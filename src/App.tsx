@@ -84,6 +84,22 @@ export default function App() {
     setActiveId(id);
   }
 
+  async function deleteConversation(id: string) {
+    await supabase.from('messages').delete().eq('conversation_id', id);
+    await supabase.from('conversations').delete().eq('id', id);
+    setConversations((prev) => prev.filter((c) => c.id !== id));
+    if (activeId === id) setActiveId(null);
+  }
+
+  async function deleteAllConversations() {
+    for (const conv of conversations) {
+      await supabase.from('messages').delete().eq('conversation_id', conv.id);
+    }
+    await supabase.from('conversations').delete().eq('user_id', user!.id);
+    setConversations([]);
+    setActiveId(null);
+  }
+
   async function sendMessage(text: string) {
     if (!text.trim() || isStreaming || !user) return;
 
@@ -235,6 +251,8 @@ export default function App() {
         activeId={activeId}
         onSelect={selectConversation}
         onNew={newConversation}
+        onDelete={deleteConversation}
+        onDeleteAll={deleteAllConversations}
         userEmail={user.email ?? ''}
         onLogout={() => supabase.auth.signOut()}
       />
