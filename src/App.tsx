@@ -6,6 +6,8 @@ import { ChatWindow } from './components/ChatWindow';
 import { ChatInput } from './components/ChatInput';
 import { WelcomeScreen } from './components/WelcomeScreen';
 import { SplashScreen } from './components/SplashScreen';
+import { MascotPanel } from './components/MascotPanel';
+import type { MascotState } from './components/MascotPanel';
 import type { Message, Conversation } from './types';
 import type { User } from '@supabase/supabase-js';
 
@@ -21,6 +23,7 @@ export default function App() {
   const [isStreaming, setIsStreaming] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [splashDone, setSplashDone] = useState(false);
+  const [mascotState, setMascotState] = useState<MascotState>('greeting');
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -74,6 +77,18 @@ export default function App() {
     );
     setConversations(full);
   }
+
+  // Drive mascot state from streaming
+  useEffect(() => {
+    if (isStreaming) {
+      setMascotState('thinking');
+    } else {
+      // Just finished — point at response, then go back to greeting
+      setMascotState('pointing');
+      const t = setTimeout(() => setMascotState('greeting'), 3500);
+      return () => clearTimeout(t);
+    }
+  }, [isStreaming]);
 
   const activeConversation = conversations.find((c) => c.id === activeId) ?? null;
 
@@ -268,6 +283,8 @@ export default function App() {
         onClose={() => setSidebarOpen(false)}
       />
 
+      <MascotPanel state={mascotState} />
+
       <main className="flex-1 flex flex-col min-w-0">
         {/* Mobile top bar */}
         <div className="md:hidden flex items-center gap-3 px-4 py-3 border-b border-gray-200 bg-white flex-shrink-0">
@@ -293,7 +310,13 @@ export default function App() {
         ) : (
           <WelcomeScreen onSend={sendMessage} />
         )}
-        <ChatInput onSend={sendMessage} disabled={isStreaming} />
+        <ChatInput
+          onSend={sendMessage}
+          disabled={isStreaming}
+          onTypingChange={(typing) => {
+            if (!isStreaming) setMascotState(typing ? 'love' : 'greeting');
+          }}
+        />
       </main>
     </div>
   );

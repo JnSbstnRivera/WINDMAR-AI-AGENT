@@ -3,9 +3,10 @@ import { useState, useRef } from 'react';
 interface Props {
   onSend: (text: string) => void;
   disabled?: boolean;
+  onTypingChange?: (typing: boolean) => void;
 }
 
-export function ChatInput({ onSend, disabled }: Props) {
+export function ChatInput({ onSend, disabled, onTypingChange }: Props) {
   const [text, setText] = useState('');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -13,6 +14,7 @@ export function ChatInput({ onSend, disabled }: Props) {
     if (!text.trim() || disabled) return;
     onSend(text.trim());
     setText('');
+    onTypingChange?.(false);
     if (textareaRef.current) {
       textareaRef.current.style.height = 'auto';
     }
@@ -38,7 +40,7 @@ export function ChatInput({ onSend, disabled }: Props) {
         <textarea
           ref={textareaRef}
           value={text}
-          onChange={(e) => setText(e.target.value)}
+          onChange={(e) => { setText(e.target.value); onTypingChange?.(e.target.value.length > 0); }}
           onKeyDown={handleKeyDown}
           onInput={handleInput}
           disabled={disabled}
