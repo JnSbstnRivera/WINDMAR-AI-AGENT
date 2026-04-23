@@ -91,7 +91,7 @@ export function ChatMessage({ message, isStreaming }: Props) {
 
   return (
     <div className="flex gap-3 mb-4">
-      <div className="w-9 h-9 rounded-full overflow-hidden flex-shrink-0 mt-1 bg-[#0d1f35]"
+      <div className="w-11 h-11 rounded-full overflow-hidden flex-shrink-0 mt-1 bg-[#0d1f35]"
         style={{ animation: 'avatar-bob 3s ease-in-out infinite' }}>
         <img src="/mascot.png" alt="Windmar AI" className="w-full h-full object-contain" style={{ imageRendering: 'pixelated' }} />
         <style>{`
@@ -102,7 +102,7 @@ export function ChatMessage({ message, isStreaming }: Props) {
         `}</style>
       </div>
       <div className="flex-1 min-w-0">
-        <div className="bg-[#f0f0f0] rounded-2xl rounded-tl-sm px-4 py-3 text-sm text-gray-800 whitespace-pre-wrap leading-relaxed">
+        <div className="bg-[#f0f0f0] rounded-2xl rounded-tl-sm px-5 py-4 text-[15px] text-gray-800 whitespace-pre-wrap leading-relaxed">
           {renderContent(message.content)}
           {isStreaming && (
             <span className="inline-block w-[2px] h-[14px] bg-gray-500 ml-1 align-middle animate-pulse" />

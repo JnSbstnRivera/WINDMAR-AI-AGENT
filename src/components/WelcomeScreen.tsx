@@ -8,7 +8,7 @@ export function WelcomeScreen({ onSend }: Props) {
   return (
     <div className="flex-1 flex flex-col items-center justify-center px-4 py-8 overflow-y-auto">
       <div className="mb-4" style={{ animation: 'welcome-bob 3s ease-in-out infinite' }}>
-        <img src="/mascot.png" alt="Windmar AI" className="w-24 h-24 object-contain" style={{ imageRendering: 'pixelated' }} />
+        <img src="/mascot.png" alt="Windmar AI" className="w-36 h-36 md:w-44 md:h-44 object-contain" style={{ imageRendering: 'pixelated' }} />
         <style>{`
           @keyframes welcome-bob {
             0%, 100% { transform: translateY(0px); }
