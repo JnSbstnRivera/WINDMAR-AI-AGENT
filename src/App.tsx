@@ -1,0 +1,251 @@
+import { useState, useEffect } from 'react';
+import { supabase } from './lib/supabase';
+import { LoginScreen } from './components/LoginScreen';
+import { Sidebar } from './components/Sidebar';
+import { ChatWindow } from './components/ChatWindow';
+import { ChatInput } from './components/ChatInput';
+import { WelcomeScreen } from './components/WelcomeScreen';
+import type { Message, Conversation } from './types';
+import type { User } from '@supabase/supabase-js';
+
+function generateId() {
+  return Math.random().toString(36).slice(2) + Date.now().toString(36);
+}
+
+export default function App() {
+  const [user, setUser] = useState<User | null>(null);
+  const [authLoading, setAuthLoading] = useState(true);
+  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const [isStreaming, setIsStreaming] = useState(false);
+
+  // Auth listener
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null);
+      setAuthLoading(false);
+    });
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+    });
+    return () => subscription.unsubscribe();
+  }, []);
+
+  // Load conversations from Supabase when user logs in
+  useEffect(() => {
+    if (!user) {
+      setConversations([]);
+      setActiveId(null);
+      return;
+    }
+    loadConversations();
+  }, [user]);
+
+  async function loadConversations() {
+    const { data: convs } = await supabase
+      .from('conversations')
+      .select('id, title, created_at, updated_at')
+      .order('updated_at', { ascending: false });
+
+    if (!convs) return;
+
+    const full: Conversation[] = await Promise.all(
+      convs.map(async (c) => {
+        const { data: msgs } = await supabase
+          .from('messages')
+          .select('id, role, content, created_at')
+          .eq('conversation_id', c.id)
+          .order('created_at', { ascending: true });
+
+        return {
+          id: c.id as string,
+          title: c.title as string,
+          createdAt: new Date(c.created_at as string),
+          updatedAt: new Date(c.updated_at as string),
+          messages: (msgs ?? []).map((m) => ({
+            id: m.id as string,
+            role: m.role as 'user' | 'assistant',
+            content: m.content as string,
+            timestamp: new Date(m.created_at as string),
+          })),
+        };
+      })
+    );
+    setConversations(full);
+  }
+
+  const activeConversation = conversations.find((c) => c.id === activeId) ?? null;
+
+  async function newConversation() {
+    setActiveId(null);
+  }
+
+  async function selectConversation(id: string) {
+    setActiveId(id);
+  }
+
+  async function sendMessage(text: string) {
+    if (!text.trim() || isStreaming || !user) return;
+
+    const userMsg: Message = {
+      id: generateId(),
+      role: 'user',
+      content: text.trim(),
+      timestamp: new Date(),
+    };
+
+    let convId = activeId;
+
+    // Create conversation in Supabase if new
+    if (!convId) {
+      const { data: newConv } = await supabase
+        .from('conversations')
+        .insert({ title: text.slice(0, 60), user_id: user.id })
+        .select('id')
+        .single();
+
+      if (!newConv) return;
+      convId = newConv.id as string;
+
+      const newConversation: Conversation = {
+        id: convId,
+        title: text.slice(0, 60),
+        messages: [],
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+      setConversations((prev) => [newConversation, ...prev]);
+      setActiveId(convId);
+    }
+
+    // Save user message to Supabase
+    await supabase.from('messages').insert({
+      conversation_id: convId,
+      role: 'user',
+      content: text.trim(),
+    });
+
+    // Add user message to local state
+    setConversations((prev) =>
+      prev.map((c) =>
+        c.id === convId ? { ...c, messages: [...c.messages, userMsg] } : c
+      )
+    );
+
+    // Add empty assistant message for streaming
+    const assistantMsgId = generateId();
+    const assistantMsg: Message = {
+      id: assistantMsgId,
+      role: 'assistant',
+      content: '',
+      timestamp: new Date(),
+    };
+    setConversations((prev) =>
+      prev.map((c) =>
+        c.id === convId ? { ...c, messages: [...c.messages, assistantMsg] } : c
+      )
+    );
+
+    setIsStreaming(true);
+
+    try {
+      const currentConv = conversations.find((c) => c.id === convId);
+      const history = (currentConv?.messages ?? []).slice(-10).map((m) => ({
+        role: m.role,
+        content: m.content,
+      }));
+
+      const response = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: text.trim(), history }),
+      });
+
+      if (!response.ok || !response.body) throw new Error('Error en la respuesta');
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let fullText = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        fullText += decoder.decode(value, { stream: true });
+        setConversations((prev) =>
+          prev.map((c) =>
+            c.id === convId
+              ? {
+                  ...c,
+                  messages: c.messages.map((m) =>
+                    m.id === assistantMsgId ? { ...m, content: fullText } : m
+                  ),
+                }
+              : c
+          )
+        );
+      }
+
+      // Save assistant message to Supabase
+      await supabase.from('messages').insert({
+        conversation_id: convId,
+        role: 'assistant',
+        content: fullText,
+      });
+
+      // Update conversation updated_at
+      await supabase
+        .from('conversations')
+        .update({ updated_at: new Date().toISOString() })
+        .eq('id', convId);
+
+    } catch {
+      setConversations((prev) =>
+        prev.map((c) =>
+          c.id === convId
+            ? {
+                ...c,
+                messages: c.messages.map((m) =>
+                  m.id === assistantMsgId
+                    ? { ...m, content: 'Error al obtener respuesta. Intenta de nuevo.' }
+                    : m
+                ),
+              }
+            : c
+        )
+      );
+    } finally {
+      setIsStreaming(false);
+    }
+  }
+
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="w-8 h-8 border-2 border-[#F7941D] border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  if (!user) return <LoginScreen />;
+
+  return (
+    <div className="flex h-screen bg-white overflow-hidden">
+      <Sidebar
+        conversations={conversations}
+        activeId={activeId}
+        onSelect={selectConversation}
+        onNew={newConversation}
+        userEmail={user.email ?? ''}
+        onLogout={() => supabase.auth.signOut()}
+      />
+      <main className="flex-1 flex flex-col min-w-0">
+        {activeConversation?.messages.length ? (
+          <ChatWindow messages={activeConversation.messages} isStreaming={isStreaming} />
+        ) : (
+          <WelcomeScreen onSend={sendMessage} />
+        )}
+        <ChatInput onSend={sendMessage} disabled={isStreaming} />
+      </main>
+    </div>
+  );
+}
