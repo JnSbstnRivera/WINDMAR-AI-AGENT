@@ -10,9 +10,11 @@ interface Props {
   onDeleteAll: () => void;
   userEmail: string;
   onLogout: () => void;
+  isOpen: boolean;
+  onClose: () => void;
 }
 
-export function Sidebar({ conversations, activeId, onSelect, onNew, onDelete, onDeleteAll, userEmail, onLogout }: Props) {
+export function Sidebar({ conversations, activeId, onSelect, onNew, onDelete, onDeleteAll, userEmail, onLogout, isOpen, onClose }: Props) {
   const [confirmClearAll, setConfirmClearAll] = useState(false);
 
   function handleClearAll() {
@@ -26,14 +28,32 @@ export function Sidebar({ conversations, activeId, onSelect, onNew, onDelete, on
   }
 
   return (
-    <aside className="w-64 bg-[#f8f9fa] border-r border-gray-200 flex flex-col flex-shrink-0">
+    <aside className={`
+      fixed inset-y-0 left-0 z-50 w-72 bg-[#f8f9fa] border-r border-gray-200 flex flex-col
+      transition-transform duration-300 ease-in-out
+      ${isOpen ? 'translate-x-0' : '-translate-x-full'}
+      md:relative md:translate-x-0 md:w-64 md:z-auto md:flex-shrink-0
+    `}>
       <div className="p-4 border-b border-gray-200">
-        <div className="flex items-center gap-2 mb-4">
-          <svg width="28" height="28" viewBox="0 0 80 80" fill="none">
-            <circle cx="40" cy="40" r="40" fill="#F7941D" />
-            <path d="M40 12 L44 27 L60 27 L47 36 L52 51 L40 42 L28 51 L33 36 L20 27 L36 27 Z" fill="white" />
-          </svg>
-          <span className="font-semibold text-[#1B3A5C] text-sm leading-tight">Windmar AI</span>
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <svg width="28" height="28" viewBox="0 0 80 80" fill="none">
+              <circle cx="40" cy="40" r="40" fill="#F7941D" />
+              <path d="M40 12 L44 27 L60 27 L47 36 L52 51 L40 42 L28 51 L33 36 L20 27 L36 27 Z" fill="white" />
+            </svg>
+            <span className="font-semibold text-[#1B3A5C] text-sm leading-tight">Windmar AI</span>
+          </div>
+          {/* Close button — mobile only */}
+          <button
+            onClick={onClose}
+            className="md:hidden text-gray-400 hover:text-gray-600 transition-colors cursor-pointer p-1"
+            aria-label="Cerrar menú"
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+          </button>
         </div>
         <button
           onClick={onNew}

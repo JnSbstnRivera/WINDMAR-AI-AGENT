@@ -18,8 +18,8 @@ export default function App() {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [isStreaming, setIsStreaming] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  // Auth listener
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null);
@@ -31,7 +31,6 @@ export default function App() {
     return () => subscription.unsubscribe();
   }, []);
 
-  // Load conversations from Supabase when user logs in
   useEffect(() => {
     if (!user) {
       setConversations([]);
@@ -78,10 +77,12 @@ export default function App() {
 
   async function newConversation() {
     setActiveId(null);
+    setSidebarOpen(false);
   }
 
   async function selectConversation(id: string) {
     setActiveId(id);
+    setSidebarOpen(false);
   }
 
   async function deleteConversation(id: string) {
@@ -112,7 +113,6 @@ export default function App() {
 
     let convId = activeId;
 
-    // Create conversation in Supabase if new
     if (!convId) {
       const { data: newConv } = await supabase
         .from('conversations')
@@ -134,21 +134,18 @@ export default function App() {
       setActiveId(convId);
     }
 
-    // Save user message to Supabase
     await supabase.from('messages').insert({
       conversation_id: convId,
       role: 'user',
       content: text.trim(),
     });
 
-    // Add user message to local state
     setConversations((prev) =>
       prev.map((c) =>
         c.id === convId ? { ...c, messages: [...c.messages, userMsg] } : c
       )
     );
 
-    // Add empty assistant message for streaming
     const assistantMsgId = generateId();
     const assistantMsg: Message = {
       id: assistantMsgId,
@@ -201,14 +198,12 @@ export default function App() {
         );
       }
 
-      // Save assistant message to Supabase
       await supabase.from('messages').insert({
         conversation_id: convId,
         role: 'assistant',
         content: fullText,
       });
 
-      // Update conversation updated_at
       await supabase
         .from('conversations')
         .update({ updated_at: new Date().toISOString() })
@@ -246,6 +241,14 @@ export default function App() {
 
   return (
     <div className="flex h-screen bg-white overflow-hidden">
+      {/* Mobile backdrop */}
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 bg-black/40 z-40 md:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
       <Sidebar
         conversations={conversations}
         activeId={activeId}
@@ -255,8 +258,33 @@ export default function App() {
         onDeleteAll={deleteAllConversations}
         userEmail={user.email ?? ''}
         onLogout={() => supabase.auth.signOut()}
+        isOpen={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
       />
+
       <main className="flex-1 flex flex-col min-w-0">
+        {/* Mobile top bar */}
+        <div className="md:hidden flex items-center gap-3 px-4 py-3 border-b border-gray-200 bg-white flex-shrink-0">
+          <button
+            onClick={() => setSidebarOpen(true)}
+            className="text-gray-500 hover:text-[#1B3A5C] transition-colors cursor-pointer"
+            aria-label="Abrir menú"
+          >
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+              <line x1="3" y1="6" x2="21" y2="6" />
+              <line x1="3" y1="12" x2="21" y2="12" />
+              <line x1="3" y1="18" x2="21" y2="18" />
+            </svg>
+          </button>
+          <div className="flex items-center gap-2">
+            <svg width="24" height="24" viewBox="0 0 80 80" fill="none">
+              <circle cx="40" cy="40" r="40" fill="#F7941D" />
+              <path d="M40 12 L44 27 L60 27 L47 36 L52 51 L40 42 L28 51 L33 36 L20 27 L36 27 Z" fill="white" />
+            </svg>
+            <span className="font-semibold text-[#1B3A5C] text-sm">Windmar AI</span>
+          </div>
+        </div>
+
         {activeConversation?.messages.length ? (
           <ChatWindow messages={activeConversation.messages} isStreaming={isStreaming} />
         ) : (
