@@ -73,10 +73,7 @@ export function LoginScreen() {
     <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
       <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-8 w-full max-w-sm">
         <div className="flex flex-col items-center mb-8">
-          <svg width="56" height="56" viewBox="0 0 80 80" fill="none" className="mb-3">
-            <circle cx="40" cy="40" r="40" fill="#F7941D" />
-            <path d="M40 12 L44 27 L60 27 L47 36 L52 51 L40 42 L28 51 L33 36 L20 27 L36 27 Z" fill="white" />
-          </svg>
+          <img src="/mascot.png" alt="Windmar AI" className="w-20 h-20 object-contain mb-3" style={{ imageRendering: 'pixelated' }} />
           <h1 className="text-xl font-bold text-[#1B3A5C]">Agente IA Windmar</h1>
           <p className="text-sm text-gray-500 mt-1">
             {mode === 'login' ? 'Inicia sesión para continuar' : 'Crea tu cuenta de asesor'}

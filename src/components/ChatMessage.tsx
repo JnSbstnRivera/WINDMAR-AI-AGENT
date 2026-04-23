@@ -91,13 +91,15 @@ export function ChatMessage({ message, isStreaming }: Props) {
 
   return (
     <div className="flex gap-3 mb-4">
-      <div className="w-8 h-8 rounded-full bg-[#F7941D] flex items-center justify-center flex-shrink-0 mt-1">
-        <svg width="16" height="16" viewBox="0 0 80 80" fill="none">
-          <path
-            d="M40 12 L44 27 L60 27 L47 36 L52 51 L40 42 L28 51 L33 36 L20 27 L36 27 Z"
-            fill="white"
-          />
-        </svg>
+      <div className="w-9 h-9 rounded-full overflow-hidden flex-shrink-0 mt-1 bg-[#0d1f35]"
+        style={{ animation: 'avatar-bob 3s ease-in-out infinite' }}>
+        <img src="/mascot.png" alt="Windmar AI" className="w-full h-full object-contain" style={{ imageRendering: 'pixelated' }} />
+        <style>{`
+          @keyframes avatar-bob {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-2px); }
+          }
+        `}</style>
       </div>
       <div className="flex-1 min-w-0">
         <div className="bg-[#f0f0f0] rounded-2xl rounded-tl-sm px-4 py-3 text-sm text-gray-800 whitespace-pre-wrap leading-relaxed">

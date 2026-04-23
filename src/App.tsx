@@ -5,6 +5,7 @@ import { Sidebar } from './components/Sidebar';
 import { ChatWindow } from './components/ChatWindow';
 import { ChatInput } from './components/ChatInput';
 import { WelcomeScreen } from './components/WelcomeScreen';
+import { SplashScreen } from './components/SplashScreen';
 import type { Message, Conversation } from './types';
 import type { User } from '@supabase/supabase-js';
 
@@ -19,6 +20,7 @@ export default function App() {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [isStreaming, setIsStreaming] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [splashDone, setSplashDone] = useState(false);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -229,9 +231,13 @@ export default function App() {
     }
   }
 
+  if (!splashDone) {
+    return <SplashScreen onDone={() => setSplashDone(true)} />;
+  }
+
   if (authLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="min-h-screen flex items-center justify-center bg-[#0d1f35]">
         <div className="w-8 h-8 border-2 border-[#F7941D] border-t-transparent rounded-full animate-spin" />
       </div>
     );
@@ -277,10 +283,7 @@ export default function App() {
             </svg>
           </button>
           <div className="flex items-center gap-2">
-            <svg width="24" height="24" viewBox="0 0 80 80" fill="none">
-              <circle cx="40" cy="40" r="40" fill="#F7941D" />
-              <path d="M40 12 L44 27 L60 27 L47 36 L52 51 L40 42 L28 51 L33 36 L20 27 L36 27 Z" fill="white" />
-            </svg>
+            <img src="/mascot.png" alt="Windmar AI" className="w-7 h-7 object-contain" style={{ imageRendering: 'pixelated' }} />
             <span className="font-semibold text-[#1B3A5C] text-sm">Windmar AI</span>
           </div>
         </div>

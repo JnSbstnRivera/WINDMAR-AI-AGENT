@@ -37,10 +37,7 @@ export function Sidebar({ conversations, activeId, onSelect, onNew, onDelete, on
       <div className="p-4 border-b border-gray-200">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
-            <svg width="28" height="28" viewBox="0 0 80 80" fill="none">
-              <circle cx="40" cy="40" r="40" fill="#F7941D" />
-              <path d="M40 12 L44 27 L60 27 L47 36 L52 51 L40 42 L28 51 L33 36 L20 27 L36 27 Z" fill="white" />
-            </svg>
+            <img src="/mascot.png" alt="Windmar AI" className="w-8 h-8 object-contain" style={{ imageRendering: 'pixelated' }} />
             <span className="font-semibold text-[#1B3A5C] text-sm leading-tight">Windmar AI</span>
           </div>
           {/* Close button — mobile only */}
