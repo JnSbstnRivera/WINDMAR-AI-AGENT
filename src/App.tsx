@@ -5,7 +5,6 @@ import { Sidebar } from './components/Sidebar';
 import { ChatWindow } from './components/ChatWindow';
 import { ChatInput } from './components/ChatInput';
 import { WelcomeScreen } from './components/WelcomeScreen';
-import { SplashScreen } from './components/SplashScreen';
 import { MascotPanel } from './components/MascotPanel';
 import type { MascotState } from './components/MascotPanel';
 import type { Message, Conversation } from './types';
@@ -22,7 +21,6 @@ export default function App() {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [isStreaming, setIsStreaming] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [splashDone, setSplashDone] = useState(false);
   const [mascotState, setMascotState] = useState<MascotState>('greeting');
 
   useEffect(() => {
@@ -83,7 +81,6 @@ export default function App() {
     if (isStreaming) {
       setMascotState('thinking');
     } else {
-      // Just finished — point at response, then go back to greeting
       setMascotState('pointing');
       const t = setTimeout(() => setMascotState('greeting'), 3500);
       return () => clearTimeout(t);
@@ -246,13 +243,9 @@ export default function App() {
     }
   }
 
-  if (!splashDone) {
-    return <SplashScreen onDone={() => setSplashDone(true)} />;
-  }
-
   if (authLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#0d1f35]">
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="w-8 h-8 border-2 border-[#F7941D] border-t-transparent rounded-full animate-spin" />
       </div>
     );
@@ -285,7 +278,8 @@ export default function App() {
 
       <MascotPanel state={mascotState} />
 
-      <main className="flex-1 flex flex-col min-w-0">
+      {/* Main — padded left on desktop to give room to mascot */}
+      <main className="flex-1 flex flex-col min-w-0 md:pl-28">
         {/* Mobile top bar */}
         <div className="md:hidden flex items-center gap-3 px-4 py-3 border-b border-gray-200 bg-white flex-shrink-0">
           <button
