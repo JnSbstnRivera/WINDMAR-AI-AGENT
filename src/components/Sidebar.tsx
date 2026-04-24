@@ -9,12 +9,11 @@ interface Props {
   onDelete: (id: string) => void;
   onDeleteAll: () => void;
   userEmail: string;
-  onLogout: () => void;
   isOpen: boolean;
   onClose: () => void;
 }
 
-export function Sidebar({ conversations, activeId, onSelect, onNew, onDelete, onDeleteAll, userEmail, onLogout, isOpen, onClose }: Props) {
+export function Sidebar({ conversations, activeId, onSelect, onNew, onDelete, onDeleteAll, userEmail, isOpen, onClose }: Props) {
   const [confirmClearAll, setConfirmClearAll] = useState(false);
 
   function handleClearAll() {
@@ -62,12 +61,6 @@ export function Sidebar({ conversations, activeId, onSelect, onNew, onDelete, on
 
       <div className="px-3 py-2 border-b border-gray-200">
         <p className="text-xs text-gray-400 truncate">{userEmail}</p>
-        <button
-          onClick={onLogout}
-          className="text-xs text-red-400 hover:text-red-600 transition-colors cursor-pointer mt-0.5"
-        >
-          Cerrar sesión
-        </button>
       </div>
 
       <div className="flex-1 overflow-y-auto p-2">

@@ -6,6 +6,7 @@ import { ChatWindow } from './components/ChatWindow';
 import { ChatInput } from './components/ChatInput';
 import { WelcomeScreen } from './components/WelcomeScreen';
 import { MascotPanel } from './components/MascotPanel';
+import { TopBar } from './components/TopBar';
 import type { MascotState } from './components/MascotPanel';
 import type { Message, Conversation } from './types';
 import type { User } from '@supabase/supabase-js';
@@ -271,11 +272,11 @@ export default function App() {
         onDelete={deleteConversation}
         onDeleteAll={deleteAllConversations}
         userEmail={user.email ?? ''}
-        onLogout={() => supabase.auth.signOut()}
         isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
       />
 
+      <TopBar onLogout={() => supabase.auth.signOut()} />
       <MascotPanel state={mascotState} />
 
       {/* Main — padded left on desktop to give room to mascot */}
