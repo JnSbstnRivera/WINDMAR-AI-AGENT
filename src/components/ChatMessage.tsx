@@ -27,7 +27,6 @@ function parseLine(line: string): Segment[] {
 
   while ((match = pattern.exec(line)) !== null) {
     if (match.index > last) segments.push({ type: 'text', value: line.slice(last, match.index) });
-
     if (match[1] && match[2]) {
       segments.push({ type: 'link', text: match[1], url: match[2] });
     } else if (match[3]) {
@@ -37,36 +36,26 @@ function parseLine(line: string): Segment[] {
     }
     last = pattern.lastIndex;
   }
-
   if (last < line.length) segments.push({ type: 'text', value: line.slice(last) });
   return segments;
 }
 
 function renderContent(text: string) {
-  const lines = text.split('\n');
-  return lines.map((line, i) => {
-    const segments = parseLine(line);
-    return (
-      <span key={i}>
-        {segments.map((seg, j) => {
-          if (seg.type === 'bold') return <strong key={j} className="font-semibold">{seg.value}</strong>;
-          if (seg.type === 'link') return (
-            <a
-              key={j}
-              href={seg.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-[#1B3A5C] underline font-medium hover:text-[#F7941D] transition-colors"
-            >
-              {seg.text}
-            </a>
-          );
-          return <span key={j}>{seg.value}</span>;
-        })}
-        {i < lines.length - 1 && '\n'}
-      </span>
-    );
-  });
+  return text.split('\n').map((line, i, arr) => (
+    <span key={i}>
+      {parseLine(line).map((seg, j) => {
+        if (seg.type === 'bold') return <strong key={j} className="font-semibold">{seg.value}</strong>;
+        if (seg.type === 'link') return (
+          <a key={j} href={seg.url} target="_blank" rel="noopener noreferrer"
+            className="text-[#1B3A5C] dark:text-blue-400 underline font-medium hover:text-[#F7941D] transition-colors">
+            {seg.text}
+          </a>
+        );
+        return <span key={j}>{seg.value}</span>;
+      })}
+      {i < arr.length - 1 && '\n'}
+    </span>
+  ));
 }
 
 export function ChatMessage({ message, isStreaming }: Props) {
@@ -91,28 +80,19 @@ export function ChatMessage({ message, isStreaming }: Props) {
 
   return (
     <div className="flex gap-3 mb-4">
-      <div className="w-11 h-11 rounded-full overflow-hidden flex-shrink-0 mt-1 bg-[#0d1f35]"
-        style={{ animation: 'avatar-bob 3s ease-in-out infinite' }}>
-        <img src="/mascot.png" alt="Windmar AI" className="w-full h-full object-contain" style={{ imageRendering: 'pixelated' }} />
-        <style>{`
-          @keyframes avatar-bob {
-            0%, 100% { transform: translateY(0px); }
-            50% { transform: translateY(-2px); }
-          }
-        `}</style>
+      <div className="w-11 h-11 rounded-full overflow-hidden flex-shrink-0 mt-1 bg-[#0d1f35]">
+        <img src="/mascot.png" alt="Windmar AI" className="mascot-img w-full h-full object-contain" style={{ imageRendering: 'pixelated' }} />
       </div>
       <div className="flex-1 min-w-0">
-        <div className="bg-[#f0f0f0] rounded-2xl rounded-tl-sm px-5 py-4 text-[15px] text-gray-800 whitespace-pre-wrap leading-relaxed">
+        <div className="bg-[#f0f0f0] dark:bg-[#1e293b] rounded-2xl rounded-tl-sm px-5 py-4 text-[15px] text-gray-800 dark:text-gray-100 whitespace-pre-wrap leading-relaxed">
           {renderContent(message.content)}
           {isStreaming && (
             <span className="inline-block w-[2px] h-[14px] bg-gray-500 ml-1 align-middle animate-pulse" />
           )}
         </div>
         {!isStreaming && message.content && (
-          <button
-            onClick={handleCopy}
-            className="mt-1 ml-2 text-xs text-gray-400 hover:text-gray-600 transition-colors flex items-center gap-1 cursor-pointer"
-          >
+          <button onClick={handleCopy}
+            className="mt-1 ml-2 text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors flex items-center gap-1 cursor-pointer">
             {copied ? '✓ Copiado' : '⎘ Copiar para WhatsApp'}
           </button>
         )}

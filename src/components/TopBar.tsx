@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 interface Props {
   onLogout: () => void;
@@ -8,6 +8,10 @@ export function TopBar({ onLogout }: Props) {
   const [dark, setDark] = useState(false);
   const [spinning, setSpinning] = useState(false);
 
+  useEffect(() => {
+    document.documentElement.classList.toggle('dark', dark);
+  }, [dark]);
+
   function toggleDark() {
     setSpinning(true);
     setDark(d => !d);
@@ -16,12 +20,10 @@ export function TopBar({ onLogout }: Props) {
 
   return (
     <div className="fixed top-3 right-4 z-40 flex items-center gap-2">
-      {/* Dark mode toggle — visual only for now */}
       <button
         onClick={toggleDark}
         title={dark ? 'Modo claro' : 'Modo oscuro'}
-        className="w-9 h-9 rounded-full flex items-center justify-center bg-white border border-gray-200 shadow-sm hover:border-[#F7941D] transition-colors cursor-pointer"
-        style={{ transition: 'background 0.3s' }}
+        className="w-9 h-9 rounded-full flex items-center justify-center bg-white dark:bg-[#1e293b] border border-gray-200 dark:border-gray-600 shadow-sm hover:border-[#F7941D] transition-colors cursor-pointer"
       >
         <span
           style={{
@@ -31,7 +33,6 @@ export function TopBar({ onLogout }: Props) {
           }}
         >
           {dark ? (
-            /* Sun */
             <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#F7941D" strokeWidth="2" strokeLinecap="round">
               <circle cx="12" cy="12" r="5"/>
               <line x1="12" y1="1"  x2="12" y2="3"/>
@@ -44,7 +45,6 @@ export function TopBar({ onLogout }: Props) {
               <line x1="18.36" y1="5.64"  x2="19.78" y2="4.22"/>
             </svg>
           ) : (
-            /* Moon */
             <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#1B3A5C" strokeWidth="2" strokeLinecap="round">
               <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/>
             </svg>
@@ -52,11 +52,10 @@ export function TopBar({ onLogout }: Props) {
         </span>
       </button>
 
-      {/* Logout */}
       <button
         onClick={onLogout}
         title="Cerrar sesión"
-        className="flex items-center gap-1.5 px-3 h-9 rounded-full bg-white border border-gray-200 shadow-sm hover:border-red-400 hover:text-red-500 text-gray-500 text-xs font-medium transition-colors cursor-pointer"
+        className="flex items-center gap-1.5 px-3 h-9 rounded-full bg-white dark:bg-[#1e293b] border border-gray-200 dark:border-gray-600 shadow-sm hover:border-red-400 hover:text-red-500 text-gray-500 dark:text-gray-300 text-xs font-medium transition-colors cursor-pointer"
       >
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
           <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/>

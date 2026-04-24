@@ -1,5 +1,8 @@
 @import "tailwindcss";
 
+/* Tailwind v4 class-based dark mode */
+@custom-variant dark (&:where(.dark, .dark *));
+
 @theme {
   --color-windmar-orange: #F7941D;
   --color-windmar-navy: #1B3A5C;
@@ -21,13 +24,12 @@ body,
 }
 
 /* Scrollbar delgado */
-::-webkit-scrollbar {
-  width: 4px;
-}
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-::-webkit-scrollbar-thumb {
-  background: #d1d5db;
-  border-radius: 2px;
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 2px; }
+.dark ::-webkit-scrollbar-thumb { background: #374151; }
+
+/* Mascot glow in dark mode */
+.dark .mascot-img {
+  filter: brightness(1.05) drop-shadow(0 0 10px rgba(255, 255, 255, 0.2));
 }

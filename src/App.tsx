@@ -255,7 +255,7 @@ export default function App() {
   if (!user) return <LoginScreen />;
 
   return (
-    <div className="flex h-screen bg-white overflow-hidden">
+    <div className="flex h-screen bg-white dark:bg-[#0a1628] overflow-hidden">
       {/* Mobile backdrop */}
       {sidebarOpen && (
         <div
@@ -282,7 +282,7 @@ export default function App() {
       {/* Main — padded left on desktop to give room to mascot */}
       <main className="flex-1 flex flex-col min-w-0 md:pl-28">
         {/* Mobile top bar */}
-        <div className="md:hidden flex items-center gap-3 px-4 py-3 border-b border-gray-200 bg-white flex-shrink-0">
+        <div className="md:hidden flex items-center gap-3 px-4 py-3 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-[#0f1c2e] flex-shrink-0">
           <button
             onClick={() => setSidebarOpen(true)}
             className="text-gray-500 hover:text-[#1B3A5C] transition-colors cursor-pointer"
@@ -295,8 +295,8 @@ export default function App() {
             </svg>
           </button>
           <div className="flex items-center gap-2">
-            <img src="/mascot.png" alt="Windmar AI" className="w-7 h-7 object-contain" style={{ imageRendering: 'pixelated' }} />
-            <span className="font-semibold text-[#1B3A5C] text-sm">Windmar AI</span>
+            <img src="/mascot.png" alt="Windmar AI" className="mascot-img w-7 h-7 object-contain" style={{ imageRendering: 'pixelated' }} />
+            <span className="font-semibold text-[#1B3A5C] dark:text-white text-sm">Windmar AI</span>
           </div>
         </div>
 

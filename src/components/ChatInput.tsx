@@ -15,9 +15,7 @@ export function ChatInput({ onSend, disabled, onTypingChange }: Props) {
     onSend(text.trim());
     setText('');
     onTypingChange?.(false);
-    if (textareaRef.current) {
-      textareaRef.current.style.height = 'auto';
-    }
+    if (textareaRef.current) textareaRef.current.style.height = 'auto';
   }
 
   function handleKeyDown(e: React.KeyboardEvent) {
@@ -35,7 +33,7 @@ export function ChatInput({ onSend, disabled, onTypingChange }: Props) {
   }
 
   return (
-    <div className="border-t border-gray-200 px-4 py-3 bg-white">
+    <div className="border-t border-gray-200 dark:border-gray-700 px-4 py-3 bg-white dark:bg-[#0f1c2e]">
       <div className="max-w-3xl mx-auto flex gap-2 items-end">
         <textarea
           ref={textareaRef}
@@ -44,9 +42,9 @@ export function ChatInput({ onSend, disabled, onTypingChange }: Props) {
           onKeyDown={handleKeyDown}
           onInput={handleInput}
           disabled={disabled}
-          placeholder="Pregunta lo que necesites..."
+          placeholder="Escribe tu pregunta..."
           rows={1}
-          className="flex-1 resize-none border border-gray-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-[#F7941D] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          className="flex-1 resize-none border border-gray-300 dark:border-gray-600 dark:bg-[#1e293b] dark:text-gray-100 dark:placeholder-gray-500 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-[#F7941D] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           style={{ minHeight: '44px', maxHeight: '120px' }}
         />
         <button
@@ -56,8 +54,8 @@ export function ChatInput({ onSend, disabled, onTypingChange }: Props) {
           aria-label="Enviar"
         >
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M22 2L11 13" />
-            <path d="M22 2L15 22L11 13L2 9L22 2Z" />
+            <path d="M22 2L11 13"/>
+            <path d="M22 2L15 22L11 13L2 9L22 2Z"/>
           </svg>
         </button>
       </div>

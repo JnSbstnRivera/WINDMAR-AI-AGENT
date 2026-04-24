@@ -41,7 +41,7 @@ export function MascotPanel({ state }: Props) {
             key={animKey}
             src={visibleSrc}
             alt="Windmar Assistant"
-            className="w-20 h-20 object-contain drop-shadow-xl"
+            className="mascot-img w-20 h-20 object-contain drop-shadow-xl"
             style={{ imageRendering: 'pixelated' }}
           />
           <span
@@ -65,7 +65,7 @@ export function MascotPanel({ state }: Props) {
             key={animKey}
             src={visibleSrc}
             alt="Windmar Assistant"
-            className="w-12 h-12 object-contain drop-shadow-lg"
+            className="mascot-img w-12 h-12 object-contain drop-shadow-lg"
             style={{ imageRendering: 'pixelated' }}
           />
         </div>
