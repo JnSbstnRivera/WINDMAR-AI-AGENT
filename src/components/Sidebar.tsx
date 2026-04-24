@@ -29,14 +29,14 @@ export function Sidebar({ conversations, activeId, onSelect, onNew, onDelete, on
 
   return (
     <aside className={`
-      fixed inset-y-0 left-0 z-50 w-72 bg-[#f8f9fa] dark:bg-[#0f1c2e] border-r border-gray-200 dark:border-gray-700 flex flex-col
+      fixed inset-y-0 left-0 z-50 w-72 bg-[#dde8f5] dark:bg-[#0f1c2e] border-r border-[#b8cfe8] dark:border-gray-700 flex flex-col
       transition-transform duration-300 ease-in-out
       ${isOpen ? 'translate-x-0' : '-translate-x-full'}
       md:relative md:translate-x-0 md:w-64 md:z-auto md:flex-shrink-0
     `}>
 
       {/* Logo */}
-      <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+      <div className="p-4 border-b border-[#b8cfe8] dark:border-gray-700">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
             <img src="/mascot.png" alt="Windmar AI" className="mascot-img w-8 h-8 object-contain" style={{ imageRendering: 'pixelated' }} />
@@ -55,14 +55,18 @@ export function Sidebar({ conversations, activeId, onSelect, onNew, onDelete, on
         </div>
         <button
           onClick={onNew}
-          className="w-full bg-[#1B3A5C] hover:bg-[#152e4a] text-white rounded-lg py-2 px-3 text-sm font-medium transition-colors cursor-pointer"
+          className="w-full text-white rounded-lg py-2.5 px-3 text-sm font-semibold cursor-pointer transition-all hover:scale-[1.02] hover:shadow-lg active:scale-[0.98]"
+          style={{
+            background: 'linear-gradient(135deg, #1B3A5C 0%, #2a5a8c 100%)',
+            boxShadow: '0 3px 10px rgba(27,58,92,0.4)',
+          }}
         >
           + Nueva conversación
         </button>
       </div>
 
       {/* Bienvenida */}
-      <div className="px-3 py-2.5 border-b border-gray-200 dark:border-gray-700">
+      <div className="px-3 py-2.5 border-b border-[#b8cfe8] dark:border-gray-700">
         <p className="text-sm font-semibold text-[#1B3A5C] dark:text-white">
           Bienvenido, {username}
         </p>
@@ -85,8 +89,8 @@ export function Sidebar({ conversations, activeId, onSelect, onNew, onDelete, on
                 onClick={() => onSelect(conv.id)}
                 className={`w-full text-left rounded-lg px-3 py-2 pr-8 text-sm transition-colors cursor-pointer ${
                   activeId === conv.id
-                    ? 'bg-orange-100 dark:bg-orange-900/30 text-[#1B3A5C] dark:text-orange-300 font-medium'
-                    : 'text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700/50'
+                    ? 'bg-white/70 dark:bg-orange-900/30 text-[#1B3A5C] dark:text-orange-300 font-semibold shadow-sm'
+                    : 'text-[#1B3A5C] dark:text-gray-300 hover:bg-white/50 dark:hover:bg-gray-700/50'
                 }`}
               >
                 <div className="truncate">{conv.title || 'Conversación'}</div>
@@ -109,7 +113,7 @@ export function Sidebar({ conversations, activeId, onSelect, onNew, onDelete, on
       </div>
 
       {conversations.length > 0 && (
-        <div className="p-2 border-t border-gray-200 dark:border-gray-700">
+        <div className="p-2 border-t border-[#b8cfe8] dark:border-gray-700">
           <button
             onClick={handleClearAll}
             className={`w-full text-xs py-1.5 rounded-lg transition-colors cursor-pointer ${

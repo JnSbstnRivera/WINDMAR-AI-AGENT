@@ -35,7 +35,7 @@ export function MascotPanel({ state }: Props) {
   return (
     <>
       {/* Desktop: bottom-left, just after sidebar */}
-      <div className="hidden md:flex fixed left-[268px] bottom-16 z-30 flex-col items-center gap-1">
+      <div className="hidden md:flex fixed left-[300px] bottom-16 z-30 flex-col items-center gap-1">
         <div style={{ transition: 'opacity 0.25s ease', opacity }} className="flex flex-col items-center">
           <img
             key={animKey}
