@@ -300,17 +300,25 @@ export default function App() {
         </div>
 
         {activeConversation?.messages.length ? (
-          <ChatWindow messages={activeConversation.messages} isStreaming={isStreaming} />
+          <>
+            <ChatWindow messages={activeConversation.messages} isStreaming={isStreaming} />
+            <ChatInput
+              onSend={sendMessage}
+              disabled={isStreaming}
+              onTypingChange={(typing) => {
+                if (!isStreaming) setMascotState(typing ? 'love' : 'greeting');
+              }}
+            />
+          </>
         ) : (
-          <WelcomeScreen onSend={sendMessage} />
+          <WelcomeScreen
+            onSend={sendMessage}
+            disabled={isStreaming}
+            onTypingChange={(typing) => {
+              if (!isStreaming) setMascotState(typing ? 'love' : 'greeting');
+            }}
+          />
         )}
-        <ChatInput
-          onSend={sendMessage}
-          disabled={isStreaming}
-          onTypingChange={(typing) => {
-            if (!isStreaming) setMascotState(typing ? 'love' : 'greeting');
-          }}
-        />
       </main>
     </div>
   );
