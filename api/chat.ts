@@ -25,6 +25,45 @@ function buildToolsContext(message: string): string {
   return `HERRAMIENTAS RELEVANTES:\n${relevant.map(t => `• ${t.name}: ${t.url}\n  Usar cuando: ${t.whenToUse}`).join('\n\n')}`;
 }
 
+// Stop words en español — palabras comunes que diluyen el match en full-text search
+const STOP_WORDS = new Set([
+  'a','al','algo','algun','alguna','algunas','alguno','algunos',
+  'ante','antes','aqui','asi','aun','aunque','bajo','bien',
+  'cada','como','con','contra','cual','cuales','cuando','cuanto','cuanta','cuantos','cuantas',
+  'cuesta','cuestan','cual','cuales',
+  'de','del','desde','donde','durante','e','el','ella','ellas',
+  'ellos','en','entre','era','eran','eres','es','esa','esas','ese','eso','esos',
+  'esta','estaba','estado','estan','estar','estas','este','estos','estoy',
+  'fue','fuera','fueron','ha','habia','habian','han','hasta','hay',
+  'la','las','le','les','lo','los','mas','me','mi','mis','mucha','muchas','mucho','muchos','muy',
+  'nada','ni','no','nos','nosotros','nuestra','nuestras','nuestro','nuestros',
+  'o','os','otra','otras','otro','otros','para','pero','poco','pocos',
+  'por','porque','que','quien','quienes','se','sea','sean','segun','ser',
+  'si','sido','siempre','sin','sobre','solo','son','soy','su','sus',
+  'tambien','tan','tanta','tantas','tanto','tantos','te','tener','tengo','ti','tiene','tienen',
+  'todas','todo','todos','tu','tus','un','una','unas','uno','unos',
+  'va','vale','vamos','van','vas','vez','y','ya','yo'
+]);
+
+// Extrae keywords removiendo signos, acentos y stop-words.
+// Mantiene palabras significativas para la búsqueda full-text.
+function extractKeywords(text: string): string {
+  const cleaned = text
+    .toLowerCase()
+    .normalize('NFD').replace(/[̀-ͯ]/g, '')  // remueve acentos
+    .replace(/[^a-z0-9\s]/g, ' ')                      // remueve puntuación
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  const keywords = cleaned
+    .split(' ')
+    .filter(w => w.length > 2 && !STOP_WORDS.has(w));
+
+  // Si quedan menos de 2 keywords, regresar el texto limpio completo
+  // para no perder señal en preguntas muy cortas
+  return keywords.length >= 2 ? keywords.join(' ') : cleaned;
+}
+
 const SYSTEM_PROMPT = `Eres el Asistente IA de Windmar Home Puerto Rico — copiloto experto del Call Center con 22 años de experiencia en la isla. Sirves a los asesores de Telemercadeo, VASS y Ventas. Tu misión es ayudarles a responder con precisión, manejar objeciones y cerrar ventas usando psicología consultiva.
 
 ═══════════════════════════════════
@@ -144,8 +183,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
     // Supabase knowledge search
     const supabase = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_ANON_KEY!);
+    // Extrae keywords del mensaje para mejorar el match en full-text search
+    const searchQuery = extractKeywords(message);
+
     const { data: docs } = await supabase.rpc('search_knowledge', {
-      search_query: message,
+      search_query: searchQuery,
       filter_categoria: null,
       filter_area: null,
       result_limit: 8,
