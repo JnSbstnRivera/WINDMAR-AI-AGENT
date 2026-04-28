@@ -22,8 +22,19 @@ export default function App() {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [isStreaming, setIsStreaming] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [desktopSidebarHidden, setDesktopSidebarHidden] = useState(false);
+  // Por defecto sidebar cerrada — se persiste en localStorage
+  const [desktopSidebarHidden, setDesktopSidebarHidden] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return true;
+    const saved = localStorage.getItem('wh-sidebar-hidden');
+    return saved === null ? true : saved === 'true';
+  });
   const [mascotState, setMascotState] = useState<MascotState>('greeting');
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('wh-sidebar-hidden', String(desktopSidebarHidden));
+    } catch {}
+  }, [desktopSidebarHidden]);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -324,23 +335,25 @@ export default function App() {
         />
       </div>
 
-      {/* Desktop sidebar toggle — sin fondo, solo ícono con halo */}
+      {/* Desktop sidebar toggle — sin fondo, solo ícono con halo + animación sutil */}
       <button
         onClick={() => setDesktopSidebarHidden(!desktopSidebarHidden)}
         className={`hidden md:flex fixed z-40 top-1/2 -translate-y-1/2 w-9 h-9 items-center justify-center transition-all duration-300 cursor-pointer group ${
           desktopSidebarHidden ? 'left-3' : 'left-[244px]'
         }`}
         title={desktopSidebarHidden ? 'Mostrar conversaciones' : 'Ocultar conversaciones'}
+        aria-label={desktopSidebarHidden ? 'Mostrar conversaciones' : 'Ocultar conversaciones'}
       >
-        {/* Halo naranja detrás del ícono */}
+        {/* Halo naranja con respiración (pulse) */}
         <div
-          className="absolute inset-0 rounded-full opacity-70 group-hover:opacity-100 transition-opacity"
+          className="absolute inset-0 rounded-full group-hover:opacity-100 transition-opacity"
           style={{
             background: 'radial-gradient(circle, rgba(247,148,29,0.55) 0%, rgba(247,148,29,0.15) 50%, transparent 75%)',
             filter: 'blur(6px)',
+            animation: 'haloPulse 2.4s ease-in-out infinite',
           }}
         />
-        {/* Ícono */}
+        {/* Ícono con micro-bounce */}
         <svg
           width="18"
           height="18"
@@ -349,8 +362,11 @@ export default function App() {
           stroke="currentColor"
           strokeWidth="2.5"
           strokeLinecap="round"
-          className="relative z-10 text-[#F7941D] group-hover:text-[#e8830d] group-hover:scale-110 transition-transform"
-          style={{ filter: 'drop-shadow(0 0 2px rgba(247,148,29,0.5))' }}
+          className="relative z-10 text-[#F7941D] group-hover:text-[#e8830d] group-hover:scale-125 transition-transform"
+          style={{
+            filter: 'drop-shadow(0 0 3px rgba(247,148,29,0.6))',
+            animation: desktopSidebarHidden ? 'arrowNudgeRight 2.4s ease-in-out infinite' : 'arrowNudgeLeft 2.4s ease-in-out infinite',
+          }}
         >
           {desktopSidebarHidden ? (
             <polyline points="9 18 15 12 9 6"/>
@@ -358,6 +374,22 @@ export default function App() {
             <polyline points="15 18 9 12 15 6"/>
           )}
         </svg>
+
+        {/* Animaciones */}
+        <style>{`
+          @keyframes haloPulse {
+            0%, 100% { opacity: 0.5; transform: scale(0.95); }
+            50%       { opacity: 1; transform: scale(1.15); }
+          }
+          @keyframes arrowNudgeRight {
+            0%, 100% { transform: translateX(0); }
+            50%       { transform: translateX(3px); }
+          }
+          @keyframes arrowNudgeLeft {
+            0%, 100% { transform: translateX(0); }
+            50%       { transform: translateX(-3px); }
+          }
+        `}</style>
       </button>
 
       <TopBar onLogout={() => supabase.auth.signOut()} />
