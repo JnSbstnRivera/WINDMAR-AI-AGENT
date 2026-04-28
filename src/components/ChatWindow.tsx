@@ -5,9 +5,10 @@ import type { Message } from '../types';
 interface Props {
   messages: Message[];
   isStreaming: boolean;
+  userEmail?: string;
 }
 
-export function ChatWindow({ messages, isStreaming }: Props) {
+export function ChatWindow({ messages, isStreaming, userEmail = '' }: Props) {
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -15,12 +16,14 @@ export function ChatWindow({ messages, isStreaming }: Props) {
   }, [messages]);
 
   return (
-    <div className="flex-1 overflow-y-auto px-4 md:pl-6 md:pr-12 py-6">
-      <div className="max-w-5xl">
+    <div className="flex-1 overflow-y-auto px-3 sm:px-6 md:px-8 py-6">
+      {/* Centered container, more spacious */}
+      <div className="max-w-4xl mx-auto">
         {messages.map((msg, i) => (
           <ChatMessage
             key={msg.id}
             message={msg}
+            asesorEmail={userEmail}
             isStreaming={
               isStreaming && i === messages.length - 1 && msg.role === 'assistant'
             }

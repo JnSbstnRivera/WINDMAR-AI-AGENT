@@ -4,6 +4,7 @@ import type { Message } from '../types';
 interface Props {
   message: Message;
   isStreaming?: boolean;
+  asesorEmail?: string;
 }
 
 function stripForCopy(text: string): string {
@@ -58,7 +59,57 @@ function renderContent(text: string) {
   ));
 }
 
-export function ChatMessage({ message, isStreaming }: Props) {
+// Avatar del asesor (intenta /asesor.png, fallback a inicial con halo)
+function AsesorAvatar({ email }: { email: string }) {
+  const initial = (email.split('@')[0]?.charAt(0) ?? 'A').toUpperCase();
+  return (
+    <div className="relative flex-shrink-0" style={{ width: 40, height: 40 }}>
+      {/* Halo azul navy */}
+      <div
+        className="absolute inset-0 rounded-full"
+        style={{
+          background:
+            'radial-gradient(circle, rgba(27,58,92,0.5) 0%, rgba(27,58,92,0.15) 50%, transparent 75%)',
+          filter: 'blur(6px)',
+        }}
+      />
+      {/* Círculo con inicial */}
+      <div
+        className="relative z-10 w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-lg shadow-md"
+        style={{
+          background: 'linear-gradient(135deg, #1B3A5C 0%, #2a5a8c 100%)',
+          boxShadow: '0 4px 12px rgba(27,58,92,0.35)',
+        }}
+      >
+        {initial}
+      </div>
+    </div>
+  );
+}
+
+// Avatar del SUN BOT IA (con halo naranja)
+function IAAvatar() {
+  return (
+    <div className="relative flex-shrink-0" style={{ width: 40, height: 40 }}>
+      <div
+        className="absolute inset-0 rounded-full"
+        style={{
+          background:
+            'radial-gradient(circle, rgba(247,148,29,0.55) 0%, rgba(247,148,29,0.15) 50%, transparent 75%)',
+          filter: 'blur(8px)',
+        }}
+      />
+      <img
+        src="/sunbot.png"
+        alt="Windmar AI"
+        className="mascot-img relative z-10 w-10 h-10 object-contain"
+        style={{ imageRendering: 'pixelated' }}
+      />
+    </div>
+  );
+}
+
+export function ChatMessage({ message, isStreaming, asesorEmail = '' }: Props) {
   const [copied, setCopied] = useState(false);
   const isUser = message.role === 'user';
 
@@ -69,47 +120,34 @@ export function ChatMessage({ message, isStreaming }: Props) {
   }
 
   if (isUser) {
+    // ASESOR — burbuja a la derecha + avatar inicial a la derecha
     return (
-      <div className="flex justify-end mb-5">
-        <div
-          className="text-white rounded-2xl px-5 py-3 max-w-[70%] text-sm leading-relaxed"
-          style={{
-            background: 'linear-gradient(135deg, #1B3A5C 0%, #2a5a8c 100%)',
-            boxShadow: '0 4px 14px rgba(27,58,92,0.25)',
-          }}
-        >
-          {message.content}
+      <div className="flex justify-end gap-3 mb-6">
+        <div className="flex flex-col items-end max-w-[85%] sm:max-w-[80%]">
+          <div
+            className="text-white rounded-2xl px-5 sm:px-6 py-4 text-[15px] leading-relaxed"
+            style={{
+              background: 'linear-gradient(135deg, #1B3A5C 0%, #2a5a8c 100%)',
+              boxShadow: '0 6px 20px rgba(27,58,92,0.25), 0 2px 6px rgba(27,58,92,0.15)',
+            }}
+          >
+            {message.content}
+          </div>
         </div>
+        <AsesorAvatar email={asesorEmail} />
       </div>
     );
   }
 
+  // IA — avatar SUN BOT a la izquierda + burbuja
   return (
-    <div className="flex gap-3 mb-6 mr-auto" style={{ maxWidth: '92%' }}>
-      {/* Avatar SUN BOT con halo */}
-      <div className="relative flex-shrink-0 mt-1" style={{ width: 40, height: 40 }}>
+    <div className="flex justify-start gap-3 mb-6">
+      <IAAvatar />
+      <div className="flex flex-col items-start min-w-0 max-w-[85%] sm:max-w-[80%]">
         <div
-          className="absolute inset-0 rounded-full"
+          className="relative rounded-2xl px-5 sm:px-7 py-5 sm:py-6 text-[15px] sm:text-[15.5px] text-gray-800 dark:text-gray-100 whitespace-pre-wrap leading-relaxed bg-white dark:bg-[#142033] border border-[#dde8f5] dark:border-white/[0.06] w-full"
           style={{
-            background:
-              'radial-gradient(circle, rgba(247,148,29,0.55) 0%, rgba(247,148,29,0.15) 50%, transparent 75%)',
-            filter: 'blur(8px)',
-          }}
-        />
-        <img
-          src="/sunbot.png"
-          alt="Windmar AI"
-          className="mascot-img relative z-10 w-10 h-10 object-contain"
-          style={{ imageRendering: 'pixelated' }}
-        />
-      </div>
-
-      {/* Burbuja — card style con acento naranja a la izquierda */}
-      <div className="flex-1 min-w-0">
-        <div
-          className="relative rounded-2xl px-6 py-5 text-[15px] text-gray-800 dark:text-gray-100 whitespace-pre-wrap leading-relaxed bg-white dark:bg-[#142033] border border-[#dde8f5] dark:border-white/[0.06]"
-          style={{
-            boxShadow: '0 4px 20px rgba(27,58,92,0.06), 0 1px 3px rgba(27,58,92,0.04)',
+            boxShadow: '0 6px 24px rgba(27,58,92,0.08), 0 2px 6px rgba(27,58,92,0.05)',
           }}
         >
           {/* Acento naranja a la izquierda */}

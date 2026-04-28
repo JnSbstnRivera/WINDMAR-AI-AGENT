@@ -430,7 +430,11 @@ export default function App() {
 
         {activeConversation?.messages.length ? (
           <>
-            <ChatWindow messages={activeConversation.messages} isStreaming={isStreaming} />
+            <ChatWindow
+              messages={activeConversation.messages}
+              isStreaming={isStreaming}
+              userEmail={user.email ?? ''}
+            />
             <ChatInput
               onSend={sendMessage}
               disabled={isStreaming}
