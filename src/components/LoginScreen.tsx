@@ -32,7 +32,12 @@ export function LoginScreen() {
       else setRegistered(true);
     } else {
       const { error: err } = await supabase.auth.signInWithPassword({ email, password });
-      if (err) setError('Correo o contraseña incorrectos');
+      if (err) {
+        setError('Correo o contraseña incorrectos');
+      } else {
+        // Marca para mostrar el loader post-login en App.tsx
+        try { sessionStorage.setItem('wh-just-logged-in', '1'); } catch {}
+      }
     }
     setLoading(false);
   }

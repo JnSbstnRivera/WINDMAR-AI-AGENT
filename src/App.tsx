@@ -29,6 +29,7 @@ export default function App() {
     return saved === null ? true : saved === 'true';
   });
   const [mascotState, setMascotState] = useState<MascotState>('greeting');
+  const [postLoginLoading, setPostLoginLoading] = useState(false);
 
   useEffect(() => {
     try {
@@ -46,6 +47,19 @@ export default function App() {
     });
     return () => subscription.unsubscribe();
   }, []);
+
+  // Cuando el usuario hace login fresco (desde LoginScreen), muestra loader 2s
+  useEffect(() => {
+    if (!user) return;
+    try {
+      if (sessionStorage.getItem('wh-just-logged-in') === '1') {
+        sessionStorage.removeItem('wh-just-logged-in');
+        setPostLoginLoading(true);
+        const t = setTimeout(() => setPostLoginLoading(false), 2000);
+        return () => clearTimeout(t);
+      }
+    } catch {}
+  }, [user]);
 
   useEffect(() => {
     if (!user) {
@@ -310,6 +324,70 @@ export default function App() {
   }
 
   if (!user) return <LoginScreen />;
+
+  // Loader breve después de iniciar sesión
+  if (postLoginLoading) {
+    const userName = (user.email ?? '').split('@')[0].split('.')[0];
+    const capName = userName ? userName.charAt(0).toUpperCase() + userName.slice(1) : 'asesor';
+
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-[#eef4fa] dark:bg-[#0a1628] px-4">
+        {/* SUN BOT con halo respirando */}
+        <div className="relative flex items-center justify-center mb-5" style={{ width: 100, height: 100 }}>
+          <div
+            className="absolute inset-0 rounded-full"
+            style={{
+              background:
+                'radial-gradient(circle, rgba(247,148,29,0.6) 0%, rgba(247,148,29,0.2) 50%, transparent 75%)',
+              filter: 'blur(14px)',
+              animation: 'haloBreathe 1.6s ease-in-out infinite',
+            }}
+          />
+          <img
+            src="/sunbot.png"
+            alt="Windmar AI"
+            className="mascot-img relative z-10 w-20 h-20 sm:w-24 sm:h-24 object-contain drop-shadow-lg"
+            style={{ imageRendering: 'pixelated' }}
+          />
+        </div>
+
+        {/* Saludo personalizado */}
+        <p className="text-lg sm:text-xl font-bold text-[#1B3A5C] dark:text-white mb-1">
+          ¡Hola, {capName}! 👋
+        </p>
+        <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mb-5">
+          Preparando tu asistente...
+        </p>
+
+        {/* 3 puntos animados */}
+        <div className="flex items-center gap-2">
+          <span
+            className="w-2.5 h-2.5 rounded-full bg-[#F7941D]"
+            style={{ animation: 'dotBounce 1.2s ease-in-out 0s infinite' }}
+          />
+          <span
+            className="w-2.5 h-2.5 rounded-full bg-[#F7941D]"
+            style={{ animation: 'dotBounce 1.2s ease-in-out 0.2s infinite' }}
+          />
+          <span
+            className="w-2.5 h-2.5 rounded-full bg-[#F7941D]"
+            style={{ animation: 'dotBounce 1.2s ease-in-out 0.4s infinite' }}
+          />
+        </div>
+
+        <style>{`
+          @keyframes haloBreathe {
+            0%, 100% { opacity: 0.55; transform: scale(1); }
+            50%       { opacity: 1; transform: scale(1.15); }
+          }
+          @keyframes dotBounce {
+            0%, 80%, 100% { transform: translateY(0); opacity: 0.4; }
+            40%            { transform: translateY(-8px); opacity: 1; }
+          }
+        `}</style>
+      </div>
+    );
+  }
 
   return (
     <div className="flex h-screen bg-[#eef4fa] dark:bg-[#0a1628] overflow-hidden">
