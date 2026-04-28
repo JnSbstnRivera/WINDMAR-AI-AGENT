@@ -55,14 +55,14 @@ export function Sidebar({ conversations, activeId, onSelect, onNew, onDelete, on
   return (
     <aside
       className={`
-        fixed inset-y-0 left-0 z-50 w-72 flex flex-col
+        fixed inset-y-0 left-0 z-50 w-72 h-full flex flex-col
         bg-gradient-to-b from-[#e3edf7] via-[#dde8f5] to-[#d5e2f0]
         dark:from-[#0f1c2e] dark:via-[#0c1828] dark:to-[#0a1422]
         border-r border-[#b8cfe8] dark:border-white/[0.08]
         backdrop-blur-md
         transition-transform duration-300 ease-in-out
         ${isOpen ? 'translate-x-0' : '-translate-x-full'}
-        md:relative md:translate-x-0 md:w-64 md:z-auto md:flex-shrink-0
+        md:relative md:translate-x-0 md:w-64 md:z-auto md:flex-shrink-0 md:h-full
       `}
       style={{
         boxShadow: '4px 0 24px rgba(27,58,92,0.08)',

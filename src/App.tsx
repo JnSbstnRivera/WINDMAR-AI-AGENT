@@ -310,7 +310,7 @@ export default function App() {
         />
       )}
 
-      <div className={`${desktopSidebarHidden ? 'md:hidden' : ''}`}>
+      <div className={`${desktopSidebarHidden ? 'md:hidden' : 'md:flex md:h-full'}`}>
         <Sidebar
           conversations={conversations}
           activeId={activeId}
