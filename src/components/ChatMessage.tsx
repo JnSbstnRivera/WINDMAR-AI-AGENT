@@ -44,10 +44,10 @@ function renderContent(text: string) {
   return text.split('\n').map((line, i, arr) => (
     <span key={i}>
       {parseLine(line).map((seg, j) => {
-        if (seg.type === 'bold') return <strong key={j} className="font-semibold">{seg.value}</strong>;
+        if (seg.type === 'bold') return <strong key={j} className="font-bold text-[#1B3A5C] dark:text-white">{seg.value}</strong>;
         if (seg.type === 'link') return (
           <a key={j} href={seg.url} target="_blank" rel="noopener noreferrer"
-            className="text-[#1B3A5C] dark:text-blue-400 underline font-medium hover:text-[#F7941D] transition-colors">
+            className="text-[#F7941D] dark:text-[#F7941D] underline font-semibold hover:text-[#e8830d] transition-colors">
             {seg.text}
           </a>
         );
@@ -70,8 +70,14 @@ export function ChatMessage({ message, isStreaming }: Props) {
 
   if (isUser) {
     return (
-      <div className="flex justify-end mb-4">
-        <div className="bg-[#1B3A5C] text-white rounded-2xl rounded-tr-sm px-4 py-3 max-w-[70%] text-sm leading-relaxed">
+      <div className="flex justify-end mb-5">
+        <div
+          className="text-white rounded-2xl px-5 py-3 max-w-[70%] text-sm leading-relaxed"
+          style={{
+            background: 'linear-gradient(135deg, #1B3A5C 0%, #2a5a8c 100%)',
+            boxShadow: '0 4px 14px rgba(27,58,92,0.25)',
+          }}
+        >
           {message.content}
         </div>
       </div>
@@ -79,20 +85,54 @@ export function ChatMessage({ message, isStreaming }: Props) {
   }
 
   return (
-    <div className="flex gap-3 mb-4">
-      <div className="w-11 h-11 rounded-full overflow-hidden flex-shrink-0 mt-1 bg-[#0d1f35]">
-        <img src="/sunbot.png" alt="Windmar AI" className="mascot-img w-full h-full object-contain" style={{ imageRendering: 'pixelated' }} />
+    <div className="flex gap-3 mb-6 mr-auto" style={{ maxWidth: '92%' }}>
+      {/* Avatar SUN BOT con halo */}
+      <div className="relative flex-shrink-0 mt-1" style={{ width: 40, height: 40 }}>
+        <div
+          className="absolute inset-0 rounded-full"
+          style={{
+            background:
+              'radial-gradient(circle, rgba(247,148,29,0.55) 0%, rgba(247,148,29,0.15) 50%, transparent 75%)',
+            filter: 'blur(8px)',
+          }}
+        />
+        <img
+          src="/sunbot.png"
+          alt="Windmar AI"
+          className="mascot-img relative z-10 w-10 h-10 object-contain"
+          style={{ imageRendering: 'pixelated' }}
+        />
       </div>
+
+      {/* Burbuja — card style con acento naranja a la izquierda */}
       <div className="flex-1 min-w-0">
-        <div className="bg-[#f0f0f0] dark:bg-[#1e293b] rounded-2xl rounded-tl-sm px-5 py-4 text-[15px] text-gray-800 dark:text-gray-100 whitespace-pre-wrap leading-relaxed">
-          {renderContent(message.content)}
-          {isStreaming && (
-            <span className="inline-block w-[2px] h-[14px] bg-gray-500 ml-1 align-middle animate-pulse" />
-          )}
+        <div
+          className="relative rounded-2xl px-6 py-5 text-[15px] text-gray-800 dark:text-gray-100 whitespace-pre-wrap leading-relaxed bg-white dark:bg-[#142033] border border-[#dde8f5] dark:border-white/[0.06]"
+          style={{
+            boxShadow: '0 4px 20px rgba(27,58,92,0.06), 0 1px 3px rgba(27,58,92,0.04)',
+          }}
+        >
+          {/* Acento naranja a la izquierda */}
+          <div
+            className="absolute left-0 top-5 bottom-5 w-1 rounded-r-full"
+            style={{
+              background: 'linear-gradient(180deg, #F7941D 0%, #e8830d 100%)',
+              opacity: 0.7,
+            }}
+          />
+          <div className="pl-2">
+            {renderContent(message.content)}
+            {isStreaming && (
+              <span className="inline-block w-[2px] h-[14px] bg-[#F7941D] ml-1 align-middle animate-pulse" />
+            )}
+          </div>
         </div>
+
         {!isStreaming && message.content && (
-          <button onClick={handleCopy}
-            className="mt-1 ml-2 text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors flex items-center gap-1 cursor-pointer">
+          <button
+            onClick={handleCopy}
+            className="mt-2 ml-2 text-xs text-gray-400 hover:text-[#F7941D] dark:hover:text-[#F7941D] transition-colors flex items-center gap-1 cursor-pointer"
+          >
             {copied ? '✓ Copiado' : '⎘ Copiar para WhatsApp'}
           </button>
         )}

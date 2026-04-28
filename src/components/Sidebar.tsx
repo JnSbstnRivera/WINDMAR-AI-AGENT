@@ -137,20 +137,25 @@ export function Sidebar({ conversations, activeId, onSelect, onNew, onDelete, on
         )}
       </div>
 
-      {conversations.length > 0 && (
-        <div className="p-2 border-t border-[#b8cfe8] dark:border-gray-700">
+      {/* Borrar historial — siempre pegado al fondo */}
+      <div className="mt-auto p-3 border-t border-[#b8cfe8] dark:border-white/[0.08]">
+        {conversations.length > 0 ? (
           <button
             onClick={handleClearAll}
-            className={`w-full text-xs py-1.5 rounded-lg transition-colors cursor-pointer ${
+            className={`w-full text-xs py-2 rounded-lg transition-colors cursor-pointer ${
               confirmClearAll
-                ? 'bg-red-500 text-white'
-                : 'text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20'
+                ? 'bg-red-500 text-white font-medium'
+                : 'text-gray-500 dark:text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20'
             }`}
           >
             {confirmClearAll ? '¿Confirmar? Clic para borrar todo' : '🗑 Borrar todo el historial'}
           </button>
-        </div>
-      )}
+        ) : (
+          <p className="text-[10px] text-gray-400 dark:text-gray-500 text-center py-1">
+            Tus conversaciones aparecerán aquí
+          </p>
+        )}
+      </div>
     </aside>
   );
 }

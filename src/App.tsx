@@ -260,7 +260,7 @@ export default function App() {
   if (!user) return <LoginScreen />;
 
   return (
-    <div className="flex h-screen bg-white dark:bg-[#0a1628] overflow-hidden">
+    <div className="flex h-screen bg-[#eef4fa] dark:bg-[#0a1628] overflow-hidden">
       {/* Mobile backdrop */}
       {sidebarOpen && (
         <div
@@ -283,23 +283,40 @@ export default function App() {
         />
       </div>
 
-      {/* Desktop sidebar toggle button — pegado al borde derecho del sidebar */}
+      {/* Desktop sidebar toggle — sin fondo, solo ícono con halo */}
       <button
         onClick={() => setDesktopSidebarHidden(!desktopSidebarHidden)}
-        className={`hidden md:flex fixed z-40 w-7 h-12 rounded-r-lg bg-white dark:bg-[#1e293b] border border-l-0 border-gray-200 dark:border-gray-600 shadow-md hover:bg-[#F7941D] hover:border-[#F7941D] hover:text-white items-center justify-center transition-all duration-300 cursor-pointer group ${
-          desktopSidebarHidden ? 'left-0 top-1/2 -translate-y-1/2' : 'left-64 top-1/2 -translate-y-1/2'
+        className={`hidden md:flex fixed z-40 top-1/2 -translate-y-1/2 w-9 h-9 items-center justify-center transition-all duration-300 cursor-pointer group ${
+          desktopSidebarHidden ? 'left-3' : 'left-[244px]'
         }`}
         title={desktopSidebarHidden ? 'Mostrar conversaciones' : 'Ocultar conversaciones'}
       >
-        {desktopSidebarHidden ? (
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" className="text-[#1B3A5C] dark:text-white group-hover:text-white">
+        {/* Halo naranja detrás del ícono */}
+        <div
+          className="absolute inset-0 rounded-full opacity-70 group-hover:opacity-100 transition-opacity"
+          style={{
+            background: 'radial-gradient(circle, rgba(247,148,29,0.55) 0%, rgba(247,148,29,0.15) 50%, transparent 75%)',
+            filter: 'blur(6px)',
+          }}
+        />
+        {/* Ícono */}
+        <svg
+          width="18"
+          height="18"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2.5"
+          strokeLinecap="round"
+          className="relative z-10 text-[#F7941D] group-hover:text-[#e8830d] group-hover:scale-110 transition-transform"
+          style={{ filter: 'drop-shadow(0 0 2px rgba(247,148,29,0.5))' }}
+        >
+          {desktopSidebarHidden ? (
             <polyline points="9 18 15 12 9 6"/>
-          </svg>
-        ) : (
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" className="text-[#1B3A5C] dark:text-white group-hover:text-white">
+          ) : (
             <polyline points="15 18 9 12 15 6"/>
-          </svg>
-        )}
+          )}
+        </svg>
       </button>
 
       <TopBar onLogout={() => supabase.auth.signOut()} />
@@ -308,7 +325,7 @@ export default function App() {
       {/* Main — padded left on desktop to give room to mascot */}
       <main className={`flex-1 flex flex-col min-w-0 transition-all duration-300 ${desktopSidebarHidden ? 'md:pl-16' : 'md:pl-28'}`}>
         {/* Mobile top bar */}
-        <div className="md:hidden flex items-center gap-3 px-4 py-3 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-[#0f1c2e] flex-shrink-0">
+        <div className="md:hidden flex items-center gap-3 px-4 py-3 border-b border-[#b8cfe8] dark:border-gray-700 bg-[#eef4fa] dark:bg-[#0f1c2e] flex-shrink-0">
           <button
             onClick={() => setSidebarOpen(true)}
             className="text-gray-500 hover:text-[#1B3A5C] transition-colors cursor-pointer"

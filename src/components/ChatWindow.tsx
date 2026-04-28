@@ -15,8 +15,8 @@ export function ChatWindow({ messages, isStreaming }: Props) {
   }, [messages]);
 
   return (
-    <div className="flex-1 overflow-y-auto px-4 py-6">
-      <div className="max-w-3xl mx-auto">
+    <div className="flex-1 overflow-y-auto px-4 md:pl-6 md:pr-12 py-6">
+      <div className="max-w-5xl">
         {messages.map((msg, i) => (
           <ChatMessage
             key={msg.id}
