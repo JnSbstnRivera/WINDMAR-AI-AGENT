@@ -361,7 +361,19 @@ export default function App() {
       </button>
 
       <TopBar onLogout={() => supabase.auth.signOut()} />
-      <MascotPanel state={mascotState} sidebarHidden={desktopSidebarHidden} />
+
+      {/*
+        Mascota inferior izquierda — espacio reservado para futuros GIFs animados.
+        Cuando llegue el GIF, descomentar y reemplazar src en MascotPanel.tsx
+      */}
+      {/* <MascotPanel state={mascotState} sidebarHidden={desktopSidebarHidden} /> */}
+
+      {/* Copyright sutil abajo y centrado */}
+      <div className="fixed bottom-1 left-1/2 -translate-x-1/2 z-20 pointer-events-none select-none">
+        <p className="text-[9px] text-gray-400/35 dark:text-gray-500/35 tracking-wider">
+          © Juan Sebastian Rivera · {new Date().getFullYear()}
+        </p>
+      </div>
 
       {/* Main — padded left on desktop to give room to mascot */}
       <main className={`flex-1 flex flex-col min-w-0 transition-all duration-300 ${desktopSidebarHidden ? 'md:pl-16' : 'md:pl-28'}`}>
