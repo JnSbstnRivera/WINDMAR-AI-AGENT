@@ -165,9 +165,9 @@ export function Sidebar({ conversations, activeId, onSelect, onNew, onDelete, on
 
       {/* TIPS ROTATIVOS — flex-1 llena el espacio disponible */}
       <div className="flex-1 flex flex-col min-h-0 px-4 py-4 border-t border-[#b8cfe8] dark:border-white/[0.08] overflow-hidden">
-        <div className="flex items-center gap-1.5 mb-2 flex-shrink-0">
-          <span className="text-[10px]">💡</span>
-          <span className="text-[10px] font-bold uppercase tracking-widest text-[#F7941D]">
+        <div className="flex items-center gap-1.5 mb-3 flex-shrink-0">
+          <span className="text-sm">💡</span>
+          <span className="text-xs font-bold uppercase tracking-widest text-[#F7941D]">
             Tip del día
           </span>
         </div>
@@ -176,7 +176,7 @@ export function Sidebar({ conversations, activeId, onSelect, onNew, onDelete, on
         <div className="flex-1 flex items-center min-h-0 overflow-hidden">
           <p
             key={tipIndex}
-            className="text-[11px] leading-relaxed text-[#1B3A5C] dark:text-gray-300 italic"
+            className="text-[14px] leading-relaxed text-[#1B3A5C] dark:text-gray-200 italic font-medium"
             style={{
               animation: 'fadeInTip 0.5s ease-in-out',
             }}
