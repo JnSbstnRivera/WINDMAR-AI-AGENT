@@ -60,7 +60,7 @@ export function SplashScreen({ onDone }: Props) {
         className="relative mb-6"
       >
         <img
-          src="/mascot.png"
+          src="/sunbot.png"
           alt="Windmar AI"
           className="w-40 h-40 md:w-48 md:h-48 object-contain drop-shadow-2xl"
           style={{ imageRendering: 'pixelated' }}

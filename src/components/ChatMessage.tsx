@@ -81,7 +81,7 @@ export function ChatMessage({ message, isStreaming }: Props) {
   return (
     <div className="flex gap-3 mb-4">
       <div className="w-11 h-11 rounded-full overflow-hidden flex-shrink-0 mt-1 bg-[#0d1f35]">
-        <img src="/mascot.png" alt="Windmar AI" className="mascot-img w-full h-full object-contain" style={{ imageRendering: 'pixelated' }} />
+        <img src="/sunbot.png" alt="Windmar AI" className="mascot-img w-full h-full object-contain" style={{ imageRendering: 'pixelated' }} />
       </div>
       <div className="flex-1 min-w-0">
         <div className="bg-[#f0f0f0] dark:bg-[#1e293b] rounded-2xl rounded-tl-sm px-5 py-4 text-[15px] text-gray-800 dark:text-gray-100 whitespace-pre-wrap leading-relaxed">

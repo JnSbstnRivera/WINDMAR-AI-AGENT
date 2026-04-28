@@ -39,7 +39,7 @@ export function Sidebar({ conversations, activeId, onSelect, onNew, onDelete, on
       <div className="p-4 border-b border-[#b8cfe8] dark:border-gray-700">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
-            <img src="/mascot.png" alt="Windmar AI" className="mascot-img w-8 h-8 object-contain" style={{ imageRendering: 'pixelated' }} />
+            <img src="/sunbot.png" alt="Windmar AI" className="mascot-img w-8 h-8 object-contain" style={{ imageRendering: 'pixelated' }} />
             <span className="font-semibold text-[#1B3A5C] dark:text-white text-sm leading-tight">Windmar AI</span>
           </div>
           <button

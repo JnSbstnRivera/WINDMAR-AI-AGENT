@@ -22,6 +22,7 @@ export default function App() {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [isStreaming, setIsStreaming] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [desktopSidebarHidden, setDesktopSidebarHidden] = useState(false);
   const [mascotState, setMascotState] = useState<MascotState>('greeting');
 
   useEffect(() => {
@@ -268,23 +269,44 @@ export default function App() {
         />
       )}
 
-      <Sidebar
-        conversations={conversations}
-        activeId={activeId}
-        onSelect={selectConversation}
-        onNew={newConversation}
-        onDelete={deleteConversation}
-        onDeleteAll={deleteAllConversations}
-        userEmail={user.email ?? ''}
-        isOpen={sidebarOpen}
-        onClose={() => setSidebarOpen(false)}
-      />
+      <div className={`${desktopSidebarHidden ? 'md:hidden' : ''}`}>
+        <Sidebar
+          conversations={conversations}
+          activeId={activeId}
+          onSelect={selectConversation}
+          onNew={newConversation}
+          onDelete={deleteConversation}
+          onDeleteAll={deleteAllConversations}
+          userEmail={user.email ?? ''}
+          isOpen={sidebarOpen}
+          onClose={() => setSidebarOpen(false)}
+        />
+      </div>
+
+      {/* Desktop sidebar toggle button */}
+      <button
+        onClick={() => setDesktopSidebarHidden(!desktopSidebarHidden)}
+        className="hidden md:flex fixed top-3 left-3 z-40 w-9 h-9 rounded-full bg-white dark:bg-[#1e293b] border border-gray-200 dark:border-gray-600 shadow-sm hover:border-[#F7941D] items-center justify-center transition-colors cursor-pointer"
+        title={desktopSidebarHidden ? 'Mostrar conversaciones' : 'Ocultar conversaciones'}
+      >
+        {desktopSidebarHidden ? (
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1B3A5C" strokeWidth="2" strokeLinecap="round">
+            <rect x="3" y="3" width="18" height="18" rx="2"/>
+            <line x1="9" y1="3" x2="9" y2="21"/>
+          </svg>
+        ) : (
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1B3A5C" strokeWidth="2" strokeLinecap="round">
+            <line x1="18" y1="6" x2="6" y2="18"/>
+            <line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        )}
+      </button>
 
       <TopBar onLogout={() => supabase.auth.signOut()} />
-      <MascotPanel state={mascotState} />
+      <MascotPanel state={mascotState} sidebarHidden={desktopSidebarHidden} />
 
       {/* Main — padded left on desktop to give room to mascot */}
-      <main className="flex-1 flex flex-col min-w-0 md:pl-28">
+      <main className={`flex-1 flex flex-col min-w-0 transition-all duration-300 ${desktopSidebarHidden ? 'md:pl-16' : 'md:pl-28'}`}>
         {/* Mobile top bar */}
         <div className="md:hidden flex items-center gap-3 px-4 py-3 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-[#0f1c2e] flex-shrink-0">
           <button
@@ -299,7 +321,7 @@ export default function App() {
             </svg>
           </button>
           <div className="flex items-center gap-2">
-            <img src="/mascot.png" alt="Windmar AI" className="mascot-img w-7 h-7 object-contain" style={{ imageRendering: 'pixelated' }} />
+            <img src="/sunbot.png" alt="Windmar AI" className="mascot-img w-7 h-7 object-contain" style={{ imageRendering: 'pixelated' }} />
             <span className="font-semibold text-[#1B3A5C] dark:text-white text-sm">Windmar AI</span>
           </div>
         </div>

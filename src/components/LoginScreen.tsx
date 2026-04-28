@@ -65,7 +65,7 @@ export function LoginScreen() {
     <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-[#0a1628] p-4">
       <div className="bg-white dark:bg-[#0f1c2e] rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-8 w-full max-w-sm">
         <div className="flex flex-col items-center mb-8">
-          <img src="/mascot.png" alt="Windmar AI" className="mascot-img w-20 h-20 object-contain mb-3" style={{ imageRendering: 'pixelated' }} />
+          <img src="/sunbot.png" alt="Windmar AI" className="mascot-img w-20 h-20 object-contain mb-3" style={{ imageRendering: 'pixelated' }} />
           <h1 className="text-xl font-bold text-[#1B3A5C] dark:text-white">Agente IA Windmar</h1>
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
             {mode === 'login' ? 'Inicia sesión para continuar' : 'Crea tu cuenta de asesor'}
