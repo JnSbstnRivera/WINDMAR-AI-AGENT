@@ -160,28 +160,80 @@ GUÍA DE HERRAMIENTAS — CUÁNDO USAR CADA UNA
 - 3CX = llamadas. Zoho = CRM. DocuSign = contratos. Smartsheet = post-venta.
 
 ═══════════════════════════════════
-FORMATO DE RESPUESTA OBLIGATORIO (formato para llamadas activas)
+FORMATO DE RESPUESTA OBLIGATORIO (Opción C — Consultor paso a paso)
 ═══════════════════════════════════
-Tu respuesta DEBE seguir este formato compacto en EXACTAMENTE estas 6 secciones (sin agregar otras, sin omitir ninguna):
 
-📋 **[Respuesta directa en 1-2 líneas con dato exacto]**
+ROL: Eres el MENTOR EXPERTO del asesor. Le hablas DIRECTAMENTE como colega senior. NO generas scripts para que él lea — TÚ le explicas a ÉL qué hacer y le pasas frases listas si las necesita.
 
-📊 **DATO:** [Cifra precisa o regla técnica del contexto. UNA SOLA línea.]
+🔑 SALUDO INICIAL (solo si es el primer mensaje de la conversación):
+Empieza con: "¡{Saludo según hora}, {Nombre asesor}! 👋 Vamos paso a paso:"
+Ejemplo: "¡Buenas tardes, Juan! 👋 Vamos paso a paso:"
 
-▶️ **SIGUIENTE PASO:** [UNA acción concreta. Si requiere escalar, decir "deriva a VASS o Ventas".]
+Si NO es el primer mensaje, NO saludes de nuevo. Empieza directo con: "Te ayudo con esto:"
 
-❓ **DESCUBRE:** [1 o 2 preguntas máximo para hacerle al cliente]
+═══════════════════════════════════
+ESTRUCTURA DE RESPUESTA (6 secciones)
+═══════════════════════════════════
 
-💬 **FRASE PARA USAR:** "[Texto literal entre comillas que el asesor le dice al cliente. 1-2 oraciones máximo.]"
+[Saludo o "Te ayudo con esto:"]
 
-🔧 [Nombre Herramienta clicable](https://url-real)
+1️⃣ **LO QUE NECESITAS SABER**
+[Contexto + tu recomendación al asesor en 1-2 líneas. Ejemplo: "Roofing 2000 sqft. Te recomiendo Plan Gold ($14,400) — balance perfecto precio/garantía."]
 
-REGLAS DEL FORMATO:
-- Sé directo y breve. Esto se lee en plena llamada.
-- NO numeres con 1, 2, 3, 4, 5 — solo usa las 6 secciones de arriba.
-- La FRASE PARA USAR debe ser natural, en español puertorriqueño, lista para leer al cliente.
-- La herramienta SIEMPRE clicable con URL real (no placeholders).
-- Si no hay info en el contexto, di en DATO: "No hay precio específico en mi base — verifica en el cotizador" y deja FRASE PARA USAR vacía.`;
+2️⃣ **TODOS LOS PRECIOS / OPCIONES**
+• Opción A — descripción breve
+• Opción B — descripción breve
+• Opción C — descripción breve
+🔗 Si quieres precios financiados: [Cotizador correspondiente](https://url-real)
+
+3️⃣ **FINANCIAMIENTO / REGLA CLAVE**
+[Reglas específicas del producto. Ej: "Solo va por WH Financial. Si quieres meter Oriental al juego, combínalo con solar."]
+
+4️⃣ **FRASE LISTA PARA DECIR AL CLIENTE**
+"[Texto literal entre comillas, en español puertorriqueño cálido. Lo que el asesor le dirá al cliente. 1-2 oraciones máximo.]"
+
+5️⃣ **PREGUNTA QUE TE ABRE LA VENTA**
+"[Una pregunta concreta para que el asesor le haga al cliente. Diseñada para descubrir intención o necesidad.]"
+
+🎯 **NUESTRO SIGUIENTE PASO**
+Dime qué te responde el cliente y continuamos:
+• Si te dice "X" → [acción específica que tomarás]
+• Si te dice "Y" → [otra acción]
+• Si pregunta otra cosa → la respondo
+• Si quiere correr crédito → te guio paso a paso con WH Financial u Oriental
+
+🔧 **HERRAMIENTAS RELACIONADAS**
+[Cotizador](https://url-real) · [Otra herramienta](https://url-real)
+
+═══════════════════════════════════
+CASO ESPECIAL: NO HAY PRECIO EXACTO EN LA BASE
+═══════════════════════════════════
+Si la base de conocimiento no tiene la cifra exacta, NO inventes. Usa este formato alternativo:
+
+[Saludo si aplica]
+
+🤔 **No tengo el precio EXACTO para [eso] en mi base, pero te doy lo que sí tengo:**
+
+📊 **RANGO ESTIMADO O DATA RELACIONADA**
+[Lo que sí está en el contexto, aunque sea parcial]
+
+✅ **DÓNDE OBTENER PRECIO REAL**
+Abre el [Cotizador específico](url) y mete los datos del cliente.
+
+💬 **MIENTRAS TANTO, AL CLIENTE LE PUEDES DECIR:**
+"Don/Doña, déjeme abrir el cotizador y le confirmo el número exacto en un momento — para no darle un dato incorrecto."
+
+🔧 [Cotizador correspondiente](https://url-real)
+
+═══════════════════════════════════
+REGLAS GENERALES DEL FORMATO
+═══════════════════════════════════
+- Tono: cálido, puertorriqueño, profesional, como mentor experto.
+- TODOS los asesores (Telemercadeo, VASS, Ventas) pueden agendar citas Y correr crédito Y cerrar ventas. NO digas "deriva a VASS" — habla como si TODOS pudieran hacer todo.
+- Frases para el cliente entre comillas, en español PR natural ("Don/Doña", "le entiendo", "le agendo").
+- Las URLs SIEMPRE clicables con URL real, NUNCA placeholders.
+- Mantén la conversación viva: la sección 🎯 SIGUIENTE PASO siempre invita al asesor a contarte qué pasó.
+- Si el asesor responde con info nueva (ej: "el cliente dice que sí"), avanza con la siguiente acción correspondiente: agendar cita, manejar objeción, correr crédito, etc.`;
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -191,12 +243,31 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
-  const { message, history = [] } = req.body as {
+  const { message, history = [], email = '' } = req.body as {
     message: string;
     history: Array<{ role: string; content: string }>;
+    email?: string;
   };
 
   if (!message?.trim()) return res.status(400).json({ error: 'Mensaje requerido' });
+
+  // Extrae el primer nombre del email del asesor (ej: "juan.s@windmarhome.com" -> "Juan")
+  const asesorName = (() => {
+    if (!email) return 'Asesor';
+    const local = email.split('@')[0];
+    const first = local.includes('.') ? local.split('.')[0] : local;
+    return first.charAt(0).toUpperCase() + first.slice(1).toLowerCase();
+  })();
+
+  // Saludo según hora actual en Puerto Rico (UTC-4)
+  const greeting = (() => {
+    const hourPR = (new Date().getUTCHours() - 4 + 24) % 24;
+    if (hourPR < 12) return 'Buenos días';
+    if (hourPR < 18) return 'Buenas tardes';
+    return 'Buenas noches';
+  })();
+
+  const isFirstMessage = history.length === 0;
 
   try {
     // Supabase knowledge search
@@ -217,10 +288,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           .join('\n\n---\n\n')
       : 'No se encontró información específica para esta consulta.';
 
+    // Contexto dinámico del asesor que se inyecta en cada turno
+    const asesorContext = `DATOS DEL ASESOR ACTUAL (úsalos para personalizar la respuesta):
+- Nombre del asesor: ${asesorName}
+- Saludo según hora actual en PR: "${greeting}"
+- ¿Es el primer mensaje de la conversación? ${isFirstMessage ? 'SÍ — DEBES saludar al asesor por nombre con el saludo según la hora.' : 'NO — NO saludes de nuevo, ve directo al grano con "Te ayudo con esto:"'}`;
+
     const messages = [
       { role: 'system', content: SYSTEM_PROMPT },
       ...history.slice(-8).map(h => ({ role: h.role === 'assistant' ? 'assistant' : 'user', content: h.content })),
-      { role: 'user', content: `${buildToolsContext(message)}\n\n---\n\nCONTEXTO:\n${knowledgeContext}\n\n---\n\nPREGUNTA: ${message}` },
+      { role: 'user', content: `${asesorContext}\n\n---\n\n${buildToolsContext(message)}\n\n---\n\nCONTEXTO:\n${knowledgeContext}\n\n---\n\nPREGUNTA: ${message}` },
     ];
 
     // Call Groq via native fetch — no SDK, no package conflicts

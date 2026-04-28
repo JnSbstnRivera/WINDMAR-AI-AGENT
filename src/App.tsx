@@ -186,7 +186,11 @@ export default function App() {
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: text.trim(), history }),
+        body: JSON.stringify({
+          message: text.trim(),
+          history,
+          email: user?.email ?? '',
+        }),
       });
 
       if (!response.ok || !response.body) throw new Error('Error en la respuesta');
