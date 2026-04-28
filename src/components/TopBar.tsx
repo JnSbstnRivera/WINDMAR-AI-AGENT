@@ -5,11 +5,17 @@ interface Props {
 }
 
 export function TopBar({ onLogout }: Props) {
-  const [dark, setDark] = useState(false);
+  // Por defecto modo oscuro — guardado en localStorage
+  const [dark, setDark] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return true;
+    const saved = localStorage.getItem('wh-theme');
+    return saved === null ? true : saved === 'dark';
+  });
   const [spinning, setSpinning] = useState(false);
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', dark);
+    try { localStorage.setItem('wh-theme', dark ? 'dark' : 'light'); } catch {}
   }, [dark]);
 
   function toggleDark() {

@@ -28,19 +28,44 @@ export function Sidebar({ conversations, activeId, onSelect, onNew, onDelete, on
   }
 
   return (
-    <aside className={`
-      fixed inset-y-0 left-0 z-50 w-72 bg-[#dde8f5] dark:bg-[#0f1c2e] border-r border-[#b8cfe8] dark:border-gray-700 flex flex-col
-      transition-transform duration-300 ease-in-out
-      ${isOpen ? 'translate-x-0' : '-translate-x-full'}
-      md:relative md:translate-x-0 md:w-64 md:z-auto md:flex-shrink-0
-    `}>
+    <aside
+      className={`
+        fixed inset-y-0 left-0 z-50 w-72 flex flex-col
+        bg-gradient-to-b from-[#e3edf7] via-[#dde8f5] to-[#d5e2f0]
+        dark:from-[#0f1c2e] dark:via-[#0c1828] dark:to-[#0a1422]
+        border-r border-[#b8cfe8] dark:border-white/[0.08]
+        backdrop-blur-md
+        transition-transform duration-300 ease-in-out
+        ${isOpen ? 'translate-x-0' : '-translate-x-full'}
+        md:relative md:translate-x-0 md:w-64 md:z-auto md:flex-shrink-0
+      `}
+      style={{
+        boxShadow: '4px 0 24px rgba(27,58,92,0.08)',
+      }}
+    >
 
       {/* Logo */}
       <div className="p-4 border-b border-[#b8cfe8] dark:border-gray-700">
         <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-2">
-            <img src="/sunbot.png" alt="Windmar AI" className="mascot-img w-8 h-8 object-contain" style={{ imageRendering: 'pixelated' }} />
-            <span className="font-semibold text-[#1B3A5C] dark:text-white text-sm leading-tight">Windmar AI</span>
+          <div className="flex items-center gap-2.5">
+            {/* Logo con halo */}
+            <div className="relative flex items-center justify-center" style={{ width: 36, height: 36 }}>
+              <div
+                className="absolute inset-0 rounded-full"
+                style={{
+                  background:
+                    'radial-gradient(circle, rgba(247,148,29,0.55) 0%, rgba(247,148,29,0.15) 50%, transparent 75%)',
+                  filter: 'blur(6px)',
+                }}
+              />
+              <img
+                src="/sunbot.png"
+                alt="Windmar AI"
+                className="mascot-img relative z-10 w-9 h-9 object-contain"
+                style={{ imageRendering: 'pixelated' }}
+              />
+            </div>
+            <span className="font-bold text-[#1B3A5C] dark:text-white text-base leading-tight">Windmar AI</span>
           </div>
           <button
             onClick={onClose}

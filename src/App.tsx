@@ -283,21 +283,21 @@ export default function App() {
         />
       </div>
 
-      {/* Desktop sidebar toggle button */}
+      {/* Desktop sidebar toggle button — pegado al borde derecho del sidebar */}
       <button
         onClick={() => setDesktopSidebarHidden(!desktopSidebarHidden)}
-        className="hidden md:flex fixed top-3 left-3 z-40 w-9 h-9 rounded-full bg-white dark:bg-[#1e293b] border border-gray-200 dark:border-gray-600 shadow-sm hover:border-[#F7941D] items-center justify-center transition-colors cursor-pointer"
+        className={`hidden md:flex fixed z-40 w-7 h-12 rounded-r-lg bg-white dark:bg-[#1e293b] border border-l-0 border-gray-200 dark:border-gray-600 shadow-md hover:bg-[#F7941D] hover:border-[#F7941D] hover:text-white items-center justify-center transition-all duration-300 cursor-pointer group ${
+          desktopSidebarHidden ? 'left-0 top-1/2 -translate-y-1/2' : 'left-64 top-1/2 -translate-y-1/2'
+        }`}
         title={desktopSidebarHidden ? 'Mostrar conversaciones' : 'Ocultar conversaciones'}
       >
         {desktopSidebarHidden ? (
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1B3A5C" strokeWidth="2" strokeLinecap="round">
-            <rect x="3" y="3" width="18" height="18" rx="2"/>
-            <line x1="9" y1="3" x2="9" y2="21"/>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" className="text-[#1B3A5C] dark:text-white group-hover:text-white">
+            <polyline points="9 18 15 12 9 6"/>
           </svg>
         ) : (
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1B3A5C" strokeWidth="2" strokeLinecap="round">
-            <line x1="18" y1="6" x2="6" y2="18"/>
-            <line x1="6" y1="6" x2="18" y2="18"/>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" className="text-[#1B3A5C] dark:text-white group-hover:text-white">
+            <polyline points="15 18 9 12 15 6"/>
           </svg>
         )}
       </button>
