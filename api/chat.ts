@@ -347,8 +347,38 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     if (!groqRes.ok) {
       const err = await groqRes.text();
-      console.error('[api/chat] Groq error:', err);
-      return res.status(500).json({ error: 'Groq API error' });
+      console.error('[api/chat] Groq error:', groqRes.status, err);
+
+      // Detección inteligente del tipo de error para mostrar mensaje útil al asesor
+      let errorType: string;
+      let errorMessage: string;
+      let retryAfterSeconds: number | undefined;
+
+      if (groqRes.status === 429) {
+        errorType = 'rate_limit';
+        errorMessage = 'Hemos hecho muchas consultas en poco tiempo. Espera unos segundos y reintenta.';
+        // Intenta extraer Retry-After del response
+        const retryAfter = groqRes.headers.get('retry-after');
+        if (retryAfter) retryAfterSeconds = parseInt(retryAfter, 10);
+      } else if (groqRes.status === 401 || groqRes.status === 403) {
+        errorType = 'auth_error';
+        errorMessage = 'Hay un problema de autenticación con el motor de IA. Avísale a tu líder.';
+      } else if (groqRes.status >= 500) {
+        errorType = 'service_unavailable';
+        errorMessage = 'El motor de IA está temporalmente caído. Espera 30 segundos e intenta de nuevo.';
+      } else if (groqRes.status === 400) {
+        errorType = 'bad_request';
+        errorMessage = 'No pude procesar tu pregunta. Intenta reformularla más corta o específica.';
+      } else {
+        errorType = 'unknown';
+        errorMessage = 'Algo inesperado pasó. Intenta de nuevo en un momento.';
+      }
+
+      return res.status(groqRes.status).json({
+        error: errorMessage,
+        errorType,
+        retryAfterSeconds,
+      });
     }
 
     res.setHeader('Content-Type', 'text/plain; charset=utf-8');

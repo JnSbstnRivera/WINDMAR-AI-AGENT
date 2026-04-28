@@ -194,7 +194,44 @@ export default function App() {
         }),
       });
 
-      if (!response.ok || !response.body) throw new Error('Error en la respuesta');
+      if (!response.ok) {
+        // Intenta parsear error JSON con tipo
+        let errorType = 'unknown';
+        let errorMessage = 'Algo inesperado pasó. Intenta de nuevo.';
+        let retryAfterSeconds: number | undefined;
+        try {
+          const errBody = await response.json();
+          errorType = errBody.errorType ?? 'unknown';
+          errorMessage = errBody.error ?? errorMessage;
+          retryAfterSeconds = errBody.retryAfterSeconds;
+        } catch { /* ignore parse errors */ }
+
+        const userName = (user.email ?? '').split('@')[0].split('.')[0];
+        const capName = userName ? userName.charAt(0).toUpperCase() + userName.slice(1) : 'asesor';
+
+        const retryHint = retryAfterSeconds
+          ? `\n\n⏱️ Espera ~${retryAfterSeconds} segundos antes de reintentar.`
+          : '';
+
+        const friendlyMessage = `🤖 ¡Ay, perdona ${capName}! ${errorMessage}${retryHint}\n\n[ERROR_TYPE:${errorType}]`;
+
+        setConversations((prev) =>
+          prev.map((c) =>
+            c.id === convId
+              ? {
+                  ...c,
+                  messages: c.messages.map((m) =>
+                    m.id === assistantMsgId ? { ...m, content: friendlyMessage } : m
+                  ),
+                }
+              : c
+          )
+        );
+        setIsStreaming(false);
+        return;
+      }
+
+      if (!response.body) throw new Error('Sin cuerpo de respuesta');
 
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
@@ -230,6 +267,10 @@ export default function App() {
         .eq('id', convId);
 
     } catch {
+      const userName = (user.email ?? '').split('@')[0].split('.')[0];
+      const capName = userName ? userName.charAt(0).toUpperCase() + userName.slice(1) : 'asesor';
+      const friendlyMessage = `🤖 ¡Ay, perdona ${capName}! Parece que hay un problema de conexión. Verifica tu internet e intenta de nuevo.\n\n[ERROR_TYPE:network]`;
+
       setConversations((prev) =>
         prev.map((c) =>
           c.id === convId
@@ -237,7 +278,7 @@ export default function App() {
                 ...c,
                 messages: c.messages.map((m) =>
                   m.id === assistantMsgId
-                    ? { ...m, content: 'Error al obtener respuesta. Intenta de nuevo.' }
+                    ? { ...m, content: friendlyMessage }
                     : m
                 ),
               }
