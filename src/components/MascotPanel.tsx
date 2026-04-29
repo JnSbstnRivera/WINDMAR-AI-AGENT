@@ -28,7 +28,8 @@ const STATE_CONFIG: Record<MascotState, {
 
 export function MascotPanel({ state = 'idle', sidebarHidden = false }: Props) {
   const config = STATE_CONFIG[state];
-  const desktopLeft = sidebarHidden ? 'left-4' : 'left-[300px]';
+  // SUN BOT en la izquierda (donde estaba en el screenshot) — más grande
+  const desktopLeft = sidebarHidden ? 'left-6' : 'left-[280px]';
 
   // Crossfade entre imágenes al cambiar de estado
   const [visibleSrc, setVisibleSrc] = useState(config.src);
@@ -49,9 +50,9 @@ export function MascotPanel({ state = 'idle', sidebarHidden = false }: Props) {
 
   return (
     <>
-      {/* Desktop */}
-      <div className={`hidden md:flex fixed ${desktopLeft} bottom-16 z-30 items-center justify-center transition-all duration-300`}>
-        <div className="relative" style={{ width: 110, height: 110 }}>
+      {/* Desktop — bottom-left (lado izquierdo), tamaño aumentado significativamente */}
+      <div className={`hidden md:flex fixed ${desktopLeft} bottom-20 z-30 items-center justify-center transition-all duration-300`}>
+        <div className="relative" style={{ width: 170, height: 170 }}>
           {/* Halo principal con animación */}
           <div
             className={`absolute inset-0 rounded-full ${config.animClass}`}
@@ -84,8 +85,8 @@ export function MascotPanel({ state = 'idle', sidebarHidden = false }: Props) {
               imageRendering: 'pixelated',
               opacity: imgOpacity,
               transition: 'opacity 0.18s ease',
-              width: 96,
-              height: 96,
+              width: 140,
+              height: 140,
               position: 'absolute',
               top: '50%',
               left: '50%',
