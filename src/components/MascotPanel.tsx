@@ -53,7 +53,7 @@ export function MascotPanel({ state = 'idle', sidebarHidden = false }: Props) {
   return (
     <>
       {/* Desktop — bottom-left (lado izquierdo), tamaño aumentado significativamente */}
-      <div className={`hidden md:flex fixed ${desktopLeft} top-1/2 -translate-y-1/2 z-30 items-center justify-center transition-all duration-300`}>
+      <div className={`hidden md:flex fixed ${desktopLeft} bottom-28 z-30 items-center justify-center transition-all duration-300`}>
         <div className="relative" style={{ width: 130, height: 130 }}>
           {/* Halo principal con animación */}
           <div
