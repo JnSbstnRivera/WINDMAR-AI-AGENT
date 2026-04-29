@@ -23,8 +23,8 @@ export function WelcomeScreen({ onSend, disabled, onTypingChange }: Props) {
           alt="Windmar Home"
           className="relative z-10 object-contain welcome-logo"
           style={{
-            width: 'clamp(190px, 34vw, 250px)',
-            height: 'clamp(190px, 34vw, 250px)',
+            width: 'clamp(240px, 40vw, 300px)',
+            height: 'clamp(240px, 40vw, 300px)',
           }}
         />
 
@@ -61,13 +61,13 @@ export function WelcomeScreen({ onSend, disabled, onTypingChange }: Props) {
       <style>{`
         @keyframes welcomeLogoGlow {
           0%, 100% {
-            filter: drop-shadow(0 0 6px rgba(247,148,29,0.55))
-                    drop-shadow(0 0 14px rgba(247,148,29,0.35));
+            filter: drop-shadow(0 0 8px rgba(255,255,255,0.75))
+                    drop-shadow(0 0 18px rgba(255,255,255,0.45));
             transform: translateY(0);
           }
           50% {
-            filter: drop-shadow(0 0 10px rgba(247,148,29,0.85))
-                    drop-shadow(0 0 22px rgba(247,148,29,0.55));
+            filter: drop-shadow(0 0 14px rgba(255,255,255,1))
+                    drop-shadow(0 0 28px rgba(255,255,255,0.65));
             transform: translateY(-6px);
           }
         }
@@ -85,8 +85,8 @@ export function WelcomeScreen({ onSend, disabled, onTypingChange }: Props) {
           width: 6px;
           height: 6px;
           border-radius: 50%;
-          background: rgb(247,148,29);
-          box-shadow: 0 0 10px rgba(247,148,29,0.85), 0 0 20px rgba(247,148,29,0.5);
+          background: rgb(253,224,71);
+          box-shadow: 0 0 10px rgba(253,224,71,0.95), 0 0 22px rgba(253,224,71,0.6);
           opacity: 0;
           pointer-events: none;
           z-index: 5;
