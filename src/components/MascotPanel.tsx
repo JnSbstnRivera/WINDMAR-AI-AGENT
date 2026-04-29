@@ -31,7 +31,7 @@ export function MascotPanel({ state = 'idle', sidebarHidden = false }: Props) {
   // SUN BOT centrado entre sidebar (256px) y chat (centrado horizontalmente)
   // Cuando sidebar visible: gap entre 256px y main content → centro ~260px
   // Cuando sidebar oculto: pegado a la izquierda con margen
-  const desktopLeft = sidebarHidden ? 'left-4' : 'left-[230px]';
+  const desktopLeft = sidebarHidden ? 'left-[80px]' : 'left-[380px]';
 
   // Crossfade entre imágenes al cambiar de estado
   const [visibleSrc, setVisibleSrc] = useState(config.src);

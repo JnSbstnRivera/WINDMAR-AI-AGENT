@@ -60,8 +60,8 @@ export function WelcomeScreen({ onSend, disabled, onTypingChange }: Props) {
           alt="Windmar Home"
           className="relative z-10 object-contain drop-shadow-2xl welcome-logo"
           style={{
-            width: 'clamp(140px, 26vw, 200px)',
-            height: 'clamp(140px, 26vw, 200px)',
+            width: 'clamp(190px, 34vw, 250px)',
+            height: 'clamp(190px, 34vw, 250px)',
           }}
         />
 
