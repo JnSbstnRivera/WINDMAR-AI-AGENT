@@ -35,7 +35,7 @@ export function WelcomeScreen({ onSend, disabled, onTypingChange }: Props) {
           }}
         />
         <img
-          src="/sunbot.png"
+          src="/sunbot-feliz.png"
           alt="Windmar AI"
           className="mascot-img relative z-10 object-contain drop-shadow-2xl"
           style={{

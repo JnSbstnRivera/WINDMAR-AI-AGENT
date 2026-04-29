@@ -87,24 +87,40 @@ function AsesorAvatar({ email }: { email: string }) {
   );
 }
 
-// Avatar del SUN BOT IA (con halo naranja)
-function IAAvatar() {
+// Avatar del SUN BOT IA — cambia según estado
+function IAAvatar({ isStreaming, isError }: { isStreaming?: boolean; isError?: boolean }) {
+  // Selecciona la imagen según el estado
+  const src = isError
+    ? '/sunbot-error.png'
+    : isStreaming
+      ? '/sunbot-pensando.png'
+      : '/sunbot-feliz.png';
+
   return (
     <div className="relative flex-shrink-0" style={{ width: 40, height: 40 }}>
       <div
         className="absolute inset-0 rounded-full"
         style={{
           background:
-            'radial-gradient(circle, rgba(247,148,29,0.55) 0%, rgba(247,148,29,0.15) 50%, transparent 75%)',
+            isError
+              ? 'radial-gradient(circle, rgba(220,80,80,0.55) 0%, rgba(220,80,80,0.15) 50%, transparent 75%)'
+              : 'radial-gradient(circle, rgba(247,148,29,0.55) 0%, rgba(247,148,29,0.15) 50%, transparent 75%)',
           filter: 'blur(8px)',
+          animation: isStreaming ? 'avatarPulse 1.4s ease-in-out infinite' : undefined,
         }}
       />
       <img
-        src="/sunbot.png"
+        src={src}
         alt="Windmar AI"
-        className="mascot-img relative z-10 w-10 h-10 object-contain"
+        className="mascot-img relative z-10 w-10 h-10 object-contain transition-opacity duration-300"
         style={{ imageRendering: 'pixelated' }}
       />
+      <style>{`
+        @keyframes avatarPulse {
+          0%, 100% { opacity: 0.55; transform: scale(1); }
+          50%       { opacity: 1; transform: scale(1.1); }
+        }
+      `}</style>
     </div>
   );
 }
@@ -139,10 +155,15 @@ export function ChatMessage({ message, isStreaming, asesorEmail = '' }: Props) {
     );
   }
 
+  // Detecta si el mensaje contiene marcador de error
+  const isErrorMessage = message.content.includes('[ERROR_TYPE:');
+  // Limpia el marcador del display
+  const displayContent = message.content.replace(/\n*\[ERROR_TYPE:[^\]]+\]/g, '');
+
   // IA — avatar SUN BOT a la izquierda + burbuja
   return (
     <div className="flex justify-start gap-3 mb-6">
-      <IAAvatar />
+      <IAAvatar isStreaming={isStreaming} isError={isErrorMessage} />
       <div className="flex flex-col items-start min-w-0 max-w-[85%] sm:max-w-[80%]">
         <div
           className="relative rounded-2xl px-5 sm:px-7 py-5 sm:py-6 text-[15px] sm:text-[15.5px] text-gray-800 dark:text-gray-100 whitespace-pre-wrap leading-relaxed bg-white dark:bg-[#142033] border border-[#dde8f5] dark:border-white/[0.06] w-full"
@@ -159,7 +180,7 @@ export function ChatMessage({ message, isStreaming, asesorEmail = '' }: Props) {
             }}
           />
           <div className="pl-2">
-            {renderContent(message.content)}
+            {renderContent(displayContent)}
             {isStreaming && (
               <span className="inline-block w-[2px] h-[14px] bg-[#F7941D] ml-1 align-middle animate-pulse" />
             )}

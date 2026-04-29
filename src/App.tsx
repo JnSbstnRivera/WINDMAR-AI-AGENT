@@ -332,7 +332,7 @@ export default function App() {
 
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-[#eef4fa] dark:bg-[#0a1628] px-4">
-        {/* SUN BOT con halo respirando */}
+        {/* SUN BOT cargando con halo respirando */}
         <div className="relative flex items-center justify-center mb-5" style={{ width: 100, height: 100 }}>
           <div
             className="absolute inset-0 rounded-full"
@@ -344,8 +344,8 @@ export default function App() {
             }}
           />
           <img
-            src="/sunbot.png"
-            alt="Windmar AI"
+            src="/sunbot-cargando.png"
+            alt="Windmar AI cargando"
             className="mascot-img relative z-10 w-20 h-20 sm:w-24 sm:h-24 object-contain drop-shadow-lg"
             style={{ imageRendering: 'pixelated' }}
           />
