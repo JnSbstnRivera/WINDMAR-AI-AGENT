@@ -9,7 +9,7 @@ interface Props {
 export function WelcomeScreen({ onSend, disabled, onTypingChange }: Props) {
   return (
     <div className="flex-1 flex flex-col items-center justify-center px-4 pb-6 sm:pb-8">
-      {/* Logo Windmar Home — con halos tipo SUN BOT + partículas flotantes glowmorphism */}
+      {/* Logo Windmar Home — glow solo en silueta + partículas flotantes */}
       <div
         className="relative flex items-center justify-center mb-4 sm:mb-5"
         style={{
@@ -17,48 +17,11 @@ export function WelcomeScreen({ onSend, disabled, onTypingChange }: Props) {
           height: 'clamp(180px, 32vw, 240px)',
         }}
       >
-        {/* Halo orange exterior (pulse lento) */}
-        <div
-          className="absolute inset-0 rounded-full welcome-halo-outer"
-          style={{
-            background:
-              'radial-gradient(circle, rgba(247,148,29,0.45) 0%, rgba(247,148,29,0.18) 45%, transparent 75%)',
-            filter: 'blur(24px)',
-          }}
-        />
-        {/* Halo navy interior */}
-        <div
-          className="absolute inset-0 rounded-full welcome-halo-inner"
-          style={{
-            background:
-              'radial-gradient(circle, rgba(27,58,92,0.35) 0%, rgba(27,58,92,0.10) 50%, transparent 75%)',
-            filter: 'blur(16px)',
-          }}
-        />
-        {/* Halo blanco brillante (efecto highlight) */}
-        <div
-          className="absolute inset-0 rounded-full"
-          style={{
-            background:
-              'radial-gradient(circle, rgba(255,255,255,0.30) 0%, transparent 60%)',
-          }}
-        />
-
-        {/* Anillo tech rotativo sutil */}
-        <div
-          className="absolute inset-0 rounded-full welcome-ring"
-          style={{
-            background:
-              'conic-gradient(from 0deg, transparent 0%, rgba(247,148,29,0.35) 25%, transparent 55%, rgba(27,58,92,0.30) 75%, transparent 100%)',
-            filter: 'blur(4px)',
-          }}
-        />
-
-        {/* Logo principal */}
+        {/* Logo principal con glow en silueta (drop-shadow) tipo SUN BOT */}
         <img
           src="/logo-inicial-chat.png"
           alt="Windmar Home"
-          className="relative z-10 object-contain drop-shadow-2xl welcome-logo"
+          className="relative z-10 object-contain welcome-logo"
           style={{
             width: 'clamp(190px, 34vw, 250px)',
             height: 'clamp(190px, 34vw, 250px)',
@@ -94,23 +57,19 @@ export function WelcomeScreen({ onSend, disabled, onTypingChange }: Props) {
         <ChatInput onSend={onSend} disabled={disabled} onTypingChange={onTypingChange} />
       </div>
 
-      {/* CSS animations: halos + partículas flotantes glowmorphism */}
+      {/* CSS animations: glow silueta + partículas flotantes */}
       <style>{`
-        @keyframes welcomeHaloOuter {
-          0%, 100% { opacity: 0.7; transform: scale(1); }
-          50%      { opacity: 1;   transform: scale(1.08); }
-        }
-        @keyframes welcomeHaloInner {
-          0%, 100% { opacity: 0.6; transform: scale(1.04); }
-          50%      { opacity: 0.9; transform: scale(0.96); }
-        }
-        @keyframes welcomeRing {
-          from { transform: rotate(0deg); }
-          to   { transform: rotate(360deg); }
-        }
-        @keyframes welcomeLogoFloat {
-          0%, 100% { transform: translateY(0); }
-          50%      { transform: translateY(-6px); }
+        @keyframes welcomeLogoGlow {
+          0%, 100% {
+            filter: drop-shadow(0 0 6px rgba(247,148,29,0.55))
+                    drop-shadow(0 0 14px rgba(247,148,29,0.35));
+            transform: translateY(0);
+          }
+          50% {
+            filter: drop-shadow(0 0 10px rgba(247,148,29,0.85))
+                    drop-shadow(0 0 22px rgba(247,148,29,0.55));
+            transform: translateY(-6px);
+          }
         }
         @keyframes welcomeParticleFloat {
           0%   { transform: translate(0, 0) scale(0.4); opacity: 0; }
@@ -119,10 +78,7 @@ export function WelcomeScreen({ onSend, disabled, onTypingChange }: Props) {
           100% { transform: translate(var(--px, 0), -100px) scale(0.3); opacity: 0; }
         }
 
-        .welcome-halo-outer { animation: welcomeHaloOuter 3.4s ease-in-out infinite; }
-        .welcome-halo-inner { animation: welcomeHaloInner 3.4s ease-in-out infinite; }
-        .welcome-ring       { animation: welcomeRing 14s linear infinite; }
-        .welcome-logo       { animation: welcomeLogoFloat 4s ease-in-out infinite; }
+        .welcome-logo { animation: welcomeLogoGlow 3.4s ease-in-out infinite; }
 
         .welcome-particle {
           position: absolute;
