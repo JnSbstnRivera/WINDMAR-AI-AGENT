@@ -28,7 +28,7 @@ export default function App() {
     const saved = localStorage.getItem('wh-sidebar-hidden');
     return saved === null ? true : saved === 'true';
   });
-  const [mascotState, setMascotState] = useState<MascotState>('greeting');
+  const [mascotState, setMascotState] = useState<MascotState>('idle');
   const [postLoginLoading, setPostLoginLoading] = useState(false);
 
   useEffect(() => {
@@ -108,8 +108,15 @@ export default function App() {
     if (isStreaming) {
       setMascotState('thinking');
     } else {
-      setMascotState('pointing');
-      const t = setTimeout(() => setMascotState('greeting'), 3500);
+      // Detecta si la última respuesta es un error
+      const lastMsg = activeConversation?.messages[activeConversation.messages.length - 1];
+      if (lastMsg?.role === 'assistant' && lastMsg.content.includes('[ERROR_TYPE:')) {
+        setMascotState('error');
+        const t = setTimeout(() => setMascotState('idle'), 4500);
+        return () => clearTimeout(t);
+      }
+      setMascotState('happy');
+      const t = setTimeout(() => setMascotState('idle'), 3500);
       return () => clearTimeout(t);
     }
   }, [isStreaming]);
@@ -472,11 +479,8 @@ export default function App() {
 
       <TopBar onLogout={() => supabase.auth.signOut()} />
 
-      {/*
-        Mascota inferior izquierda — espacio reservado para futuros GIFs animados.
-        Cuando llegue el GIF, descomentar y reemplazar src en MascotPanel.tsx
-      */}
-      {/* <MascotPanel state={mascotState} sidebarHidden={desktopSidebarHidden} /> */}
+      {/* Mascota SUN BOT bottom-left con estados dinámicos */}
+      <MascotPanel state={mascotState} sidebarHidden={desktopSidebarHidden} />
 
       {/* Copyright sutil abajo y centrado */}
       <div className="fixed bottom-1 left-1/2 -translate-x-1/2 z-20 pointer-events-none select-none">
@@ -517,7 +521,7 @@ export default function App() {
               onSend={sendMessage}
               disabled={isStreaming}
               onTypingChange={(typing) => {
-                if (!isStreaming) setMascotState(typing ? 'love' : 'greeting');
+                if (!isStreaming) setMascotState(typing ? 'typing' : 'idle');
               }}
             />
           </>
@@ -526,7 +530,7 @@ export default function App() {
             onSend={sendMessage}
             disabled={isStreaming}
             onTypingChange={(typing) => {
-              if (!isStreaming) setMascotState(typing ? 'love' : 'greeting');
+              if (!isStreaming) setMascotState(typing ? 'typing' : 'idle');
             }}
           />
         )}
