@@ -108,8 +108,9 @@ export function LoginScreen() {
     setShowConfirmModal(false);
     setLoading(true);
     const finalName = capitalizeName(regNombre);
-    const { error: err } = await supabase.auth.signUp({
-      email: regEmail.trim().toLowerCase(),
+    const cleanEmail = regEmail.trim().toLowerCase();
+    const { data, error: err } = await supabase.auth.signUp({
+      email: cleanEmail,
       password: regPassword,
       options: {
         data: {
@@ -121,8 +122,27 @@ export function LoginScreen() {
         },
       },
     });
-    if (err) setError(err.message);
-    else setRegistered(true);
+
+    // Supabase puede:
+    // 1) Devolver error explícito "User already registered" (config con email confirmation off)
+    // 2) Devolver data.user pero sin user.identities[] (email ya existe pero confirmación pendiente)
+    if (err) {
+      const msg = (err.message || '').toLowerCase();
+      if (msg.includes('already registered') || msg.includes('already exists') || msg.includes('user_already_exists')) {
+        setError('Este correo ya está en uso. Intenta iniciar sesión o recupera tu contraseña.');
+      } else if (msg.includes('invalid email')) {
+        setError('Correo no válido.');
+      } else if (msg.includes('password')) {
+        setError('La contraseña no cumple los requisitos.');
+      } else {
+        setError('No pudimos crear tu cuenta. Intenta de nuevo en unos segundos.');
+      }
+    } else if (data?.user && Array.isArray(data.user.identities) && data.user.identities.length === 0) {
+      // Email ya estaba registrado — Supabase devolvió "fake" user sin identidades
+      setError('Este correo ya está en uso. Intenta iniciar sesión o recupera tu contraseña.');
+    } else {
+      setRegistered(true);
+    }
     setLoading(false);
   }
 
@@ -225,7 +245,16 @@ export function LoginScreen() {
                 className="w-full border border-gray-300 dark:border-gray-600 dark:bg-[#1e293b] dark:text-gray-100 dark:placeholder-gray-500 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-[#F7941D] transition-colors"
               />
             </div>
-            {error && <p className="text-xs text-red-500 bg-red-50 dark:bg-red-900/20 px-3 py-2 rounded-lg">{error}</p>}
+            {error && (
+              <div className="animate-fade-in flex items-start gap-2 text-xs text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-700 px-3 py-2.5 rounded-lg font-medium">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="flex-shrink-0 mt-0.5">
+                  <circle cx="12" cy="12" r="10"/>
+                  <line x1="12" y1="8" x2="12" y2="12"/>
+                  <line x1="12" y1="16" x2="12.01" y2="16"/>
+                </svg>
+                <span>{error}</span>
+              </div>
+            )}
             <button
               type="submit"
               disabled={loading}
@@ -315,7 +344,14 @@ export function LoginScreen() {
               </div>
 
               {error && !flipped && (
-                <p className="text-xs text-red-500 bg-red-50 dark:bg-red-900/20 px-3 py-2 rounded-lg">{error}</p>
+                <div className="animate-fade-in flex items-start gap-2 text-xs text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-700 px-3 py-2.5 rounded-lg font-medium">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="flex-shrink-0 mt-0.5">
+                    <circle cx="12" cy="12" r="10"/>
+                    <line x1="12" y1="8" x2="12" y2="12"/>
+                    <line x1="12" y1="16" x2="12.01" y2="16"/>
+                  </svg>
+                  <span>{error}</span>
+                </div>
               )}
 
               <button
@@ -513,7 +549,14 @@ export function LoginScreen() {
               </label>
 
               {error && flipped && (
-                <p className="text-xs text-red-500 bg-red-50 dark:bg-red-900/20 px-3 py-2 rounded-lg">{error}</p>
+                <div className="animate-fade-in flex items-start gap-2 text-xs text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-700 px-3 py-2.5 rounded-lg font-medium">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="flex-shrink-0 mt-0.5">
+                    <circle cx="12" cy="12" r="10"/>
+                    <line x1="12" y1="8" x2="12" y2="12"/>
+                    <line x1="12" y1="16" x2="12.01" y2="16"/>
+                  </svg>
+                  <span>{error}</span>
+                </div>
               )}
 
               <button
