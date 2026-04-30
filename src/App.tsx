@@ -7,6 +7,7 @@ import { ChatInput } from './components/ChatInput';
 import { WelcomeScreen } from './components/WelcomeScreen';
 import { MascotPanel } from './components/MascotPanel';
 import { TopBar } from './components/TopBar';
+import { ProfileModal } from './components/ProfileModal';
 import type { MascotState } from './components/MascotPanel';
 import type { Message, Conversation } from './types';
 import type { User } from '@supabase/supabase-js';
@@ -30,6 +31,9 @@ export default function App() {
   });
   const [mascotState, setMascotState] = useState<MascotState>('idle');
   const [postLoginLoading, setPostLoginLoading] = useState(false);
+  const [profileOpen, setProfileOpen] = useState(false);
+  // Versión bump al guardar perfil para forzar re-lectura de metadata
+  const [profileVersion, setProfileVersion] = useState(0);
 
   useEffect(() => {
     try {
@@ -47,6 +51,19 @@ export default function App() {
     });
     return () => subscription.unsubscribe();
   }, []);
+
+  // Refresca user después de guardar perfil
+  useEffect(() => {
+    if (profileVersion === 0) return;
+    supabase.auth.getUser().then(({ data: { user: u } }) => {
+      if (u) setUser(u);
+    });
+  }, [profileVersion]);
+
+  // Metadata helpers
+  const meta = (user?.user_metadata ?? {}) as { display_name?: string; departamento?: string; rol?: string };
+  const displayName = meta.display_name || (user?.email ?? '').split('@')[0].split('.')[0];
+  const capDisplayName = displayName ? displayName.charAt(0).toUpperCase() + displayName.slice(1) : 'asesor';
 
   // Cuando el usuario hace login fresco (desde LoginScreen), muestra loader 2s
   useEffect(() => {
@@ -223,6 +240,9 @@ export default function App() {
           message: text.trim(),
           history,
           email: user?.email ?? '',
+          displayName: meta.display_name ?? '',
+          departamento: meta.departamento ?? '',
+          rol: meta.rol ?? '',
         }),
       });
 
@@ -238,14 +258,11 @@ export default function App() {
           retryAfterSeconds = errBody.retryAfterSeconds;
         } catch { /* ignore parse errors */ }
 
-        const userName = (user.email ?? '').split('@')[0].split('.')[0];
-        const capName = userName ? userName.charAt(0).toUpperCase() + userName.slice(1) : 'asesor';
-
         const retryHint = retryAfterSeconds
           ? `\n\n⏱️ Espera ~${retryAfterSeconds} segundos antes de reintentar.`
           : '';
 
-        const friendlyMessage = `🤖 ¡Ay, perdona ${capName}! ${errorMessage}${retryHint}\n\n[ERROR_TYPE:${errorType}]`;
+        const friendlyMessage = `🤖 ¡Ay, perdona ${capDisplayName}! ${errorMessage}${retryHint}\n\n[ERROR_TYPE:${errorType}]`;
 
         setConversations((prev) =>
           prev.map((c) =>
@@ -299,9 +316,7 @@ export default function App() {
         .eq('id', convId);
 
     } catch {
-      const userName = (user.email ?? '').split('@')[0].split('.')[0];
-      const capName = userName ? userName.charAt(0).toUpperCase() + userName.slice(1) : 'asesor';
-      const friendlyMessage = `🤖 ¡Ay, perdona ${capName}! Parece que hay un problema de conexión. Verifica tu internet e intenta de nuevo.\n\n[ERROR_TYPE:network]`;
+      const friendlyMessage = `🤖 ¡Ay, perdona ${capDisplayName}! Parece que hay un problema de conexión. Verifica tu internet e intenta de nuevo.\n\n[ERROR_TYPE:network]`;
 
       setConversations((prev) =>
         prev.map((c) =>
@@ -334,9 +349,6 @@ export default function App() {
 
   // Loader breve después de iniciar sesión
   if (postLoginLoading) {
-    const userName = (user.email ?? '').split('@')[0].split('.')[0];
-    const capName = userName ? userName.charAt(0).toUpperCase() + userName.slice(1) : 'asesor';
-
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-[#eef4fa] dark:bg-[#0a1628] px-4">
         {/* SUN BOT cargando con halo respirando */}
@@ -360,7 +372,7 @@ export default function App() {
 
         {/* Saludo personalizado */}
         <p className="text-lg sm:text-xl font-bold text-[#1B3A5C] dark:text-white mb-1">
-          ¡Hola, {capName}! 👋
+          ¡Hola, {capDisplayName}! 👋
         </p>
         <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mb-5">
           Preparando tu asistente...
@@ -415,6 +427,9 @@ export default function App() {
           onDelete={deleteConversation}
           onDeleteAll={deleteAllConversations}
           userEmail={user.email ?? ''}
+          displayName={meta.display_name}
+          departamento={meta.departamento}
+          rol={meta.rol}
           isOpen={sidebarOpen}
           onClose={() => setSidebarOpen(false)}
         />
@@ -477,7 +492,19 @@ export default function App() {
         `}</style>
       </button>
 
-      <TopBar onLogout={() => supabase.auth.signOut()} />
+      <TopBar
+        onLogout={() => supabase.auth.signOut()}
+        onOpenProfile={() => setProfileOpen(true)}
+        displayName={meta.display_name}
+      />
+
+      {profileOpen && (
+        <ProfileModal
+          user={user}
+          onClose={() => setProfileOpen(false)}
+          onSaved={() => setProfileVersion((v) => v + 1)}
+        />
+      )}
 
       {/* Mascota SUN BOT bottom-left con estados dinámicos */}
       <MascotPanel state={mascotState} sidebarHidden={desktopSidebarHidden} />

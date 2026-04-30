@@ -2,9 +2,11 @@ import { useState, useEffect } from 'react';
 
 interface Props {
   onLogout: () => void;
+  onOpenProfile?: () => void;
+  displayName?: string;
 }
 
-export function TopBar({ onLogout }: Props) {
+export function TopBar({ onLogout, onOpenProfile, displayName }: Props) {
   // Por defecto modo oscuro — guardado en localStorage
   const [dark, setDark] = useState<boolean>(() => {
     if (typeof window === 'undefined') return true;
@@ -26,6 +28,22 @@ export function TopBar({ onLogout }: Props) {
 
   return (
     <div className="fixed top-3 right-4 z-40 flex items-center gap-2">
+      {/* Mi perfil */}
+      {onOpenProfile && (
+        <button
+          onClick={onOpenProfile}
+          title={displayName ? `Perfil de ${displayName}` : 'Mi perfil'}
+          className="flex items-center gap-1.5 px-3 h-9 rounded-full bg-white dark:bg-[#1e293b] border border-gray-200 dark:border-gray-600 shadow-sm hover:border-[#F7941D] hover:text-[#F7941D] text-gray-500 dark:text-gray-300 text-xs font-medium transition-colors cursor-pointer"
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+            <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/>
+            <circle cx="12" cy="7" r="4"/>
+          </svg>
+          {displayName ? displayName.split(' ')[0] : 'Perfil'}
+        </button>
+      )}
+
+      {/* Tema */}
       <button
         onClick={toggleDark}
         title={dark ? 'Modo claro' : 'Modo oscuro'}

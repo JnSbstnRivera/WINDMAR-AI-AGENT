@@ -302,16 +302,23 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
-  const { message, history = [], email = '' } = req.body as {
+  const { message, history = [], email = '', displayName = '', departamento = '', rol = '' } = req.body as {
     message: string;
     history: Array<{ role: string; content: string }>;
     email?: string;
+    displayName?: string;
+    departamento?: string;
+    rol?: string;
   };
 
   if (!message?.trim()) return res.status(400).json({ error: 'Mensaje requerido' });
 
-  // Extrae el primer nombre del email del asesor (ej: "juan.s@windmarhome.com" -> "Juan")
+  // Prioridad: displayName del perfil > primer nombre del email > "Asesor"
   const asesorName = (() => {
+    if (displayName?.trim()) {
+      const n = displayName.trim();
+      return n.charAt(0).toUpperCase() + n.slice(1);
+    }
     if (!email) return 'Asesor';
     const local = email.split('@')[0];
     const first = local.includes('.') ? local.split('.')[0] : local;
@@ -350,8 +357,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // Contexto dinámico del asesor que se inyecta en cada turno
     const asesorContext = `DATOS DEL ASESOR ACTUAL Y CONTEXTO:
 - Nombre del asesor: ${asesorName}
+${departamento ? `- Departamento: ${departamento}` : ''}
+${rol ? `- Rol: ${rol}` : ''}
 - Saludo según hora actual en PR: "${greeting}"
 - ¿Es el primer mensaje de la conversación? ${isFirstMessage ? 'SÍ — saluda al asesor con: "¡' + greeting + ', ' + asesorName + '! 👋"' : 'NO — NO saludes de nuevo. Mira el HISTORIAL y mantén el HILO temático (si hablaba de Roofing, sigue en Roofing; si era Solar, sigue en Solar). NO cambies de tema sin razón.'}
+${rol === 'Jefe' ? '- IMPORTANTE: Este usuario es JEFE — ajusta el tono. Habla en términos de equipo, métricas y reportes ("para tu equipo...", "puedes comunicar a tus asesores...").' : ''}
+${rol === 'Channel' ? '- IMPORTANTE: Este usuario es de CHANNEL — habla en términos de canal de venta y partners ("para tu canal...", "tus distribuidores...").' : ''}
 - Tipo de mensaje a clasificar antes de responder: ¿es saludo/despedida/gracias? → respuesta corta cálida. ¿Es seguimiento? → responde solo lo nuevo. ¿Es pregunta sustantiva nueva? → formato Mentor.`;
 
     const messages = [

@@ -9,6 +9,9 @@ interface Props {
   onDelete: (id: string) => void;
   onDeleteAll: () => void;
   userEmail: string;
+  displayName?: string;
+  departamento?: string;
+  rol?: string;
   isOpen: boolean;
   onClose: () => void;
 }
@@ -29,10 +32,11 @@ const SALES_TIPS = [
   '🎯 Cliente VIP instalado: $1,000 descuento adicional en Roofing.',
 ];
 
-export function Sidebar({ conversations, activeId, onSelect, onNew, onDelete, onDeleteAll, userEmail, isOpen, onClose }: Props) {
+export function Sidebar({ conversations, activeId, onSelect, onNew, onDelete, onDeleteAll, userEmail, displayName, departamento, rol, isOpen, onClose }: Props) {
   const [confirmClearAll, setConfirmClearAll] = useState(false);
   const [tipIndex, setTipIndex] = useState(() => Math.floor(Math.random() * SALES_TIPS.length));
-  const username = userEmail.split('@')[0];
+  const username = displayName || userEmail.split('@')[0];
+  const subtitle = [departamento, rol].filter(Boolean).join(' · ');
 
   // Rotar tip cada 25 segundos
   useEffect(() => {
@@ -119,10 +123,12 @@ export function Sidebar({ conversations, activeId, onSelect, onNew, onDelete, on
         <p className="text-sm font-semibold text-[#1B3A5C] dark:text-white">
           Bienvenido, {username}
         </p>
-        <p className="text-[11px] text-gray-400 dark:text-gray-500 mt-0.5">
-          Iniciaste sesión como
-        </p>
-        <p className="text-[11px] text-gray-500 dark:text-gray-400 truncate font-medium">
+        {subtitle && (
+          <p className="text-[11px] text-[#F7941D] dark:text-[#F7941D] mt-0.5 font-semibold">
+            {subtitle}
+          </p>
+        )}
+        <p className="text-[11px] text-gray-500 dark:text-gray-400 truncate font-medium mt-0.5">
           {userEmail}
         </p>
       </div>
