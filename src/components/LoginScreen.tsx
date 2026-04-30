@@ -21,17 +21,22 @@ Al usar esta aplicación aceptas:
 
 Versión: ${TERMS_VERSION}`;
 
-function getPasswordStrength(pwd: string): { level: 0 | 1 | 2 | 3; label: string; color: string } {
-  if (pwd.length === 0) return { level: 0, label: '', color: '' };
-  let score = 0;
-  if (pwd.length >= 6) score++;
-  if (pwd.length >= 10) score++;
-  if (/[A-Z]/.test(pwd) && /[a-z]/.test(pwd)) score++;
-  if (/[0-9]/.test(pwd)) score++;
-  if (/[^A-Za-z0-9]/.test(pwd)) score++;
-  if (score <= 1) return { level: 1, label: 'Débil', color: '#ef4444' };
-  if (score <= 3) return { level: 2, label: 'Media', color: '#f59e0b' };
-  return { level: 3, label: 'Fuerte', color: '#22c55e' };
+// Valida nombre/apodo: 2-30 chars, solo letras (con acentos), espacios, guiones y apóstrofes
+function isValidDisplayName(name: string): boolean {
+  const trimmed = name.trim();
+  if (trimmed.length < 2 || trimmed.length > 30) return false;
+  // Solo letras (incluye acentos), espacios, guiones, apóstrofes
+  return /^[A-Za-zÁÉÍÓÚáéíóúÑñÜü\s'\-]+$/.test(trimmed);
+}
+
+// Capitaliza la primera letra de cada palabra
+function capitalizeName(name: string): string {
+  return name
+    .trim()
+    .toLowerCase()
+    .split(/\s+/)
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(' ');
 }
 
 export function LoginScreen() {
@@ -57,14 +62,14 @@ export function LoginScreen() {
   const [regAcceptTerms, setRegAcceptTerms] = useState(false);
   const [showRegPassword, setShowRegPassword] = useState(false);
   const [showTermsModal, setShowTermsModal] = useState(false);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
 
   // Shared
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [registered, setRegistered] = useState(false);
 
-  const strength = getPasswordStrength(regPassword);
-  const nombreOk = regNombre.trim().length >= 3;
+  const nombreOk = isValidDisplayName(regNombre);
   const regEmailOk = regEmail.trim().toLowerCase().endsWith('@windmarhome.com') && regEmail.length > '@windmarhome.com'.length;
   const passwordOk = regPassword.length >= 6;
   const passwordsMatch = passwordOk && regPassword === regPasswordConfirm;
@@ -92,17 +97,23 @@ export function LoginScreen() {
     setLoading(false);
   }
 
-  async function handleRegister(e: React.FormEvent) {
+  function handleRegisterClick(e: React.FormEvent) {
     e.preventDefault();
     if (!formValid) return;
     setError('');
+    setShowConfirmModal(true);
+  }
+
+  async function confirmRegister() {
+    setShowConfirmModal(false);
     setLoading(true);
+    const finalName = capitalizeName(regNombre);
     const { error: err } = await supabase.auth.signUp({
       email: regEmail.trim().toLowerCase(),
       password: regPassword,
       options: {
         data: {
-          full_name: regNombre.trim(),
+          display_name: finalName,
           departamento: regDepartamento,
           rol: regRol,
           terms_version: TERMS_VERSION,
@@ -349,19 +360,28 @@ export function LoginScreen() {
               <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Bienvenido al equipo Windmar</p>
             </div>
 
-            <form onSubmit={handleRegister} className="space-y-3">
-              {/* Nombre */}
-              <FieldLabel text="Nombre completo" />
+            <form onSubmit={handleRegisterClick} className="space-y-3">
+              {/* ¿Cómo te llamamos? */}
+              <FieldLabel text="¿Cómo quieres que te llame?" />
               <FieldWrap valid={nombreOk} touched={regNombre.length > 0}>
                 <input
                   type="text"
                   value={regNombre}
                   onChange={(e) => setRegNombre(e.target.value)}
-                  placeholder="Juan Pérez"
+                  placeholder="Ej: Juan, Carlos, Don Pepe..."
+                  maxLength={30}
                   required
                   className="w-full border border-gray-300 dark:border-gray-600 dark:bg-[#1e293b] dark:text-gray-100 dark:placeholder-gray-500 rounded-xl px-4 py-2 pr-9 text-sm focus:outline-none focus:border-[#F7941D] transition-colors"
                 />
               </FieldWrap>
+              <p className="text-[10px] text-gray-500 dark:text-gray-500 -mt-1 ml-1">
+                Podrás cambiarlo más adelante desde tu perfil
+              </p>
+              {regNombre.length > 0 && !nombreOk && (
+                <p className="text-[11px] text-red-500 -mt-1 ml-1">
+                  Solo letras y espacios, entre 2 y 30 caracteres
+                </p>
+              )}
 
               {/* Correo */}
               <FieldLabel text="Correo corporativo" />
@@ -435,38 +455,24 @@ export function LoginScreen() {
                 </button>
               </div>
 
-              {/* Strength bar */}
+              {/* Confirmar — aparece solo cuando hay contraseña escrita */}
               {regPassword.length > 0 && (
-                <div className="flex items-center gap-2">
-                  <div className="flex-1 h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-                    <div
-                      className="h-full transition-all duration-300"
-                      style={{
-                        width: `${(strength.level / 3) * 100}%`,
-                        background: strength.color,
-                      }}
+                <div className="space-y-1 animate-fade-in">
+                  <FieldLabel text="Confirmar contraseña" />
+                  <FieldWrap valid={passwordsMatch} touched={regPasswordConfirm.length > 0}>
+                    <input
+                      type={showRegPassword ? 'text' : 'password'}
+                      value={regPasswordConfirm}
+                      onChange={(e) => setRegPasswordConfirm(e.target.value)}
+                      placeholder="Repite la contraseña"
+                      required
+                      className="w-full border border-gray-300 dark:border-gray-600 dark:bg-[#1e293b] dark:text-gray-100 dark:placeholder-gray-500 rounded-xl px-4 py-2 pr-9 text-sm focus:outline-none focus:border-[#F7941D] transition-colors"
                     />
-                  </div>
-                  <span className="text-[10px] font-semibold" style={{ color: strength.color }}>
-                    {strength.label}
-                  </span>
+                  </FieldWrap>
+                  {regPasswordConfirm.length > 0 && !passwordsMatch && (
+                    <p className="text-[11px] text-red-500">Las contraseñas no coinciden</p>
+                  )}
                 </div>
-              )}
-
-              {/* Confirmar */}
-              <FieldLabel text="Confirmar contraseña" />
-              <FieldWrap valid={passwordsMatch} touched={regPasswordConfirm.length > 0}>
-                <input
-                  type={showRegPassword ? 'text' : 'password'}
-                  value={regPasswordConfirm}
-                  onChange={(e) => setRegPasswordConfirm(e.target.value)}
-                  placeholder="Repite la contraseña"
-                  required
-                  className="w-full border border-gray-300 dark:border-gray-600 dark:bg-[#1e293b] dark:text-gray-100 dark:placeholder-gray-500 rounded-xl px-4 py-2 pr-9 text-sm focus:outline-none focus:border-[#F7941D] transition-colors"
-                />
-              </FieldWrap>
-              {regPasswordConfirm.length > 0 && !passwordsMatch && (
-                <p className="text-[11px] text-red-500 -mt-1">Las contraseñas no coinciden</p>
               )}
 
               {/* Términos */}
@@ -516,6 +522,50 @@ export function LoginScreen() {
           </div>
         </div>
       </div>
+
+      {/* Modal de confirmación de nombre */}
+      {showConfirmModal && (
+        <div
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+          onClick={() => setShowConfirmModal(false)}
+        >
+          <div
+            className="bg-white dark:bg-[#0f1c2e] rounded-2xl shadow-xl border border-gray-200 dark:border-gray-700 p-6 max-w-sm w-full text-center"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <img
+              src="/sunbot-feliz.png"
+              alt="SUN BOT"
+              className="mascot-img w-20 h-20 object-contain mx-auto mb-3"
+              style={{ imageRendering: 'pixelated' }}
+            />
+            <h3 className="text-lg font-bold text-[#1B3A5C] dark:text-white mb-2">
+              ¿Confirmas?
+            </h3>
+            <p className="text-sm text-gray-600 dark:text-gray-300 mb-1">
+              A partir de ahora te llamaré
+            </p>
+            <p className="text-2xl font-bold text-[#F7941D] mb-5">
+              {capitalizeName(regNombre)}
+            </p>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setShowConfirmModal(false)}
+                className="flex-1 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-xl py-2.5 text-sm font-semibold hover:bg-gray-50 dark:hover:bg-[#1e293b] transition-colors cursor-pointer"
+              >
+                Editar
+              </button>
+              <button
+                onClick={confirmRegister}
+                disabled={loading}
+                className="flex-1 bg-[#F7941D] hover:bg-[#e8830d] disabled:opacity-50 text-white rounded-xl py-2.5 text-sm font-semibold transition-colors cursor-pointer"
+              >
+                {loading ? 'Creando...' : 'Sí, crear cuenta'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Modal de términos */}
       {showTermsModal && (
@@ -587,6 +637,13 @@ export function LoginScreen() {
         }
         @media (max-width: 480px) {
           .flip-card-inner { min-height: 760px; }
+        }
+        @keyframes fadeIn {
+          from { opacity: 0; transform: translateY(-4px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fade-in {
+          animation: fadeIn 0.25s ease-out;
         }
       `}</style>
     </div>
