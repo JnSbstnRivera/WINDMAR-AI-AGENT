@@ -345,6 +345,22 @@ export function LoginScreen() {
                 Regístrate
               </button>
             </p>
+
+            {/* Logo Windmar Home decorativo abajo (con brillo blanco + partículas amarillas) */}
+            <div className="login-logo-wrap mt-6 flex items-center justify-center">
+              <div className="relative" style={{ width: 180, height: 110 }}>
+                <img
+                  src="/logo-inicial-chat.png"
+                  alt="Windmar Home"
+                  className="login-bottom-logo absolute inset-0 w-full h-full object-contain"
+                />
+                {/* Partículas amarillas flotantes */}
+                <span className="login-particle login-particle-1" />
+                <span className="login-particle login-particle-2" />
+                <span className="login-particle login-particle-3" />
+                <span className="login-particle login-particle-4" />
+              </div>
+            </div>
           </div>
 
           {/* ============== TRASERA — REGISTRO ============== */}
@@ -644,6 +660,65 @@ export function LoginScreen() {
         }
         .animate-fade-in {
           animation: fadeIn 0.25s ease-out;
+        }
+
+        /* Logo decorativo abajo del login — glow blanco en silueta */
+        @keyframes loginLogoGlow {
+          0%, 100% {
+            filter: drop-shadow(0 0 5px rgba(255,255,255,0.65))
+                    drop-shadow(0 0 12px rgba(255,255,255,0.35));
+            transform: translateY(0);
+          }
+          50% {
+            filter: drop-shadow(0 0 9px rgba(255,255,255,0.95))
+                    drop-shadow(0 0 18px rgba(255,255,255,0.55));
+            transform: translateY(-3px);
+          }
+        }
+        .login-bottom-logo {
+          animation: loginLogoGlow 3.4s ease-in-out infinite;
+          opacity: 0.85;
+        }
+
+        /* Partículas amarillas flotantes */
+        @keyframes loginParticleFloat {
+          0%   { transform: translate(0, 0) scale(0.4); opacity: 0; }
+          15%  { opacity: 0.85; }
+          50%  { transform: translate(var(--px, 0), -32px) scale(1); opacity: 0.7; }
+          100% { transform: translate(var(--px, 0), -60px) scale(0.3); opacity: 0; }
+        }
+        .login-particle {
+          position: absolute;
+          width: 4px;
+          height: 4px;
+          border-radius: 50%;
+          background: rgb(253,224,71);
+          box-shadow: 0 0 8px rgba(253,224,71,0.95), 0 0 16px rgba(253,224,71,0.55);
+          opacity: 0;
+          pointer-events: none;
+          z-index: 5;
+        }
+        .login-particle-1 {
+          left: 20%; bottom: 18%;
+          --px: -4px;
+          animation: loginParticleFloat 3.2s ease-in-out 0s infinite;
+        }
+        .login-particle-2 {
+          left: 45%; bottom: 8%;
+          --px: 3px;
+          animation: loginParticleFloat 3.6s ease-in-out 0.7s infinite;
+          width: 3px; height: 3px;
+        }
+        .login-particle-3 {
+          left: 70%; bottom: 16%;
+          --px: 6px;
+          animation: loginParticleFloat 3.4s ease-in-out 1.4s infinite;
+        }
+        .login-particle-4 {
+          left: 84%; bottom: 6%;
+          --px: 4px;
+          animation: loginParticleFloat 3.8s ease-in-out 2.1s infinite;
+          width: 3px; height: 3px;
         }
       `}</style>
     </div>
