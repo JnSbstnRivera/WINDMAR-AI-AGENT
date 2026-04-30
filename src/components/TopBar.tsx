@@ -28,18 +28,18 @@ export function TopBar({ onLogout, onOpenProfile, displayName }: Props) {
 
   return (
     <div className="fixed top-3 right-4 z-40 flex items-center gap-2">
-      {/* Mi perfil */}
+      {/* Configuración / Perfil */}
       {onOpenProfile && (
         <button
           onClick={onOpenProfile}
-          title={displayName ? `Perfil de ${displayName}` : 'Mi perfil'}
-          className="flex items-center gap-1.5 px-3 h-9 rounded-full bg-white dark:bg-[#1e293b] border border-gray-200 dark:border-gray-600 shadow-sm hover:border-[#F7941D] hover:text-[#F7941D] text-gray-500 dark:text-gray-300 text-xs font-medium transition-colors cursor-pointer"
+          title={displayName ? `Configuración (${displayName})` : 'Configuración'}
+          className="w-9 h-9 rounded-full flex items-center justify-center bg-white dark:bg-[#1e293b] border border-gray-200 dark:border-gray-600 shadow-sm hover:border-[#F7941D] hover:text-[#F7941D] text-gray-500 dark:text-gray-300 transition-colors cursor-pointer"
+          aria-label="Configuración"
         >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-            <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/>
-            <circle cx="12" cy="7" r="4"/>
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="12" cy="12" r="3"/>
+            <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z"/>
           </svg>
-          {displayName ? displayName.split(' ')[0] : 'Perfil'}
         </button>
       )}
 
