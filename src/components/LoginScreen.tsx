@@ -242,7 +242,7 @@ export function LoginScreen() {
                 onChange={(e) => setForgotEmail(e.target.value)}
                 placeholder="nombre@windmarhome.com"
                 required
-                className="w-full border border-gray-300 dark:border-gray-600 dark:bg-[#1e293b] dark:text-gray-100 dark:placeholder-gray-500 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-[#F7941D] transition-colors"
+                className="w-full border border-gray-300 dark:border-gray-600 dark:bg-[#1e293b] dark:text-gray-100 dark:placeholder-gray-500 rounded-xl px-3.5 py-2 text-sm focus:outline-none focus:border-[#F7941D] transition-colors"
               />
             </div>
             {error && (
@@ -263,7 +263,7 @@ export function LoginScreen() {
               {loading ? 'Enviando...' : 'Enviar enlace'}
             </button>
           </form>
-          <p className="text-center text-xs text-gray-500 dark:text-gray-400 mt-6">
+          <p className="text-center text-xs text-gray-500 dark:text-gray-400 mt-4">
             <button
               onClick={() => { setView('login'); setError(''); }}
               className="text-[#F7941D] font-medium hover:underline cursor-pointer"
@@ -278,20 +278,20 @@ export function LoginScreen() {
 
   // ---------------- Tarjeta principal con flip ----------------
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-[#0a1628] p-4 py-8">
-      <div className="flip-card w-full max-w-sm">
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-[#0a1628] px-3 py-3">
+      <div className="flip-card w-full max-w-md">
         <div className={`flip-card-inner ${flipped ? 'flipped' : ''}`}>
           {/* ============== FRONTAL — LOGIN ============== */}
-          <div className="flip-card-face flip-card-front bg-white dark:bg-[#0f1c2e] rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-8">
-            <div className="flex flex-col items-center mb-8">
+          <div className="flip-card-face flip-card-front bg-white dark:bg-[#0f1c2e] rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-5 sm:p-6">
+            <div className="flex flex-col items-center mb-5">
               <img
                 src="/sunbot.png"
                 alt="Windmar AI"
-                className="mascot-img w-20 h-20 object-contain mb-3"
+                className="mascot-img w-16 h-16 object-contain mb-2"
                 style={{ imageRendering: 'pixelated' }}
               />
-              <h1 className="text-xl font-bold text-[#1B3A5C] dark:text-white">Agente Windmar Home</h1>
-              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Inicia sesión para continuar</p>
+              <h1 className="text-lg font-bold text-[#1B3A5C] dark:text-white">Agente Windmar Home</h1>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Inicia sesión para continuar</p>
             </div>
 
             <form onSubmit={handleLogin} className="space-y-4">
@@ -305,7 +305,7 @@ export function LoginScreen() {
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="nombre@windmarhome.com"
                   required
-                  className="w-full border border-gray-300 dark:border-gray-600 dark:bg-[#1e293b] dark:text-gray-100 dark:placeholder-gray-500 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-[#F7941D] transition-colors"
+                  className="w-full border border-gray-300 dark:border-gray-600 dark:bg-[#1e293b] dark:text-gray-100 dark:placeholder-gray-500 rounded-xl px-3.5 py-2 text-sm focus:outline-none focus:border-[#F7941D] transition-colors"
                 />
               </div>
 
@@ -320,7 +320,7 @@ export function LoginScreen() {
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="Mínimo 6 caracteres"
                     required
-                    className="w-full border border-gray-300 dark:border-gray-600 dark:bg-[#1e293b] dark:text-gray-100 dark:placeholder-gray-500 rounded-xl px-4 py-2.5 pr-11 text-sm focus:outline-none focus:border-[#F7941D] transition-colors"
+                    className="w-full border border-gray-300 dark:border-gray-600 dark:bg-[#1e293b] dark:text-gray-100 dark:placeholder-gray-500 rounded-xl px-3.5 py-2 pr-11 text-sm focus:outline-none focus:border-[#F7941D] transition-colors"
                   />
                   <button
                     type="button"
@@ -371,7 +371,7 @@ export function LoginScreen() {
               </button>
             </form>
 
-            <p className="text-center text-xs text-gray-500 dark:text-gray-400 mt-6">
+            <p className="text-center text-xs text-gray-500 dark:text-gray-400 mt-4">
               ¿No tienes cuenta?{' '}
               <button
                 type="button"
@@ -383,8 +383,8 @@ export function LoginScreen() {
             </p>
 
             {/* Logo Windmar Home decorativo abajo (con brillo blanco + partículas amarillas) */}
-            <div className="login-logo-wrap mt-6 flex items-center justify-center">
-              <div className="relative" style={{ width: 180, height: 110 }}>
+            <div className="login-logo-wrap mt-4 flex items-center justify-center">
+              <div className="relative" style={{ width: 260, height: 170 }}>
                 <img
                   src="/logo-inicial-chat.png"
                   alt="Windmar Home"
@@ -400,19 +400,21 @@ export function LoginScreen() {
           </div>
 
           {/* ============== TRASERA — REGISTRO ============== */}
-          <div className="flip-card-face flip-card-back bg-white dark:bg-[#0f1c2e] rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-7">
-            <div className="flex flex-col items-center mb-5">
+          <div className="flip-card-face flip-card-back bg-white dark:bg-[#0f1c2e] rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-5 sm:p-6">
+            <div className="flex items-center gap-3 mb-4">
               <img
                 src="/sunbot-feliz.png"
                 alt="Windmar AI"
-                className="mascot-img w-16 h-16 object-contain mb-2"
+                className="mascot-img w-12 h-12 object-contain flex-shrink-0"
                 style={{ imageRendering: 'pixelated' }}
               />
-              <h1 className="text-lg font-bold text-[#1B3A5C] dark:text-white">Crea tu cuenta</h1>
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Bienvenido al equipo Windmar</p>
+              <div className="leading-tight">
+                <h1 className="text-base font-bold text-[#1B3A5C] dark:text-white">Crea tu cuenta</h1>
+                <p className="text-[11px] text-gray-500 dark:text-gray-400">Bienvenido al equipo Windmar</p>
+              </div>
             </div>
 
-            <form onSubmit={handleRegisterClick} className="space-y-3">
+            <form onSubmit={handleRegisterClick} className="space-y-2.5">
               {/* ¿Cómo te llamamos? */}
               <FieldLabel text="¿Cómo quieres que te llame?" />
               <FieldWrap valid={nombreOk} touched={regNombre.length > 0}>
@@ -420,10 +422,10 @@ export function LoginScreen() {
                   type="text"
                   value={regNombre}
                   onChange={(e) => setRegNombre(e.target.value)}
-                  placeholder="Ej: Juan, Carlos, Don Pepe..."
+                  placeholder="Ej: Andres, Andy, Don Andres..."
                   maxLength={30}
                   required
-                  className="w-full border border-gray-300 dark:border-gray-600 dark:bg-[#1e293b] dark:text-gray-100 dark:placeholder-gray-500 rounded-xl px-4 py-2 pr-9 text-sm focus:outline-none focus:border-[#F7941D] transition-colors"
+                  className="w-full border border-gray-300 dark:border-gray-600 dark:bg-[#1e293b] dark:text-gray-100 dark:placeholder-gray-500 rounded-xl px-3.5 py-2 pr-9 text-sm focus:outline-none focus:border-[#F7941D] transition-colors"
                 />
               </FieldWrap>
               <p className="text-[10px] text-gray-500 dark:text-gray-500 -mt-1 ml-1">
@@ -444,7 +446,7 @@ export function LoginScreen() {
                   onChange={(e) => setRegEmail(e.target.value.toLowerCase())}
                   placeholder="nombre@windmarhome.com"
                   required
-                  className="w-full border border-gray-300 dark:border-gray-600 dark:bg-[#1e293b] dark:text-gray-100 dark:placeholder-gray-500 rounded-xl px-4 py-2 pr-9 text-sm focus:outline-none focus:border-[#F7941D] transition-colors"
+                  className="w-full border border-gray-300 dark:border-gray-600 dark:bg-[#1e293b] dark:text-gray-100 dark:placeholder-gray-500 rounded-xl px-3.5 py-2 pr-9 text-sm focus:outline-none focus:border-[#F7941D] transition-colors"
                 />
               </FieldWrap>
 
@@ -456,7 +458,7 @@ export function LoginScreen() {
                     value={regDepartamento}
                     onChange={(e) => setRegDepartamento(e.target.value)}
                     required
-                    className="w-full border border-gray-300 dark:border-gray-600 dark:bg-[#1e293b] dark:text-gray-100 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-[#F7941D] transition-colors cursor-pointer"
+                    className="w-full border border-gray-300 dark:border-gray-600 dark:bg-[#1e293b] dark:text-gray-100 rounded-xl px-2.5 py-2 text-sm focus:outline-none focus:border-[#F7941D] transition-colors cursor-pointer"
                   >
                     <option value="" disabled>Selecciona</option>
                     {DEPARTAMENTOS.map(d => <option key={d} value={d}>{d}</option>)}
@@ -468,7 +470,7 @@ export function LoginScreen() {
                     value={regRol}
                     onChange={(e) => setRegRol(e.target.value)}
                     required
-                    className="w-full border border-gray-300 dark:border-gray-600 dark:bg-[#1e293b] dark:text-gray-100 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-[#F7941D] transition-colors cursor-pointer"
+                    className="w-full border border-gray-300 dark:border-gray-600 dark:bg-[#1e293b] dark:text-gray-100 rounded-xl px-2.5 py-2 text-sm focus:outline-none focus:border-[#F7941D] transition-colors cursor-pointer"
                   >
                     <option value="" disabled>Selecciona</option>
                     {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
@@ -485,7 +487,7 @@ export function LoginScreen() {
                   onChange={(e) => setRegPassword(e.target.value)}
                   placeholder="Mínimo 6 caracteres"
                   required
-                  className="w-full border border-gray-300 dark:border-gray-600 dark:bg-[#1e293b] dark:text-gray-100 dark:placeholder-gray-500 rounded-xl px-4 py-2 pr-11 text-sm focus:outline-none focus:border-[#F7941D] transition-colors"
+                  className="w-full border border-gray-300 dark:border-gray-600 dark:bg-[#1e293b] dark:text-gray-100 dark:placeholder-gray-500 rounded-xl px-3.5 py-2 pr-11 text-sm focus:outline-none focus:border-[#F7941D] transition-colors"
                 />
                 <button
                   type="button"
@@ -518,7 +520,7 @@ export function LoginScreen() {
                       onChange={(e) => setRegPasswordConfirm(e.target.value)}
                       placeholder="Repite la contraseña"
                       required
-                      className="w-full border border-gray-300 dark:border-gray-600 dark:bg-[#1e293b] dark:text-gray-100 dark:placeholder-gray-500 rounded-xl px-4 py-2 pr-9 text-sm focus:outline-none focus:border-[#F7941D] transition-colors"
+                      className="w-full border border-gray-300 dark:border-gray-600 dark:bg-[#1e293b] dark:text-gray-100 dark:placeholder-gray-500 rounded-xl px-3.5 py-2 pr-9 text-sm focus:outline-none focus:border-[#F7941D] transition-colors"
                     />
                   </FieldWrap>
                   {regPasswordConfirm.length > 0 && !passwordsMatch && (
@@ -663,39 +665,35 @@ export function LoginScreen() {
 
       {/* CSS — Flip card 3D */}
       <style>{`
+        /* Flip card con grid stacking — ambas caras se apilan en la misma celda
+           y el grid toma la altura de la cara más alta (auto-ajuste) */
         .flip-card {
           perspective: 1800px;
         }
         .flip-card-inner {
           position: relative;
           width: 100%;
-          min-height: 720px;
+          display: grid;
+          grid-template-columns: 1fr;
           transition: transform 0.7s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.7s ease;
           transform-style: preserve-3d;
+          box-shadow: 0 8px 28px rgba(27,58,92,0.10);
         }
         .flip-card-inner.flipped {
           transform: rotateY(180deg);
         }
+        .flip-card-inner:hover {
+          box-shadow: 0 14px 40px rgba(247,148,29,0.18), 0 8px 28px rgba(27,58,92,0.10);
+        }
         .flip-card-face {
-          position: absolute;
-          inset: 0;
+          grid-column: 1;
+          grid-row: 1;
           width: 100%;
-          height: 100%;
           backface-visibility: hidden;
           -webkit-backface-visibility: hidden;
         }
         .flip-card-back {
           transform: rotateY(180deg);
-        }
-        /* Sombra dinámica durante flip */
-        .flip-card-inner {
-          box-shadow: 0 8px 28px rgba(27,58,92,0.10);
-        }
-        .flip-card-inner:hover {
-          box-shadow: 0 14px 40px rgba(247,148,29,0.18), 0 8px 28px rgba(27,58,92,0.10);
-        }
-        @media (max-width: 480px) {
-          .flip-card-inner { min-height: 760px; }
         }
         @keyframes fadeIn {
           from { opacity: 0; transform: translateY(-4px); }
