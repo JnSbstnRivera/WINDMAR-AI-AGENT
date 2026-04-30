@@ -1,7 +1,7 @@
 # 🗺️ Roadmap Visual — WINDMAR AI AGENT
 
-> Mapa conceptual del proyecto. Actualizado: Abril 2026
-> Progreso global: **75% hacia v1.0 producción**
+> Mapa conceptual del proyecto. **Última actualización: 30 abril 2026**
+> Progreso global: **82% hacia v1.0 producción** ⬆️ (+7% hoy)
 
 ---
 
@@ -24,12 +24,25 @@ mindmap
       Prompt adaptativo
       4 tipos de mensaje
       Memoria conversacional
+      Tono adaptado por rol
       Detección de errores
     ✅ UX/UI
       Modo oscuro/claro
       SUN BOT 6 estados
       Glassmorphism
       Responsive
+      Welcome con glowmorphism
+    ✅ Auth Avanzado
+      Flip card 3D
+      Registro completo
+      Recuperar contraseña
+      Detección email duplicado
+      Términos de uso
+    ✅ Perfil de Usuario
+      ProfileModal editable
+      display_name personalizable
+      Departamento + Rol
+      Engranaje en TopBar
     🔄 Validación
       Pilotaje 3-5 asesores
       Dashboard Groq
@@ -54,9 +67,10 @@ flowchart TD
     Start([🚀 Inicio Proyecto]) --> A
     A[🟢 BLOQUE A<br/>Infraestructura<br/>100% ✅]
     A --> B[🟢 BLOQUE B<br/>Conocimiento<br/>100% ✅]
-    B --> C[🟢 BLOQUE C<br/>Prompt IA<br/>95% ✅]
+    B --> C[🟢 BLOQUE C<br/>Prompt IA<br/>100% ✅]
     C --> D[🟢 BLOQUE D<br/>UX/UI<br/>100% ✅]
-    D --> E{🟡 BLOQUE E<br/>Validación<br/>40% 🔄}
+    D --> H[🟢 BLOQUE H<br/>Auth + Perfil<br/>100% ✅]
+    H --> E{🟡 BLOQUE E<br/>Validación<br/>40% 🔄}
     E -->|Feedback OK| F[⏳ BLOQUE F<br/>Optimización<br/>0%]
     F --> V1([🎯 v1.0 PRODUCCIÓN])
     V1 --> G[🔮 BLOQUE G<br/>Integraciones<br/>Backlog]
@@ -65,6 +79,7 @@ flowchart TD
     style B fill:#22c55e,color:#fff
     style C fill:#22c55e,color:#fff
     style D fill:#22c55e,color:#fff
+    style H fill:#22c55e,color:#fff
     style E fill:#fbbf24,color:#000
     style F fill:#94a3b8,color:#fff
     style G fill:#a78bfa,color:#fff
@@ -112,7 +127,7 @@ flowchart TD
     style KB fill:#F7941D,color:#fff
 ```
 
-### 🟢 BLOQUE C — Prompt Adaptativo (✅ 95%)
+### 🟢 BLOQUE C — Prompt Adaptativo (✅ 100%)
 
 ```mermaid
 flowchart TD
@@ -122,14 +137,20 @@ flowchart TD
     Detect -->|Casual| T2[💚 Tipo 2<br/>Conversacional]
     Detect -->|Follow-up| T3[💚 Tipo 3<br/>Continúa hilo]
     Detect -->|Sustantiva| T4[🔴 Tipo 4<br/>Formato Mentor]
-    T1 --> Out([📤 Respuesta IA])
-    T2 --> Out
-    T3 --> Out
-    T4 --> Out
+    T1 --> Role{👔 Rol del usuario}
+    T2 --> Role
+    T3 --> Role
+    T4 --> Role
+    Role -->|Asesor| Out([📤 Tono normal])
+    Role -->|Jefe| OutJ([📤 Tono ejecutivo])
+    Role -->|Channel| OutC([📤 Tono partner])
 
     style Detect fill:#fbbf24,color:#000
     style T4 fill:#1B3A5C,color:#fff
+    style Role fill:#a78bfa,color:#fff
     style Out fill:#F7941D,color:#fff
+    style OutJ fill:#F7941D,color:#fff
+    style OutC fill:#F7941D,color:#fff
 ```
 
 ### 🟢 BLOQUE D — UX/UI (✅ 100%)
@@ -143,6 +164,7 @@ flowchart LR
     UI --> D4[📱 Responsive]
     UI --> D5[✨ Glassmorphism]
     UI --> D6[💡 Tips rotativos]
+    UI --> D7[🌟 Welcome glowmorphism]
 
     D2 --> S1[idle]
     D2 --> S2[typing]
@@ -152,6 +174,34 @@ flowchart LR
     D2 --> S6[loading]
 
     style UI fill:#1B3A5C,color:#fff
+```
+
+### 🟢 BLOQUE H — Auth + Perfil (✅ 100%) 🆕
+
+```mermaid
+flowchart TD
+    Auth[🔐 Sistema Auth]
+    Auth --> Login[🚪 Login]
+    Auth --> Register[📝 Registro]
+    Auth --> Forgot[🔑 Recuperar]
+
+    Login --> Flip[🎴 Flip Card 3D]
+    Register --> Flip
+    Flip --> Fields[📋 Campos:<br/>nombre, depto, rol,<br/>contraseña x2, T&C]
+    Fields --> Validate{✅ Valida}
+    Validate -->|OK| Confirm[✨ Modal confirmación]
+    Validate -->|Email duplicado| Red[❌ Banner rojo]
+    Confirm --> Save[💾 user_metadata]
+
+    Save --> Profile[👤 ProfileModal]
+    Profile --> Edit[✏️ Editar nombre/<br/>depto/rol]
+    Edit --> Sync[🔄 Refresca app]
+
+    style Auth fill:#1B3A5C,color:#fff
+    style Flip fill:#F7941D,color:#fff
+    style Confirm fill:#22c55e,color:#fff
+    style Red fill:#ef4444,color:#fff
+    style Profile fill:#a78bfa,color:#fff
 ```
 
 ### 🟡 BLOQUE E — Validación (🔄 EN CURSO)
@@ -219,18 +269,19 @@ gantt
     Infraestructura      :done,    a1, 2026-03-01, 7d
     Knowledge Base       :done,    b1, 2026-03-08, 14d
     Prompt + UI          :done,    c1, 2026-03-22, 21d
+    Auth + Perfil 🆕     :done,    h1, 2026-04-29, 2d
 
     section Fase 4 (Ahora)
-    Pilotaje asesores    :active,  e1, 2026-04-29, 14d
-    Recolectar feedback  :active,  e2, 2026-04-29, 14d
+    Pilotaje asesores    :active,  e1, 2026-05-01, 14d
+    Recolectar feedback  :active,  e2, 2026-05-01, 14d
 
     section Fase 5 (Próximo)
-    Migrar a Claude API  :         f1, 2026-05-13, 3d
-    Botones feedback     :         f2, 2026-05-16, 3d
-    Demo gerencia        :         f3, 2026-05-19, 2d
+    Migrar a Claude API  :         f1, 2026-05-15, 3d
+    Botones feedback     :         f2, 2026-05-18, 3d
+    Demo gerencia        :         f3, 2026-05-21, 2d
 
     section Lanzamiento
-    🎯 v1.0 Producción   :crit,    v1, 2026-05-21, 1d
+    🎯 v1.0 Producción   :crit,    v1, 2026-05-23, 1d
 ```
 
 ---
@@ -277,6 +328,44 @@ flowchart LR
 
 ---
 
+## 📅 Bitácora de Cambios
+
+### 30 abril 2026 — Auth avanzado + perfil de usuario 🆕
+
+**Login/Registro completamente rediseñado:**
+- Tarjeta con animación 3D flip (eje Y, 0.7s premium curve)
+- Cara frontal: login + "¿Olvidaste contraseña?" + logo decorativo con partículas
+- Cara trasera: registro con campos completos (nombre amigable, depto, rol, contraseñas, T&C)
+- Grid stacking para auto-altura sin scroll en cualquier viewport
+- Detección de email duplicado con banner rojo + icono
+- Modal de confirmación del nombre antes de crear cuenta
+- T&C con modal expandible (versionado v1.0 — Abril 2026)
+- Recuperar contraseña con email reset
+
+**Sistema de perfil:**
+- ProfileModal con campos editables (nombre, depto, rol)
+- Engranaje ⚙️ en TopBar abre el modal
+- Datos persisten en `user_metadata` de Supabase
+- Refetch automático después de guardar
+
+**Personalización del bot:**
+- Bot saluda con `display_name` (no más "juan.s", ahora "Don Pepe")
+- Sidebar muestra nombre + departamento · rol
+- Tono del bot adaptado por rol:
+  - **Asesor** → tono normal
+  - **Jefe** → "para tu equipo...", "puedes comunicar a tus asesores..."
+  - **Channel** → "para tu canal...", "tus distribuidores..."
+
+**UI polish:**
+- Welcome screen con logo grande +80px y glow blanco
+- Welcome shifted hacia arriba (justify-start + pt-vh)
+- Logo decorativo con brillo blanco + partículas amarillas (login + welcome)
+- SUN BOT mascota reposicionado al lado del input
+
+**Commits del día**: 12 commits, ~1,200 líneas de código nuevas/modificadas
+
+---
+
 ## 📍 ¿Cómo ver este mapa?
 
 ### Opción 1 — GitHub (más fácil) ✨
@@ -312,5 +401,5 @@ Cuando completes algo:
 
 ---
 
-**Última actualización**: 29 abril 2026
-**Próxima revisión sugerida**: 6 mayo 2026 (después de 1 semana de pilotaje)
+**Última actualización**: 30 abril 2026
+**Próxima revisión sugerida**: 7 mayo 2026 (después de 1 semana de pilotaje)
