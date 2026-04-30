@@ -5,57 +5,40 @@
 
 ---
 
-## 🌟 Vista General (Mind Map)
+## 🌟 Vista General
 
 ```mermaid
-mindmap
-  root((WINDMAR<br/>AI AGENT))
-    ✅ Infraestructura
-      Auth Supabase
-      Backend Vercel
-      Streaming
-      Deploy automático
-    ✅ Conocimiento
-      206 entradas
-      9 categorías
-      Búsqueda OR
-      10 herramientas
-    ✅ Inteligencia
-      Prompt adaptativo
-      4 tipos de mensaje
-      Memoria conversacional
-      Tono adaptado por rol
-      Detección de errores
-    ✅ UX/UI
-      Modo oscuro/claro
-      SUN BOT 6 estados
-      Glassmorphism
-      Responsive
-      Welcome con glowmorphism
-    ✅ Auth Avanzado
-      Flip card 3D
-      Registro completo
-      Recuperar contraseña
-      Detección email duplicado
-      Términos de uso
-    ✅ Perfil de Usuario
-      ProfileModal editable
-      display_name personalizable
-      Departamento + Rol
-      Engranaje en TopBar
-    🔄 Validación
-      Pilotaje 3-5 asesores
-      Dashboard Groq
-      Feedback real
-      Ajuste de prompt
-    ⏳ Optimización
-      Migrar a Claude
-      Botones 👍👎
-      Métricas Supabase
-    🔮 Futuro
-      Zoho CRM
-      Citas automáticas
-      Reportes semanales
+flowchart TD
+    Root[🌟 WINDMAR AI AGENT]
+    Root --> Done[✅ COMPLETADO]
+    Root --> Now[🔄 EN CURSO]
+    Root --> Next[⏳ PRÓXIMO]
+
+    Done --> D1[Infraestructura]
+    Done --> D2[Conocimiento]
+    Done --> D3[Inteligencia]
+    Done --> D4[UX/UI]
+    Done --> D5[Auth + Perfil]
+
+    Now --> N1[Validación con asesores]
+
+    Next --> X1[Claude API]
+    Next --> X2[Métricas]
+    Next --> X3[Zoho CRM]
+
+    style Root fill:#1B3A5C,color:#fff
+    style Done fill:#22c55e,color:#fff
+    style Now fill:#fbbf24,color:#000
+    style Next fill:#a78bfa,color:#fff
+    style D1 fill:#dcfce7,color:#15803d
+    style D2 fill:#dcfce7,color:#15803d
+    style D3 fill:#dcfce7,color:#15803d
+    style D4 fill:#dcfce7,color:#15803d
+    style D5 fill:#dcfce7,color:#15803d
+    style N1 fill:#fef3c7,color:#92400e
+    style X1 fill:#ede9fe,color:#5b21b6
+    style X2 fill:#ede9fe,color:#5b21b6
+    style X3 fill:#ede9fe,color:#5b21b6
 ```
 
 ---
