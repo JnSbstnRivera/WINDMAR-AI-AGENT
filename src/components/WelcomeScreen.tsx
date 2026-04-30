@@ -8,13 +8,13 @@ interface Props {
 
 export function WelcomeScreen({ onSend, disabled, onTypingChange }: Props) {
   return (
-    <div className="flex-1 flex flex-col items-center justify-center px-4 pb-6 sm:pb-8">
+    <div className="flex-1 flex flex-col items-center justify-start px-4 pt-[8vh] sm:pt-[10vh] pb-6 sm:pb-8">
       {/* Logo Windmar Home — glow solo en silueta + partículas flotantes */}
       <div
         className="relative flex items-center justify-center mb-4 sm:mb-5"
         style={{
-          width: 'clamp(180px, 32vw, 240px)',
-          height: 'clamp(180px, 32vw, 240px)',
+          width: 'clamp(260px, 40vw, 320px)',
+          height: 'clamp(260px, 40vw, 320px)',
         }}
       >
         {/* Logo principal con glow en silueta (drop-shadow) tipo SUN BOT */}
@@ -23,8 +23,8 @@ export function WelcomeScreen({ onSend, disabled, onTypingChange }: Props) {
           alt="Windmar Home"
           className="relative z-10 object-contain welcome-logo"
           style={{
-            width: 'clamp(240px, 40vw, 300px)',
-            height: 'clamp(240px, 40vw, 300px)',
+            width: 'clamp(320px, 48vw, 380px)',
+            height: 'clamp(320px, 48vw, 380px)',
           }}
         />
 
