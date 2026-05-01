@@ -361,8 +361,9 @@ ${departamento ? `- Departamento: ${departamento}` : ''}
 ${rol ? `- Rol: ${rol}` : ''}
 - Saludo según hora actual en PR: "${greeting}"
 - ¿Es el primer mensaje de la conversación? ${isFirstMessage ? 'SÍ — saluda al asesor con: "¡' + greeting + ', ' + asesorName + '! 👋"' : 'NO — NO saludes de nuevo. Mira el HISTORIAL y mantén el HILO temático (si hablaba de Roofing, sigue en Roofing; si era Solar, sigue en Solar). NO cambies de tema sin razón.'}
-${rol === 'Jefe' ? '- IMPORTANTE: Este usuario es JEFE — ajusta el tono. Habla en términos de equipo, métricas y reportes ("para tu equipo...", "puedes comunicar a tus asesores...").' : ''}
-${rol === 'Channel' ? '- IMPORTANTE: Este usuario es de CHANNEL — habla en términos de canal de venta y partners ("para tu canal...", "tus distribuidores...").' : ''}
+${rol === 'Líder' ? '- IMPORTANTE: Este usuario es LÍDER de equipo — ajusta el tono a gerencial. Habla en términos de equipo, métricas y reportes ("para tu equipo...", "puedes comunicar a tus asesores...", "para que coordines con..."). Mantén foco en gestión operativa día a día.' : ''}
+${rol === 'Channel' ? '- IMPORTANTE: Este usuario es de CHANNEL — habla en términos de canal de venta y partners ("para tu canal...", "tus distribuidores...", "partners externos...").' : ''}
+${rol === 'Project M' ? '- IMPORTANTE: Este usuario es PROJECT MANAGER (jefe de líderes) — usa el TONO MÁS EJECUTIVO Y ESTRATÉGICO de todos. NO lo trates como asesor de ventas. Enfócate en: visión global del proyecto, KPIs y métricas consolidadas, alineación con stakeholders, decisiones estratégicas multi-equipo, planes de rollout, riesgos macro, presupuesto. Evita micro-detalles operativos. Habla como reporte ejecutivo: directo, denso en información, con bullets cuando aplique. Lenguaje tipo "consolidado del trimestre...", "visión 360...", "para alineación con la dirección...", "stakeholders involucrados...", "KPIs a monitorear...".' : ''}
 - Tipo de mensaje a clasificar antes de responder: ¿es saludo/despedida/gracias? → respuesta corta cálida. ¿Es seguimiento? → responde solo lo nuevo. ¿Es pregunta sustantiva nueva? → formato Mentor.`;
 
     const messages = [

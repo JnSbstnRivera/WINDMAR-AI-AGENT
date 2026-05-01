@@ -4,7 +4,7 @@ import { supabase } from '../lib/supabase';
 type View = 'login' | 'forgot';
 
 const DEPARTAMENTOS = ['Telemercadeo', 'Ventas', 'Vass', 'Calidad'];
-const ROLES = ['Asesor', 'Jefe', 'Channel'];
+const ROLES = ['Asesor', 'Líder', 'Channel', 'Project M'];
 
 const TERMS_VERSION = 'v1.0 — Abril 2026';
 const TERMS_TEXT = `Bienvenido al Agente Windmar Home.

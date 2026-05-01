@@ -16,9 +16,9 @@ export function ChatWindow({ messages, isStreaming, userEmail = '' }: Props) {
   }, [messages]);
 
   return (
-    <div className="flex-1 overflow-y-auto px-3 sm:px-6 md:px-8 py-6">
-      {/* Centered container, more spacious */}
-      <div className="max-w-4xl mx-auto">
+    <div className="flex-1 overflow-y-auto px-3 sm:px-6 md:px-10 py-6">
+      {/* Container ancho estilo ChatGPT (max-w-3xl) */}
+      <div className="max-w-3xl mx-auto">
         {messages.map((msg, i) => (
           <ChatMessage
             key={msg.id}

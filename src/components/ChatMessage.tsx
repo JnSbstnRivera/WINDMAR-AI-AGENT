@@ -160,37 +160,22 @@ export function ChatMessage({ message, isStreaming, asesorEmail = '' }: Props) {
   // Limpia el marcador del display
   const displayContent = message.content.replace(/\n*\[ERROR_TYPE:[^\]]+\]/g, '');
 
-  // IA — avatar SUN BOT a la izquierda + burbuja
+  // IA — avatar SUN BOT + texto plano sin burbuja (estilo ChatGPT)
   return (
-    <div className="flex justify-start gap-3 mb-6">
+    <div className="flex justify-start gap-3 mb-8">
       <IAAvatar isStreaming={isStreaming} isError={isErrorMessage} />
-      <div className="flex flex-col items-start min-w-0 max-w-[85%] sm:max-w-[80%]">
-        <div
-          className="relative rounded-2xl px-5 sm:px-7 py-5 sm:py-6 text-[15px] sm:text-[15.5px] text-gray-800 dark:text-gray-100 whitespace-pre-wrap leading-relaxed bg-white dark:bg-[#142033] border border-[#dde8f5] dark:border-white/[0.06] w-full"
-          style={{
-            boxShadow: '0 6px 24px rgba(27,58,92,0.08), 0 2px 6px rgba(27,58,92,0.05)',
-          }}
-        >
-          {/* Acento naranja a la izquierda */}
-          <div
-            className="absolute left-0 top-5 bottom-5 w-1 rounded-r-full"
-            style={{
-              background: 'linear-gradient(180deg, #F7941D 0%, #e8830d 100%)',
-              opacity: 0.7,
-            }}
-          />
-          <div className="pl-2">
-            {renderContent(displayContent)}
-            {isStreaming && (
-              <span className="inline-block w-[2px] h-[14px] bg-[#F7941D] ml-1 align-middle animate-pulse" />
-            )}
-          </div>
+      <div className="flex flex-col items-start min-w-0 flex-1 pt-1.5">
+        <div className="text-[15px] sm:text-[15.5px] text-gray-800 dark:text-gray-100 whitespace-pre-wrap leading-relaxed w-full">
+          {renderContent(displayContent)}
+          {isStreaming && (
+            <span className="inline-block w-[2px] h-[14px] bg-[#F7941D] ml-1 align-middle animate-pulse" />
+          )}
         </div>
 
         {!isStreaming && message.content && (
           <button
             onClick={handleCopy}
-            className="mt-2 ml-2 text-xs text-gray-400 hover:text-[#F7941D] dark:hover:text-[#F7941D] transition-colors flex items-center gap-1 cursor-pointer"
+            className="mt-3 text-xs text-gray-400 hover:text-[#F7941D] dark:hover:text-[#F7941D] transition-colors flex items-center gap-1 cursor-pointer"
           >
             {copied ? '✓ Copiado' : '⎘ Copiar para WhatsApp'}
           </button>

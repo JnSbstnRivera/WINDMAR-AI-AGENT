@@ -9,7 +9,7 @@ interface Props {
 }
 
 const DEPARTAMENTOS = ['Telemercadeo', 'Ventas', 'Vass', 'Calidad'];
-const ROLES = ['Asesor', 'Jefe', 'Channel'];
+const ROLES = ['Asesor', 'Líder', 'Channel', 'Project M'];
 
 function isValidDisplayName(name: string): boolean {
   const trimmed = name.trim();
