@@ -114,7 +114,7 @@ flowchart TD
 
 ```mermaid
 flowchart TD
-    User[👤 Asesor pregunta]
+    User[👤 Usuario pregunta]
     User --> Detect{🧠 Detecta tipo<br/>de mensaje}
     Detect -->|Saludo| T1[💚 Tipo 1<br/>Respuesta corta]
     Detect -->|Casual| T2[💚 Tipo 2<br/>Conversacional]
@@ -124,17 +124,27 @@ flowchart TD
     T2 --> Role
     T3 --> Role
     T4 --> Role
-    Role -->|Asesor| Out([📤 Tono normal])
-    Role -->|Jefe| OutJ([📤 Tono ejecutivo])
-    Role -->|Channel| OutC([📤 Tono partner])
+    Role -->|Asesor| Out([📤 Tono operativo<br/>llamadas a clientes])
+    Role -->|Channel| OutC([📤 Tono partner<br/>documentación + semi-liderazgo])
+    Role -->|Líder| OutL([📤 Tono gerencial<br/>manda asesor + channel])
+    Role -->|Project M| OutPM([📤 Tono ejecutivo<br/>jefe de áreas del call center])
 
     style Detect fill:#fbbf24,color:#000
     style T4 fill:#1B3A5C,color:#fff
     style Role fill:#a78bfa,color:#fff
     style Out fill:#F7941D,color:#fff
-    style OutJ fill:#F7941D,color:#fff
     style OutC fill:#F7941D,color:#fff
+    style OutL fill:#F7941D,color:#fff
+    style OutPM fill:#1B3A5C,color:#fff
 ```
+
+**Jerarquía del call center:**
+- 📞 **Asesor** — llamadas a clientes (operativo)
+- 📋 **Channel** — documentación + semi-liderazgo del grupo
+- 👔 **Líder** — manda Asesor + Channel del equipo
+- 🎯 **Project M** — jefe de Asesores, Channel y Líderes de todas las áreas
+
+> 🔍 **Calidad** opera aparte: evalúan llamadas y apoyan asignación de citas. No están en la cadena de mando.
 
 ### 🟢 BLOQUE D — UX/UI ✅
 
