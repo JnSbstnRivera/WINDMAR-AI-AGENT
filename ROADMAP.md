@@ -1,7 +1,7 @@
 # 🗺️ Roadmap Visual — WINDMAR AI AGENT
 
-> Mapa conceptual del proyecto. **Última actualización: 30 abril 2026**
-> Progreso global: **82% hacia v1.0 producción** ⬆️ (+7% hoy)
+> Mapa conceptual del proyecto. **Última actualización: 1 mayo 2026**
+> Estado: **Fase de Validación** 🔄
 
 ---
 
@@ -48,13 +48,13 @@ flowchart TD
 ```mermaid
 flowchart TD
     Start([🚀 Inicio Proyecto]) --> A
-    A[🟢 BLOQUE A<br/>Infraestructura<br/>100% ✅]
-    A --> B[🟢 BLOQUE B<br/>Conocimiento<br/>100% ✅]
-    B --> C[🟢 BLOQUE C<br/>Prompt IA<br/>100% ✅]
-    C --> D[🟢 BLOQUE D<br/>UX/UI<br/>100% ✅]
-    D --> H[🟢 BLOQUE H<br/>Auth + Perfil<br/>100% ✅]
-    H --> E{🟡 BLOQUE E<br/>Validación<br/>40% 🔄}
-    E -->|Feedback OK| F[⏳ BLOQUE F<br/>Optimización<br/>0%]
+    A[🟢 BLOQUE A<br/>Infraestructura<br/>✅]
+    A --> B[🟢 BLOQUE B<br/>Conocimiento<br/>✅]
+    B --> C[🟢 BLOQUE C<br/>Prompt IA<br/>✅]
+    C --> D[🟢 BLOQUE D<br/>UX/UI<br/>✅]
+    D --> H[🟢 BLOQUE H<br/>Auth + Perfil<br/>✅]
+    H --> E{🟡 BLOQUE E<br/>Validación<br/>📍 AQUÍ}
+    E -->|Feedback OK| F[⏳ BLOQUE F<br/>Optimización]
     F --> V1([🎯 v1.0 PRODUCCIÓN])
     V1 --> G[🔮 BLOQUE G<br/>Integraciones<br/>Backlog]
 
@@ -74,7 +74,7 @@ flowchart TD
 
 ## 📊 Detalle por Bloque
 
-### 🟢 BLOQUE A — Infraestructura (✅ 100%)
+### 🟢 BLOQUE A — Infraestructura ✅
 
 ```mermaid
 flowchart LR
@@ -92,7 +92,7 @@ flowchart LR
     style A6 fill:#22c55e,color:#fff
 ```
 
-### 🟢 BLOQUE B — Conocimiento (✅ 100%)
+### 🟢 BLOQUE B — Conocimiento ✅
 
 ```mermaid
 flowchart TD
@@ -110,7 +110,7 @@ flowchart TD
     style KB fill:#F7941D,color:#fff
 ```
 
-### 🟢 BLOQUE C — Prompt Adaptativo (✅ 100%)
+### 🟢 BLOQUE C — Prompt Adaptativo ✅
 
 ```mermaid
 flowchart TD
@@ -136,7 +136,7 @@ flowchart TD
     style OutC fill:#F7941D,color:#fff
 ```
 
-### 🟢 BLOQUE D — UX/UI (✅ 100%)
+### 🟢 BLOQUE D — UX/UI ✅
 
 ```mermaid
 flowchart LR
@@ -159,7 +159,7 @@ flowchart LR
     style UI fill:#1B3A5C,color:#fff
 ```
 
-### 🟢 BLOQUE H — Auth + Perfil (✅ 100%) 🆕
+### 🟢 BLOQUE H — Auth + Perfil ✅
 
 ```mermaid
 flowchart TD
@@ -187,7 +187,7 @@ flowchart TD
     style Profile fill:#a78bfa,color:#fff
 ```
 
-### 🟡 BLOQUE E — Validación (🔄 EN CURSO)
+### 🟡 BLOQUE E — Validación 📍 EN CURSO
 
 ```mermaid
 flowchart TD
@@ -206,6 +206,7 @@ flowchart TD
 ```
 
 ### ⏳ BLOQUE F — Optimización (próximo)
+
 
 ```mermaid
 flowchart LR
@@ -313,7 +314,39 @@ flowchart LR
 
 ## 📅 Bitácora de Cambios
 
-### 30 abril 2026 — Auth avanzado + perfil de usuario 🆕
+### 1 mayo 2026 — Roles ampliados + Chat estilo ChatGPT + Anti-alucinación 🆕
+
+**Roles del asesor:**
+- Renombrado "Jefe" → **Líder** (terminología más actual)
+- Nuevo rol **Project M** (Project Manager — jefe de líderes)
+- 4 niveles de tono ahora: Asesor / Líder / Channel / Project M
+- Project M recibe el tono más ejecutivo: KPIs, stakeholders, visión 360, alineación con dirección
+
+**Rediseño de chat tipo ChatGPT:**
+- Burbuja IA eliminada (sin fondo, sin borde, sin sombra)
+- Acento naranja vertical eliminado
+- Texto IA fluye libre estilo ChatGPT
+- Avatar SUN BOT mantenido al lado
+- Cursor parpadeante streaming mantenido
+- Botón "Copiar para WhatsApp" mantenido
+- Chat ancho a max-w-3xl (estilo ChatGPT)
+- Burbuja del usuario sin tocar (navy gradient derecha)
+- Más respiro entre mensajes
+
+**Reglas anti-alucinación (críticas):**
+- 🔴 REGLA #0 — Lista cerrada de 10 herramientas reales. Bot NO puede inventar URLs/herramientas (ej: "Calculadora de ahorro de agua" — no existe)
+- 🔴 REGLA #1 — Solo precios literales del knowledge_base. NO promos/descuentos inventados
+- 🔴 REGLA #2 — Si hay duda, omite. Mejor respuesta corta sin dato que larga con dato falso
+
+**Otros ajustes:**
+- Login/Registro sin scroll en cualquier viewport (grid stacking)
+- Logo decorativo welcome +80px con glow blanco
+- Botón "Perfil" reemplazado por engranaje ⚙️ (look uniforme TopBar)
+- launch.json eliminado (equipo corporativo, deploy via Vercel únicamente)
+
+---
+
+### 30 abril 2026 — Auth avanzado + perfil de usuario
 
 **Login/Registro completamente rediseñado:**
 - Tarjeta con animación 3D flip (eje Y, 0.7s premium curve)
@@ -384,5 +417,5 @@ Cuando completes algo:
 
 ---
 
-**Última actualización**: 30 abril 2026
-**Próxima revisión sugerida**: 7 mayo 2026 (después de 1 semana de pilotaje)
+**Última actualización**: 1 mayo 2026
+**Próxima revisión sugerida**: 8 mayo 2026 (después de 1 semana de pilotaje)
