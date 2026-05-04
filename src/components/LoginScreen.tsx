@@ -127,6 +127,8 @@ export function LoginScreen() {
     // 1) Devolver error explícito "User already registered" (config con email confirmation off)
     // 2) Devolver data.user pero sin user.identities[] (email ya existe pero confirmación pendiente)
     if (err) {
+      // Log completo a consola para debugging
+      console.error('[SignUp Error]', err);
       const msg = (err.message || '').toLowerCase();
       if (msg.includes('already registered') || msg.includes('already exists') || msg.includes('user_already_exists')) {
         setError('Este correo ya está en uso. Intenta iniciar sesión o recupera tu contraseña.');
@@ -134,8 +136,11 @@ export function LoginScreen() {
         setError('Correo no válido.');
       } else if (msg.includes('password')) {
         setError('La contraseña no cumple los requisitos.');
+      } else if (msg.includes('rate') || msg.includes('limit') || msg.includes('too many')) {
+        setError('Demasiados intentos. Espera 1-2 minutos e intenta de nuevo.');
       } else {
-        setError('No pudimos crear tu cuenta. Intenta de nuevo en unos segundos.');
+        // Mostrar el error real para diagnóstico
+        setError(`Error: ${err.message || 'desconocido'}`);
       }
     } else if (data?.user && Array.isArray(data.user.identities) && data.user.identities.length === 0) {
       // Email ya estaba registrado — Supabase devolvió "fake" user sin identidades
