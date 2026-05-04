@@ -1,7 +1,7 @@
 # 🗺️ Roadmap Visual — WINDMAR AI AGENT
 
-> Mapa conceptual del proyecto. **Última actualización: 1 mayo 2026**
-> Estado: **Fase de Validación** 🔄
+> Mapa conceptual del proyecto. **Última actualización: 4 mayo 2026**
+> Estado: **Fase de Validación con Pilotos** 🔄
 
 ---
 
@@ -19,12 +19,15 @@ flowchart TD
     Done --> D3[Inteligencia]
     Done --> D4[UX/UI]
     Done --> D5[Auth + Perfil]
+    Done --> D6[Email profesional]
 
     Now --> N1[Validación con asesores]
+    Now --> N2[Verificación DNS<br/>esperando IT]
 
     Next --> X1[Claude API]
-    Next --> X2[Métricas]
-    Next --> X3[Zoho CRM]
+    Next --> X2[Dashboard admin]
+    Next --> X3[Sistema feedback]
+    Next --> X4[Zoho CRM]
 
     style Root fill:#1B3A5C,color:#fff
     style Done fill:#22c55e,color:#fff
@@ -35,10 +38,13 @@ flowchart TD
     style D3 fill:#dcfce7,color:#15803d
     style D4 fill:#dcfce7,color:#15803d
     style D5 fill:#dcfce7,color:#15803d
+    style D6 fill:#dcfce7,color:#15803d
     style N1 fill:#fef3c7,color:#92400e
+    style N2 fill:#fef3c7,color:#92400e
     style X1 fill:#ede9fe,color:#5b21b6
     style X2 fill:#ede9fe,color:#5b21b6
     style X3 fill:#ede9fe,color:#5b21b6
+    style X4 fill:#ede9fe,color:#5b21b6
 ```
 
 ---
@@ -312,19 +318,82 @@ flowchart LR
     R3[🟡 Adopción baja] -->|Mitigación| M3[Demo + onboarding]
     R4[🟡 Info desactualizada] -->|Mitigación| M4[Update trimestral]
     R5[🟢 Costo API] -->|Mitigación| M5[Claude $3/M tokens]
+    R6[🟡 DNS sin verificar<br/>esperando IT] -->|Mitigación| M6[Pilotaje sin email<br/>confirmation por ahora]
 
     style R1 fill:#f97316,color:#fff
     style R2 fill:#22c55e,color:#fff
     style R3 fill:#fbbf24,color:#000
     style R4 fill:#fbbf24,color:#000
     style R5 fill:#22c55e,color:#fff
+    style R6 fill:#fbbf24,color:#000
 ```
 
 ---
 
 ## 📅 Bitácora de Cambios
 
-### 1 mayo 2026 — Roles ampliados + Chat estilo ChatGPT + Anti-alucinación 🆕
+### 4 mayo 2026 — Email profesional con Resend + Reset total + IT ticket 🆕
+
+**Reset total y rebuild:**
+- Eliminados todos los usuarios, conversaciones y sesiones
+- Cleanup adicional de `auth.identities` (residuales que bloqueaban signup)
+- Base de datos virgen lista para pilotaje
+
+**Email profesional via Resend SMTP:**
+- Cuenta Resend creada (workspace "windmarhome")
+- API key generada y guardada en Supabase SMTP Settings
+- Configuración SMTP completada:
+  - Host: `smtp.resend.com`
+  - Port: `465`
+  - Username: `resend`
+  - Sender temporal: `onboarding@resend.dev`
+- Plantilla HTML personalizada en Supabase con branding Windmar:
+  - Hero gradient navy + naranja
+  - SUN BOT (sunbot-feliz.png) hosted en Vercel
+  - Saludo personalizado con `{{ .Data.display_name }}`
+  - Botón naranja "☀️ Confirmar mi cuenta"
+  - Footer con tagline "22 años iluminando hogares"
+  - Tip de validación incluido
+- Subject: "¡Bienvenido al Agente Windmar Home! ☀️"
+
+**Identificadas 2 limitaciones del free tier:**
+- ⚠️ Sender `onboarding@resend.dev` solo permite enviar al dueño del workspace
+- ⚠️ Imágenes externas bloqueadas por defecto en clientes (Gmail/Outlook)
+- ✅ Solución temporal: email confirmation desactivado para fase de pilotaje
+
+**Solicitud DNS enviada a IT (iNubo):**
+- Dominio `windmarhome.com` agregado en Resend
+- 3 records DNS generados (1 MX + 2 TXT para SPF/DKIM)
+- Ticket creado en sistema iNubo Managed
+- Estado: ⏳ Esperando respuesta de IT
+
+**Queries SQL para Project M:**
+- 5 queries listos para monitorear conversaciones de TODOS los asesores
+- Resumen de actividad, mensajes por usuario, preguntas frecuentes
+- Estadísticas para reportar a gerencia
+
+---
+
+### 🔮 PENDIENTES — Por hacer cuando IT confirme DNS
+
+| # | Tarea | Cuándo |
+|---|---|---|
+| 1 | IT pega 3 records DNS en GoDaddy (windmarhome.com) | ⏳ 1-2 días |
+| 2 | Verificar dominio en Resend (esperar propagación 15min-24h) | Día 2-3 |
+| 3 | Cambiar `Sender email` en Supabase a `noreply@windmarhome.com` | Día 3 |
+| 4 | Reactivar `Confirm email` en Supabase Auth | Día 3 |
+| 5 | Probar registro con asesor de prueba | Día 3 |
+| 6 | Comunicar a pilotos que ya pueden registrarse normalmente | Día 3 |
+
+**Beneficios después de verificación DNS:**
+- ✅ Emails salen de `noreply@windmarhome.com` (look profesional)
+- ✅ Imágenes cargan automáticamente sin click extra
+- ✅ Cero problemas de spam (sender confiable)
+- ✅ Escala a todo el call center sin restricciones
+
+---
+
+### 1 mayo 2026 — Roles ampliados + Chat estilo ChatGPT + Anti-alucinación
 
 **Roles del asesor:**
 - Renombrado "Jefe" → **Líder** (terminología más actual)
@@ -427,5 +496,5 @@ Cuando completes algo:
 
 ---
 
-**Última actualización**: 1 mayo 2026
-**Próxima revisión sugerida**: 8 mayo 2026 (después de 1 semana de pilotaje)
+**Última actualización**: 4 mayo 2026
+**Próxima revisión sugerida**: cuando IT confirme DNS o tengas feedback de pilotos
