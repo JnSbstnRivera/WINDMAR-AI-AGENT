@@ -1,7 +1,7 @@
 # 🗺️ Roadmap Visual — WINDMAR AI AGENT
 
-> Mapa conceptual del proyecto. **Última actualización: 7 mayo 2026**
-> Estado: **Migración a Next.js + SSO Microsoft (sin DNS/email)** 🔄
+> Mapa conceptual del proyecto. **Última actualización: 8 mayo 2026**
+> Estado: **🟢 EN PRODUCCIÓN — Uso definitivo activo**
 
 ---
 
@@ -11,23 +11,26 @@
 flowchart TD
     Root[🌟 WINDMAR AI AGENT]
     Root --> Done[✅ COMPLETADO]
-    Root --> Now[🔄 EN CURSO]
+    Root --> Now[🔄 EN USO]
     Root --> Next[⏳ PRÓXIMO]
 
     Done --> D1[Infraestructura]
-    Done --> D2[Conocimiento]
-    Done --> D3[Inteligencia]
-    Done --> D4[UX/UI]
-    Done --> D5[Auth + Perfil v1]
-    Done --> D7[Migración Next.js<br/>+ SSO Microsoft]
+    Done --> D2[Knowledge Base]
+    Done --> D3[Prompt Adaptativo]
+    Done --> D4[UX/UI Premium]
+    Done --> D5[SSO Microsoft]
+    Done --> D6[Migración Next.js]
+    Done --> D7[Claude Haiku 4.5]
+    Done --> D8[Web Search opt-in]
+    Done --> D9[Onboarding asesores]
 
-    Now --> N1[SSO Microsoft Entra ID<br/>esperando IT]
-    Now --> N2[Validación con asesores]
+    Now --> N1[Validación con asesores reales]
+    Now --> N2[Recolección feedback]
 
-    Next --> X1[Claude API]
-    Next --> X2[Dashboard admin]
-    Next --> X3[Sistema feedback]
-    Next --> X4[Zoho CRM]
+    Next --> X1[📸 Vision: factura LUMA]
+    Next --> X2[📊 Gráficos ROI]
+    Next --> X3[🗺️ Maps + direcciones]
+    Next --> X4[🔌 Integración Zoho]
 
     style Root fill:#1B3A5C,color:#fff
     style Done fill:#22c55e,color:#fff
@@ -38,7 +41,10 @@ flowchart TD
     style D3 fill:#dcfce7,color:#15803d
     style D4 fill:#dcfce7,color:#15803d
     style D5 fill:#dcfce7,color:#15803d
+    style D6 fill:#dcfce7,color:#15803d
     style D7 fill:#dcfce7,color:#15803d
+    style D8 fill:#dcfce7,color:#15803d
+    style D9 fill:#dcfce7,color:#15803d
     style N1 fill:#fef3c7,color:#92400e
     style N2 fill:#fef3c7,color:#92400e
     style X1 fill:#ede9fe,color:#5b21b6
@@ -55,24 +61,28 @@ flowchart TD
 flowchart TD
     Start([🚀 Inicio Proyecto]) --> A
     A[🟢 BLOQUE A<br/>Infraestructura<br/>✅]
-    A --> B[🟢 BLOQUE B<br/>Conocimiento<br/>✅]
-    B --> C[🟢 BLOQUE C<br/>Prompt IA<br/>✅]
+    A --> B[🟢 BLOQUE B<br/>Knowledge Base<br/>✅]
+    B --> C[🟢 BLOQUE C<br/>Prompt IA v2<br/>✅]
     C --> D[🟢 BLOQUE D<br/>UX/UI<br/>✅]
-    D --> H[🟢 BLOQUE H<br/>Auth + Perfil v1<br/>✅]
-    H --> I{🟡 BLOQUE I<br/>Migración Next.js<br/>+ SSO Microsoft<br/>📍 AQUÍ}
-    I -->|IT entrega creds| E[⏳ BLOQUE E<br/>Validación con<br/>asesores]
-    E -->|Feedback OK| F[⏳ BLOQUE F<br/>Optimización]
-    F --> V1([🎯 v1.0 PRODUCCIÓN])
-    V1 --> G[🔮 BLOQUE G<br/>Integraciones<br/>Backlog]
+    D --> H[🟢 BLOQUE H<br/>Auth v1 Email/Pass<br/>✅ Reemplazado]
+    H --> I[🟢 BLOQUE I<br/>Migración Next.js<br/>+ SSO Microsoft<br/>✅]
+    I --> J[🟢 BLOQUE J<br/>Haiku 4.5<br/>+ Web Search<br/>✅]
+    J --> K[🟢 BLOQUE K<br/>Onboarding<br/>asesores nuevos<br/>✅]
+    K --> E{🟡 BLOQUE E<br/>Validación<br/>📍 AQUÍ}
+    E -->|Feedback OK| F[⏳ BLOQUE F<br/>Vision + Gráficos<br/>+ Maps]
+    F --> V1([🎯 v2.0 PRODUCCIÓN COMPLETA])
+    V1 --> G[🔮 BLOQUE G<br/>Integraciones<br/>Zoho/Smartsheet]
 
     style A fill:#22c55e,color:#fff
     style B fill:#22c55e,color:#fff
     style C fill:#22c55e,color:#fff
     style D fill:#22c55e,color:#fff
     style H fill:#22c55e,color:#fff
-    style I fill:#fbbf24,color:#000
-    style E fill:#94a3b8,color:#fff
-    style F fill:#94a3b8,color:#fff
+    style I fill:#22c55e,color:#fff
+    style J fill:#22c55e,color:#fff
+    style K fill:#22c55e,color:#fff
+    style E fill:#fbbf24,color:#000
+    style F fill:#a78bfa,color:#fff
     style G fill:#a78bfa,color:#fff
     style V1 fill:#f97316,color:#fff
     style Start fill:#1B3A5C,color:#fff
@@ -80,211 +90,112 @@ flowchart TD
 
 ---
 
+## 📊 Stack Actual (Producción)
+
+```mermaid
+flowchart LR
+    User[👤 Asesor] -->|SSO Microsoft| App[🌐 Next.js 15]
+    App -->|JWT 8h| Auth[🔐 NextAuth v5]
+    App -->|Streaming| AI[🤖 Claude Haiku 4.5]
+    AI -.->|Prompt cache 80%| AI
+    AI -->|Búsqueda KB| DB[(💾 Supabase)]
+    AI -.->|Opt-in 🌐| Web[🔍 Web Search]
+    DB --> KB[📚 206 entradas]
+    DB --> UR[👥 user_roles]
+    DB --> CV[💬 conversations]
+
+    style User fill:#1B3A5C,color:#fff
+    style App fill:#000,color:#fff
+    style Auth fill:#0078D4,color:#fff
+    style AI fill:#F7941D,color:#fff
+    style DB fill:#3ECF8E,color:#fff
+    style Web fill:#a78bfa,color:#fff
+```
+
+---
+
 ## 📊 Detalle por Bloque
 
-### 🟢 BLOQUE A — Infraestructura ✅
-
-```mermaid
-flowchart LR
-    A1[Auth Supabase] --> A2[Sesión persistente]
-    A2 --> A3[Backend Vercel]
-    A3 --> A4[Streaming responses]
-    A4 --> A5[RLS por asesor]
-    A5 --> A6[Deploy automático]
-
-    style A1 fill:#22c55e,color:#fff
-    style A2 fill:#22c55e,color:#fff
-    style A3 fill:#22c55e,color:#fff
-    style A4 fill:#22c55e,color:#fff
-    style A5 fill:#22c55e,color:#fff
-    style A6 fill:#22c55e,color:#fff
-```
-
-### 🟢 BLOQUE B — Conocimiento ✅
+### 🟢 BLOQUE I — Migración Next.js + SSO Microsoft ✅
 
 ```mermaid
 flowchart TD
-    KB[(📚 Knowledge Base<br/>206 entradas)]
-    KB --> B1[☀️ Solar]
-    KB --> B2[🔋 Anker]
-    KB --> B3[💧 Water]
-    KB --> B4[🏠 Roofing]
-    KB --> B5[💰 Financiamiento]
-    KB --> B6[🛡️ Garantías]
-    KB --> B7[⚙️ Procesos]
-    KB --> B8[💬 Objeciones]
-    KB --> B9[🔧 10 Herramientas]
-
-    style KB fill:#F7941D,color:#fff
-```
-
-### 🟢 BLOQUE C — Prompt Adaptativo ✅
-
-```mermaid
-flowchart TD
-    User[👤 Usuario pregunta]
-    User --> Detect{🧠 Detecta tipo<br/>de mensaje}
-    Detect -->|Saludo| T1[💚 Tipo 1<br/>Respuesta corta]
-    Detect -->|Casual| T2[💚 Tipo 2<br/>Conversacional]
-    Detect -->|Follow-up| T3[💚 Tipo 3<br/>Continúa hilo]
-    Detect -->|Sustantiva| T4[🔴 Tipo 4<br/>Formato Mentor]
-    T1 --> Role{👔 Rol del usuario}
-    T2 --> Role
-    T3 --> Role
-    T4 --> Role
-    Role -->|Asesor| Out([📤 Tono operativo<br/>llamadas a clientes])
-    Role -->|Channel| OutC([📤 Tono partner<br/>documentación + semi-liderazgo])
-    Role -->|Líder| OutL([📤 Tono gerencial<br/>manda asesor + channel])
-    Role -->|Project M| OutPM([📤 Tono ejecutivo<br/>jefe de áreas del call center])
-
-    style Detect fill:#fbbf24,color:#000
-    style T4 fill:#1B3A5C,color:#fff
-    style Role fill:#a78bfa,color:#fff
-    style Out fill:#F7941D,color:#fff
-    style OutC fill:#F7941D,color:#fff
-    style OutL fill:#F7941D,color:#fff
-    style OutPM fill:#1B3A5C,color:#fff
-```
-
-**Jerarquía del call center:**
-- 📞 **Asesor** — llamadas a clientes (operativo)
-- 📋 **Channel** — documentación + semi-liderazgo del grupo
-- 👔 **Líder** — manda Asesor + Channel del equipo
-- 🎯 **Project M** — jefe de Asesores, Channel y Líderes de todas las áreas
-
-> 🔍 **Calidad** opera aparte: evalúan llamadas y apoyan asignación de citas. No están en la cadena de mando.
-
-### 🟢 BLOQUE D — UX/UI ✅
-
-```mermaid
-flowchart LR
-    UI[🎨 UI Windmar]
-    UI --> D1[🌙 Dark/Light]
-    UI --> D2[🤖 SUN BOT 6 estados]
-    UI --> D3[💬 Burbujas + avatares]
-    UI --> D4[📱 Responsive]
-    UI --> D5[✨ Glassmorphism]
-    UI --> D6[💡 Tips rotativos]
-    UI --> D7[🌟 Welcome glowmorphism]
-
-    D2 --> S1[idle]
-    D2 --> S2[typing]
-    D2 --> S3[thinking]
-    D2 --> S4[happy]
-    D2 --> S5[error]
-    D2 --> S6[loading]
-
-    style UI fill:#1B3A5C,color:#fff
-```
-
-### 🟢 BLOQUE H — Auth + Perfil v1 ✅ (REEMPLAZADO por BLOQUE I)
-
-> Sistema de email + password de Supabase Auth. Funcional pero reemplazado por SSO corporativo.
-
-### 🟡 BLOQUE I — Migración Next.js + SSO Microsoft 📍 EN CURSO
-
-```mermaid
-flowchart TD
-    Migration[🔄 Migración Next.js + SSO]
-    Migration --> M1[📦 Reescritura completa<br/>Vite → Next.js 15]
-    Migration --> M2[🔐 NextAuth v5<br/>+ Microsoft Entra ID]
-    Migration --> M3[🗄️ Refactor DB<br/>user_id → user_email]
+    Migration[Migración completada]
+    Migration --> M1[Vite → Next.js 15.5.18]
+    Migration --> M2[Supabase Auth → NextAuth v5]
+    Migration --> M3[user_id UUID → user_email TEXT]
+    Migration --> M4[Tabla nueva user_roles]
 
     M2 --> Login[🚪 Login simplificado]
-    Login --> L1[Botón único<br/>'Iniciar sesión con Microsoft']
-    L1 --> L2[Sesión 8h<br/>JWT cifrado]
-    L2 --> L3[Solo @windmarhome.com<br/>validación tenant + dominio]
+    Login --> L1[Botón único Microsoft]
+    L1 --> L2[Sesión 8h JWT cifrado]
+    L2 --> L3[Solo @windmarhome.com]
 
-    M3 --> DB1[Tabla user_roles<br/>display_name, departamento, rol]
-    M3 --> DB2[conversations.user_email<br/>migrado desde user_id]
+    M3 --> DB1[Service role + checks API layer]
+    M4 --> Roles[Asesor / Líder / Channel / Project M]
 
-    style Migration fill:#fbbf24,color:#000
-    style M1 fill:#1B3A5C,color:#fff
-    style M2 fill:#1B3A5C,color:#fff
-    style M3 fill:#1B3A5C,color:#fff
+    style Migration fill:#22c55e,color:#fff
 ```
 
-**Stack nuevo:**
-
-| Capa | Antes (v1) | Ahora (v2) |
-|---|---|---|
-| Framework | React + Vite | **Next.js 15** + React 19 |
-| Auth | Supabase Auth (email/password) | **NextAuth v5** + Microsoft Entra ID |
-| Sesiones | Token Supabase | **JWT cifrado, 8h TTL** |
-| Identidad | UUID `auth.users.id` | **Email corporativo** |
-| Profile data | `auth.users.user_metadata` | Tabla `user_roles` |
-| Acceso DB | Anon key + RLS | **Service role + checks en API layer** |
-| Email | Resend SMTP via Supabase | **Removido** (decisión: SSO es self-explanatory) |
-
-**Flujo SSO completo:**
-
-```mermaid
-sequenceDiagram
-    participant U as Asesor
-    participant A as App Next.js
-    participant M as Microsoft Entra ID
-    participant S as Supabase
-
-    U->>A: Click "Iniciar sesión con Microsoft"
-    A->>M: Redirect a login.microsoftonline.com
-    U->>M: Autentica con cuenta Windmar
-    M->>A: Callback con auth code
-    A->>M: Intercambia code por tokens
-    A->>A: Valida @windmarhome.com
-    A->>S: Upsert user_roles (auto-provision)
-    S-->>A: Perfil listo
-    A->>U: Cookie sesión (8h) + redirect al chat
-```
-
-### 🟡 BLOQUE E — Validación (próximo, después de SSO)
+### 🟢 BLOQUE J — Claude Haiku 4.5 + Web Search ✅
 
 ```mermaid
 flowchart TD
-    E[👥 Pilotaje]
-    E --> E1[3-5 asesores<br/>con cuenta Windmar]
-    E1 --> E2[📊 Monitor<br/>Dashboard Groq + logs Vercel]
-    E2 --> E3[📝 Feedback<br/>cualitativo]
-    E3 --> E4{¿Respuestas<br/>buenas?}
-    E4 -->|Sí| E5[✅ Aprobación<br/>gerencia]
-    E4 -->|No| E6[🔧 Ajustar<br/>prompt + KB]
-    E6 --> E1
-    E5 --> Next([➡️ Bloque F])
+    Haiku[🤖 Claude Haiku 4.5]
+    Haiku --> H1[Modelo: claude-haiku-4-5]
+    Haiku --> H2[💰 ~$3-8/mes con caching]
+    Haiku --> H3[⚡ Latencia ~2-3s primer token]
 
-    style E fill:#94a3b8,color:#fff
-    style Next fill:#22c55e,color:#fff
+    H1 --> Cache[📦 Prompt Caching]
+    Cache --> C1[Cache write: $1.25/M]
+    Cache --> C2[Cache read: $0.10/M ~80% ahorro]
+
+    Haiku --> WS[🌐 Web Search opt-in]
+    WS --> W1[Triggers: investiga, busca online]
+    WS --> W2[max_uses: 3 búsquedas/turno]
+    WS --> W3[Prefijo 🌐 + cita fuente]
+
+    style Haiku fill:#F7941D,color:#fff
+    style Cache fill:#22c55e,color:#fff
+    style WS fill:#a78bfa,color:#fff
 ```
 
-### ⏳ BLOQUE F — Optimización (próximo)
+### 🟢 BLOQUE K — Onboarding asesores nuevos ✅
+
+```mermaid
+flowchart TD
+    Onboard[OnboardingModal]
+    Onboard --> O1[Detecta onboarded_at IS NULL]
+    Onboard --> O2[Pre-fill primer nombre desde Microsoft]
+    Onboard --> O3[Dropdown departamento]
+    Onboard --> O4[Radio cards rol con descripciones]
+    Onboard --> O5[Pantalla éxito con saludo personalizado]
+
+    O5 --> Save[Guarda en user_roles]
+    Save --> JWT[Update JWT via useSession update]
+    JWT --> Chat[→ Chat con datos correctos]
+
+    style Onboard fill:#F7941D,color:#fff
+    style Save fill:#22c55e,color:#fff
+```
+
+### 🟢 BLOQUE C v2 — System Prompt Refactorizado ✅
 
 ```mermaid
 flowchart LR
-    F1[🤖 Migrar<br/>a Claude API]
-    F2[👍👎 Botones<br/>feedback]
-    F3[📈 Tabla<br/>métricas]
-    F4[👨‍💼 Dashboard<br/>admin]
+    Old[Prompt v1] --> Fixes[8 fixes críticos]
+    Fixes --> F1[Identidad: MENTOR único]
+    Fixes --> F2[Web search docs]
+    Fixes --> F3[Rol → tono adaptativo]
+    Fixes --> F4[Lenguaje menos alarmista]
+    Fixes --> F5[Reglas precios HAZ vs EVITA]
+    Fixes --> F6[Memoria conversacional concreta]
+    Fixes --> F7[Formato Mentor adaptativo]
+    Fixes --> F8[Ejemplo positivo Tipo 4]
 
-    F1 --> F2
-    F2 --> F3
-    F3 --> F4
+    Fixes --> New[✅ Prompt v2]
 
-    style F1 fill:#a78bfa,color:#fff
-    style F2 fill:#a78bfa,color:#fff
-    style F3 fill:#94a3b8,color:#fff
-    style F4 fill:#94a3b8,color:#fff
-```
-
-### 🔮 BLOQUE G — Integraciones Futuras
-
-```mermaid
-flowchart TD
-    Future[🔮 Fase 2 del proyecto]
-    Future --> G1[💼 Zoho CRM<br/>Deal # → Producto]
-    Future --> G2[📅 Citas automáticas]
-    Future --> G3[📊 Reportes semanales]
-    Future --> G4[🔔 Notificaciones push]
-    Future --> G5[🌐 Multi-idioma]
-
-    style Future fill:#a78bfa,color:#fff
+    style New fill:#22c55e,color:#fff
 ```
 
 ---
@@ -293,53 +204,66 @@ flowchart TD
 
 ```mermaid
 gantt
-    title Ruta hacia v1.0 Producción
+    title Ruta hacia v2.0 Producción Completa
     dateFormat YYYY-MM-DD
     axisFormat %d %b
 
     section Fase 1-3 (Hecho)
     Infraestructura      :done,    a1, 2026-03-01, 7d
     Knowledge Base       :done,    b1, 2026-03-08, 14d
-    Prompt + UI          :done,    c1, 2026-03-22, 21d
-    Auth + Perfil v1     :done,    h1, 2026-04-29, 2d
-    Email pro Resend     :done,    h2, 2026-05-04, 1d
+    Prompt + UI v1       :done,    c1, 2026-03-22, 21d
+    Auth v1 email/pass   :done,    h1, 2026-04-29, 2d
 
-    section Fase 4 (Ahora)
+    section Fase 4 (8 mayo)
     Migración Next.js    :done,    i1, 2026-05-07, 1d
-    SSO Microsoft        :active,  i3, 2026-05-07, 5d
+    SSO Microsoft        :done,    i3, 2026-05-08, 1d
+    Haiku 4.5 + Cache    :done,    j1, 2026-05-08, 1d
+    Web Search opt-in    :done,    j2, 2026-05-08, 1d
+    Onboarding modal     :done,    k1, 2026-05-08, 1d
+    System Prompt v2     :done,    c2, 2026-05-08, 1d
 
     section Fase 5 (Próximo)
-    Pilotaje asesores    :         e1, 2026-05-12, 14d
-    Migrar a Claude API  :         f1, 2026-05-26, 3d
-    Botones feedback     :         f2, 2026-05-29, 3d
-    Demo gerencia        :         f3, 2026-06-01, 2d
+    Validación asesores  :active,  e1, 2026-05-09, 14d
+    Vision facturas LUMA :         f1, 2026-05-15, 1d
+    Gráficos ROI         :         f2, 2026-05-16, 1d
+    Maps + direcciones   :         f3, 2026-05-17, 1d
 
     section Lanzamiento
-    🎯 v1.0 Producción   :crit,    v1, 2026-06-03, 1d
+    🎯 v2.0 Completa     :crit,    v1, 2026-05-23, 1d
+
+    section Fase 6 (Backlog)
+    Zoho integration     :         g1, 2026-06-01, 5d
+    Dashboard métricas   :         g2, 2026-06-08, 5d
 ```
 
 ---
 
-## 🎯 Prioridades Esta Semana
+## 🎯 Capacidades Disponibles AHORA
 
-```mermaid
-quadrantChart
-    title Importancia vs Urgencia
-    x-axis Bajo Esfuerzo --> Alto Esfuerzo
-    y-axis Bajo Impacto --> Alto Impacto
-    quadrant-1 Hacer Ya
-    quadrant-2 Planificar
-    quadrant-3 Delegar
-    quadrant-4 Ignorar
+| Capacidad | Estado | Notas |
+|---|---|---|
+| 💬 Chat texto streaming | ✅ Live | Haiku 4.5 con prompt caching |
+| 🔐 SSO Microsoft Entra ID | ✅ Live | NextAuth v5, JWT 8h |
+| 👋 Onboarding nuevo asesor | ✅ Live | Auto-extract primer nombre |
+| 🧠 Memoria conversacional | ✅ Live | Mantiene hilo dentro de sesión |
+| 📚 Knowledge base oficial | ✅ Live | 206 entradas, full-text search |
+| 🌐 Web search | ✅ Live | Opt-in con palabras clave |
+| 🔧 Tool selection | ✅ Live | 10 cotizadores oficiales |
+| 🤖 Mascot SUN BOT | ✅ Live | 6 estados animados |
+| 🌙 Dark mode | ✅ Live | Default + toggle |
 
-    Esperar credenciales IT: [0.1, 0.95]
-    Test SSO en localhost: [0.3, 0.9]
-    Deploy prod con maintenance window: [0.4, 0.85]
-    Comunicar cambio a asesores: [0.2, 0.7]
-    Pilotaje post-SSO: [0.4, 0.6]
-    Migrar Claude: [0.5, 0.5]
-    Botones feedback: [0.4, 0.4]
-```
+---
+
+## 🎯 Próximas Capacidades (1-3 días dev cada una)
+
+| # | Capacidad | Esfuerzo | Impacto | Caso de uso |
+|---|---|---|---|---|
+| 1 | 📸 **Vision** — factura LUMA | 1h | ⭐⭐⭐⭐⭐ | Asesor sube foto, bot extrae kWh + monto |
+| 2 | 📊 **Gráficos ROI** | 1h | ⭐⭐⭐⭐ | PNG de proyección 25 años para mandar al cliente |
+| 3 | 🗺️ **Maps/Direcciones** | 30min | ⭐⭐⭐⭐ | Link Google Maps con ruta cliente → Windmar |
+| 4 | 📄 **PDF processing** | 30min | ⭐⭐⭐ | Subir contrato competencia, comparar |
+| 5 | 🧠 **Memory tool** | 2h | ⭐⭐⭐ | Recuerda datos persistentes del asesor |
+| 6 | 🔌 **Zoho integration** | 3h | ⭐⭐⭐ | Bot consulta CRM directo desde chat |
 
 ---
 
@@ -347,166 +271,146 @@ quadrantChart
 
 ```mermaid
 flowchart LR
-    R1[🟠 Rate limit Groq<br/>30 RPM free] -->|Mitigación| M1[Migrar a Claude<br/>o pagar Groq]
-    R2[🟢 KB incompleto] -->|Mitigación| M2[Asesores reportan<br/>qué falta]
-    R3[🟡 Adopción baja] -->|Mitigación| M3[Demo + onboarding]
-    R4[🟡 Info desactualizada] -->|Mitigación| M4[Update trimestral]
-    R5[🟢 Costo API] -->|Mitigación| M5[Claude $3/M tokens]
-    R6[🟡 SSO falla en prod] -->|Mitigación| M6[Test localhost<br/>+ rollback Vercel<br/>+ maintenance window]
+    R1[🟢 Rate limit Anthropic] -->|5-10 RPM peak| M1[Tier 1 cubre 50+ asesores]
+    R2[🟢 KB completo 206] -->|Mantenimiento trimestral| M2[Update con cambios producto]
+    R3[🟡 Adopción asesores] -->|Mitigación| M3[Onboarding + soporte 1ra semana]
+    R4[🟡 Info desactualizada KB] -->|Mitigación| M4[Web search opt-in cubre gaps]
+    R5[🟢 Costo API] -->|~$3-8/mes| M5[Prompt caching 80% ahorro]
+    R6[🟢 SSO falla] -->|Resuelto| M6[Fix env vars + dark mode + favicon]
 
-    style R1 fill:#f97316,color:#fff
+    style R1 fill:#22c55e,color:#fff
     style R2 fill:#22c55e,color:#fff
     style R3 fill:#fbbf24,color:#000
     style R4 fill:#fbbf24,color:#000
     style R5 fill:#22c55e,color:#fff
-    style R6 fill:#fbbf24,color:#000
+    style R6 fill:#22c55e,color:#fff
 ```
 
 ---
 
 ## 📅 Bitácora de Cambios
 
-### 7 mayo 2026 — Migración Next.js + SSO Microsoft 🆕
+### 8 mayo 2026 — Día de lanzamiento definitivo 🎉
 
-**Reescritura completa Vite → Next.js 15:**
-- Proyecto nuevo en paralelo: `windmar-ai-agent-next/` (44 archivos, 0 errores de build)
-- App actual `WINDMAR-AI-AGENT-main/` sigue corriendo intacto en producción durante la migración
-- Stack: Next.js 15 + React 19 + TypeScript + NextAuth v5
-- Todos los componentes (Sidebar, ChatWindow, ChatMessage, MascotPanel, etc.) migrados con `'use client'`
-- Endpoint `api/chat.ts` (Vercel function) → `app/api/chat/route.ts` (Next.js route handler con streaming)
-- Nuevos endpoints: `/api/conversations`, `/api/conversations/[id]`, `/api/messages`, `/api/profile`
-- SYSTEM_PROMPT extraído a `src/lib/prompts.ts` para mejor mantenimiento
-
-**SSO Microsoft Entra ID via NextAuth v5:**
-- Provider built-in `microsoft-entra-id`
+**Mañana — SSO Microsoft Entra ID:**
+- Migración completa de React + Vite → Next.js 15.5.18 + NextAuth v5
+- Reemplazado login email/password por botón único "Iniciar sesión con Microsoft"
 - Restricción a dominio `@windmarhome.com` en callback `signIn`
 - Sesión JWT cifrada de 8 horas (auto-logout al final del turno)
-- Middleware protege todas las rutas (excepto `/login` y assets estáticos)
-- LoginScreen rediseñado: un solo botón "Iniciar sesión con Microsoft" (logo oficial 4 cuadrados)
-- Eliminados: pantalla de registro, flip card 3D, recuperar contraseña, validación de email duplicado — Microsoft maneja todo
+- Middleware protege todas las rutas (excepto `/login` y assets)
+- Refactor DB: `user_roles` table reemplaza `auth.users.user_metadata`
+- Fix env vars con valores vacíos (re-creación via REST API directa)
+- Dark mode por defecto en login + script anti-flash SSR
+- Favicon SUN BOT via Next.js convention `app/icon.png`
+- Open Graph para preview en Teams/WhatsApp/Slack
 
-**Refactor de identidad y base de datos:**
-- Tabla nueva `user_roles` reemplaza `auth.users.user_metadata` para `display_name`, `departamento`, `rol`
-- `conversations.user_id` (UUID) → `conversations.user_email` (TEXT) — backfill incluido
-- Migraciones SQL: `004_user_roles.sql` + `005_conversations_email.sql`
-- RLS sin políticas → solo `service_role` accede (más simple, validación a nivel API)
+**Tarde — Claude Haiku 4.5 + Web Search:**
+- Migración endpoint `/api/chat` de Groq → Anthropic SDK
+- Modelo: `claude-haiku-4-5` con prompt caching del SYSTEM_PROMPT (~80% ahorro)
+- Web search opt-in: triggers "investiga", "busca online", "actualízame"
+- Tool `web_search_20250305` con `max_uses: 3` por turno
+- Prefijo 🌐 + cita de fuente cuando usa web search
+- Manejo de errores tipados (RateLimitError, AuthenticationError, etc.)
+- Fix bug perfil no guardaba: `useSession().update()` con datos directos al JWT
+- Página de login en dark mode
 
-**Decisión: sin emails / sin DNS**
-- Se descartó la verificación DNS de `windmarhome.com` en GoDaddy/Resend
-- Welcome email REMOVIDO — el SSO es self-explanatory: el asesor sabe que entró cuando ve a Microsoft autenticarlo
-- `resend` y dependencias eliminadas del proyecto (-18 paquetes, middleware más liviano)
-- Si en el futuro se requiere email, se puede agregar Microsoft Graph API (Mail.Send) sin necesidad de DNS
+**Tarde-Noche — Onboarding + Prompt v2:**
+- Migración SQL 006: agrega columna `onboarded_at` a `user_roles`
+- `OnboardingModal.tsx`: pantalla de bienvenida con SUN BOT, primer nombre auto-extracted, dropdown depto, radio cards rol con descripciones
+- Auth signIn callback ahora extrae solo PRIMER nombre por defecto
+- Endpoint POST `/api/profile/onboarding` marca `onboarded_at` + guarda perfil
+- `OnboardingGate` envuelve ChatApp; modal solo si `onboarded_at IS NULL`
+- Pantalla de éxito con saludo personalizado antes del primer chat
+- **SYSTEM_PROMPT v2 con 8 fixes críticos:**
+  - Identidad unificada como MENTOR (no mezcla Asistente)
+  - Instrucciones explícitas para web search (cuándo, cómo citar)
+  - Datos del asesor documentados → tono adaptativo según rol
+  - Lenguaje menos alarmista (Haiku 4.5 sigue instrucciones literalmente)
+  - Reglas de precios con balance HAZ vs EVITA
+  - Memoria conversacional con pasos concretos
+  - Formato Mentor adaptativo (no rígido) — solo secciones que aplican
+  - Ejemplo positivo de buena respuesta Tipo 4
 
-**Solicitudes a IT:**
-- ⏳ Client ID + Client Secret + Tenant ID del App Registration en Azure
-- 📌 Redirect URI registrada: `https://windmar-ai-agent.vercel.app/api/auth/callback/microsoft-entra-id`
+**Noche — Reset definitivo y comunicación:**
+- Reset DB total para arranque limpio (KB intacto: 206)
+- Anuncio a asesores para uso definitivo
+- ROADMAP actualizado en GitHub
 
-**Plan de despliegue:**
-- Test local en `http://localhost:3000` cuando llegue creds
-- Ventana de mantenimiento ~10 min para deploy a producción
-- Mismo URL público `windmar-ai-agent.vercel.app` (Vercel auto-detecta cambio Vite → Next.js)
-- Rollback inmediato disponible vía dashboard Vercel si falla
-
----
-
-### 4 mayo 2026 — Email profesional con Resend + Reset total + IT ticket
-
-**Reset total y rebuild:**
-- Eliminados todos los usuarios, conversaciones y sesiones
-- Cleanup adicional de `auth.identities` (residuales que bloqueaban signup)
-- Base de datos virgen lista para pilotaje
-
-**Email profesional via Resend SMTP:**
-- Cuenta Resend creada (workspace "windmarhome")
-- API key generada y guardada en Supabase SMTP Settings
-- Configuración SMTP completada:
-  - Host: `smtp.resend.com`
-  - Port: `465`
-  - Username: `resend`
-  - Sender temporal: `onboarding@resend.dev`
-- Plantilla HTML personalizada en Supabase con branding Windmar
-- Subject: "¡Bienvenido al Agente Windmar Home! ☀️"
-
-**Identificadas 2 limitaciones del free tier:**
-- ⚠️ Sender `onboarding@resend.dev` solo permite enviar al dueño del workspace
-- ⚠️ Imágenes externas bloqueadas por defecto en clientes (Gmail/Outlook)
-- ✅ Solución temporal: email confirmation desactivado para fase de pilotaje
-
-**Solicitud DNS enviada a IT (iNubo):**
-- Dominio `windmarhome.com` agregado en Resend
-- 3 records DNS generados (1 MX + 2 TXT para SPF/DKIM)
-- Ticket creado en sistema iNubo Managed
-- Estado: ⏳ Esperando respuesta de IT
-
-**Queries SQL para Project M:**
-- 5 queries listos para monitorear conversaciones de TODOS los asesores
-- Resumen de actividad, mensajes por usuario, preguntas frecuentes
-- Estadísticas para reportar a gerencia
+**Stack final en producción:**
+- Frontend: Next.js 15.5.18 + React 19 + TypeScript + Tailwind v4
+- Auth: NextAuth v5 + Microsoft Entra ID (claude-opus-4-7 SDK pattern)
+- AI: Anthropic SDK + Claude Haiku 4.5 + prompt caching + web_search_20250305
+- DB: Supabase PostgreSQL 17 + RLS + service_role key
+- Hosting: Vercel (auto-deploy from GitHub `main`)
+- URL: https://windmar-ai-agent.vercel.app
 
 ---
 
-### 🔮 PENDIENTES — Por hacer cuando IT entregue lo que falta
+### 7 mayo 2026 — Decisión estratégica: SSO sin DNS
 
-| # | Tarea | Cuándo | Bloqueado por |
-|---|---|---|---|
-| 1 | Recibir Client ID + Secret + Tenant ID de Azure | ⏳ | IT |
-| 2 | Pegar 4 variables en `.env.local` y probar SSO en localhost | 1 día | Credenciales IT |
-| 3 | Correr migraciones SQL `004` y `005` en Supabase | 30 min | — |
-| 4 | Push a GitHub + deploy Vercel + smoke test | 1 hora | Test local OK |
-| 5 | Ventana de mantenimiento + comunicar a asesores | 30 min | Deploy listo |
+- Removido Resend SMTP y dependencia de DNS GoDaddy
+- Decisión: SSO Microsoft es self-explanatory, no requiere welcome email
+- Reset total de la DB (preparativo para rebuild)
+- Plan de migración a Next.js + NextAuth definido
 
-**Beneficios después del SSO:**
-- ✅ Cero passwords que recordar — entrada con cuenta Microsoft Windmar
-- ✅ Acceso restringido a nivel de tenant Azure (más seguro que validación frontend)
-- ✅ Auto-logout 8h alineado al turno de trabajo
-- ✅ Flujo idéntico al resto de apps Windmar (TechSupportHub etc.)
-- ✅ Sin dependencia de DNS, GoDaddy ni servicios de email externos
+### 4 mayo 2026 — Email profesional con Resend (luego removido)
 
----
+Email profesional via Resend SMTP configurado, luego descartado el 7 mayo cuando se decidió ir directamente a SSO sin DNS.
 
-### 1 mayo 2026 — Roles ampliados + Chat estilo ChatGPT + Anti-alucinación
+### 1 mayo 2026 — Roles ampliados + Anti-alucinación
 
-**Roles del asesor:**
-- Renombrado "Jefe" → **Líder** (terminología más actual)
-- Nuevo rol **Project M** (Project Manager — jefe de líderes)
-- 4 niveles de tono ahora: Asesor / Líder / Channel / Project M
+- Agregado rol Project M (jefe de líderes)
+- 4 niveles de tono: Asesor / Líder / Channel / Project M
+- Reglas anti-alucinación REGLA #0/1/2 (luego refinadas en v2 del prompt)
+- Chat estilo ChatGPT (sin burbujas IA)
 
-**Rediseño de chat tipo ChatGPT:**
-- Burbuja IA eliminada (sin fondo, sin borde, sin sombra)
-- Texto IA fluye libre estilo ChatGPT
-- Avatar SUN BOT mantenido al lado
-- Cursor parpadeante streaming mantenido
+### 30 abril 2026 — Auth v1 (luego reemplazado por SSO)
 
-**Reglas anti-alucinación (críticas):**
-- 🔴 REGLA #0 — Lista cerrada de 10 herramientas reales
-- 🔴 REGLA #1 — Solo precios literales del knowledge_base
-- 🔴 REGLA #2 — Si hay duda, omite
+Sistema de login email/password con flip card 3D, registro con depto/rol/T&C, ProfileModal. Reemplazado completamente el 8 mayo por SSO Microsoft.
 
 ---
 
-### 30 abril 2026 — Auth avanzado + perfil de usuario (v1, ahora reemplazado)
+## 🔮 PENDIENTES — Roadmap futuro
 
-**Login/Registro completamente rediseñado:**
-- Tarjeta con animación 3D flip
-- Cara frontal: login + recuperar contraseña
-- Cara trasera: registro completo
-- T&C versionado v1.0
+### 🟠 Esta semana (validación post-lanzamiento)
+| # | Tarea | Tiempo |
+|---|---|---|
+| 1 | Asesores prueban en uso real | 5-7 días |
+| 2 | Recolección feedback cualitativo | continua |
+| 3 | Monitor logs Vercel para errores | continua |
+| 4 | Métricas Anthropic (cache hit rate, RPM) | continua |
 
-**Sistema de perfil:**
-- ProfileModal con campos editables
-- Datos persisten en `user_metadata` de Supabase
+### 🟡 Próxima semana (capacidades avanzadas)
+| # | Capacidad | Esfuerzo |
+|---|---|---|
+| 1 | 📸 Vision: subir factura LUMA | 1h dev |
+| 2 | 📊 Code execution: gráficos ROI | 1h dev |
+| 3 | 🗺️ Maps/direcciones via web search | 30min dev |
 
-**Nota:** este sistema fue reemplazado el 7 mayo por SSO Microsoft. El ProfileModal sigue vivo pero ahora escribe a la tabla `user_roles` en lugar de `user_metadata`.
+### 🟢 Mes próximo (integraciones)
+| # | Capacidad | Esfuerzo |
+|---|---|---|
+| 1 | 🔌 Integración Zoho CRM | 3h dev |
+| 2 | 📊 Dashboard métricas Project M | 1d dev |
+| 3 | 👍👎 Sistema feedback de respuestas | 4h dev |
+| 4 | 📄 PDF processing (contratos) | 30min dev |
+
+### 🔮 Backlog (cuando haya bandwidth)
+- Foto de perfil desde Microsoft Graph
+- Renombrar conversaciones
+- Multi-idioma (futuro lejano)
+- Notificaciones push
+- Reportes semanales automatizados
 
 ---
 
 ## 📍 ¿Cómo ver este mapa?
 
-### Opción 1 — GitHub (más fácil) ✨
+### Opción 1 — GitHub (más fácil)
 1. Ya está en tu repo: `ROADMAP.md`
 2. Abre el archivo en GitHub web
 3. Los diagramas se renderizan **automáticamente**
-4. Link directo: `https://github.com/JnSbstnRivera/WINDMAR-AI-AGENT/blob/main/ROADMAP.md`
+4. Link directo: https://github.com/JnSbstnRivera/WINDMAR-AI-AGENT/blob/main/ROADMAP.md
 
 ### Opción 2 — Mermaid Live Editor
 1. Ve a https://mermaid.live
@@ -520,15 +424,5 @@ flowchart LR
 
 ---
 
-## 🔄 Cómo actualizar este mapa
-
-Cuando completes algo:
-1. Cambia `🔄` por `✅`
-2. Cambia colores `fbbf24` (amarillo) por `22c55e` (verde)
-3. Mueve la flecha de "📍 ESTAMOS AQUÍ" al siguiente bloque
-4. Push a GitHub → mapa actualizado para todos
-
----
-
-**Última actualización**: 7 mayo 2026
-**Próxima revisión sugerida**: cuando IT entregue las credenciales del App Registration de Azure
+**Última actualización**: 8 mayo 2026 — día de lanzamiento definitivo
+**Próxima revisión sugerida**: después de 1 semana de uso real, basado en feedback de asesores
