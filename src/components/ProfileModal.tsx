@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useSession } from 'next-auth/react';
 
 interface UserData {
   email: string;
@@ -29,6 +30,7 @@ function capitalizeName(name: string): string {
 }
 
 export function ProfileModal({ user, onClose, onSaved }: Props) {
+  const { update } = useSession();
   const [displayName, setDisplayName] = useState(user.displayName ?? '');
   const [departamento, setDepartamento] = useState(user.departamento ?? '');
   const [rol, setRol] = useState(user.rol ?? '');
@@ -57,6 +59,8 @@ export function ProfileModal({ user, onClose, onSaved }: Props) {
       if (!res.ok) {
         setError('No pudimos guardar los cambios. Intenta de nuevo.');
       } else {
+        // Forzar a NextAuth a re-leer user_roles via JWT trigger='update'
+        await update();
         setSaved(true);
         onSaved();
         setTimeout(() => onClose(), 900);
