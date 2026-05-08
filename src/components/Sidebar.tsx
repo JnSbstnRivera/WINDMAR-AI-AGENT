@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import type { Conversation } from '@/types';
+import { UserAvatar } from './UserAvatar';
 
 interface Props {
   conversations: Conversation[];
@@ -14,6 +15,8 @@ interface Props {
   displayName?: string;
   departamento?: string;
   rol?: string;
+  /** Foto de perfil de Microsoft 365 (data URI base64) o null. */
+  photoUrl?: string | null;
   isOpen: boolean;
   onClose: () => void;
 }
@@ -33,7 +36,7 @@ const SALES_TIPS = [
   '🎯 Cliente VIP instalado: $1,000 descuento adicional en Roofing.',
 ];
 
-export function Sidebar({ conversations, activeId, onSelect, onNew, onDelete, onDeleteAll, userEmail, displayName, departamento, rol, isOpen, onClose }: Props) {
+export function Sidebar({ conversations, activeId, onSelect, onNew, onDelete, onDeleteAll, userEmail, displayName, departamento, rol, photoUrl, isOpen, onClose }: Props) {
   const [confirmClearAll, setConfirmClearAll] = useState(false);
   const [tipIndex, setTipIndex] = useState(() => Math.floor(Math.random() * SALES_TIPS.length));
   const username = displayName || userEmail.split('@')[0];
@@ -117,17 +120,27 @@ export function Sidebar({ conversations, activeId, onSelect, onNew, onDelete, on
       </div>
 
       <div className="px-3 py-2.5 border-b border-[#b8cfe8] dark:border-white/[0.08] flex-shrink-0">
-        <p className="text-sm font-semibold text-[#1B3A5C] dark:text-white">
-          Bienvenido, {username}
-        </p>
-        {subtitle && (
-          <p className="text-[11px] text-[#F7941D] dark:text-[#F7941D] mt-0.5 font-semibold">
-            {subtitle}
-          </p>
-        )}
-        <p className="text-[11px] text-gray-500 dark:text-gray-400 truncate font-medium mt-0.5">
-          {userEmail}
-        </p>
+        <div className="flex items-center gap-3">
+          <UserAvatar
+            photoUrl={photoUrl}
+            displayName={displayName}
+            email={userEmail}
+            size={40}
+          />
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-semibold text-[#1B3A5C] dark:text-white truncate">
+              Bienvenido, {username}
+            </p>
+            {subtitle && (
+              <p className="text-[11px] text-[#F7941D] dark:text-[#F7941D] mt-0.5 font-semibold truncate">
+                {subtitle}
+              </p>
+            )}
+            <p className="text-[11px] text-gray-500 dark:text-gray-400 truncate font-medium mt-0.5">
+              {userEmail}
+            </p>
+          </div>
+        </div>
       </div>
 
       <div className="overflow-y-auto p-2 max-h-[35%] flex-shrink-0">

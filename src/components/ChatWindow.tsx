@@ -8,9 +8,17 @@ interface Props {
   messages: Message[];
   isStreaming: boolean;
   userEmail?: string;
+  userDisplayName?: string;
+  userPhotoUrl?: string | null;
 }
 
-export function ChatWindow({ messages, isStreaming, userEmail = '' }: Props) {
+export function ChatWindow({
+  messages,
+  isStreaming,
+  userEmail = '',
+  userDisplayName,
+  userPhotoUrl,
+}: Props) {
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -25,6 +33,8 @@ export function ChatWindow({ messages, isStreaming, userEmail = '' }: Props) {
             key={msg.id}
             message={msg}
             asesorEmail={userEmail}
+            asesorDisplayName={userDisplayName}
+            asesorPhotoUrl={userPhotoUrl}
             isStreaming={
               isStreaming && i === messages.length - 1 && msg.role === 'assistant'
             }

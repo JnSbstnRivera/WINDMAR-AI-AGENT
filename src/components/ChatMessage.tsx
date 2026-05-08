@@ -2,11 +2,14 @@
 
 import { useState } from 'react';
 import type { Message } from '@/types';
+import { UserAvatar } from './UserAvatar';
 
 interface Props {
   message: Message;
   isStreaming?: boolean;
   asesorEmail?: string;
+  asesorDisplayName?: string;
+  asesorPhotoUrl?: string | null;
 }
 
 function stripForCopy(text: string): string {
@@ -61,31 +64,6 @@ function renderContent(text: string) {
   ));
 }
 
-function AsesorAvatar({ email }: { email: string }) {
-  const initial = (email.split('@')[0]?.charAt(0) ?? 'A').toUpperCase();
-  return (
-    <div className="relative flex-shrink-0" style={{ width: 40, height: 40 }}>
-      <div
-        className="absolute inset-0 rounded-full"
-        style={{
-          background:
-            'radial-gradient(circle, rgba(27,58,92,0.5) 0%, rgba(27,58,92,0.15) 50%, transparent 75%)',
-          filter: 'blur(6px)',
-        }}
-      />
-      <div
-        className="relative z-10 w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-lg shadow-md"
-        style={{
-          background: 'linear-gradient(135deg, #1B3A5C 0%, #2a5a8c 100%)',
-          boxShadow: '0 4px 12px rgba(27,58,92,0.35)',
-        }}
-      >
-        {initial}
-      </div>
-    </div>
-  );
-}
-
 function IAAvatar({ isStreaming, isError }: { isStreaming?: boolean; isError?: boolean }) {
   const src = isError
     ? '/sunbot-error.png'
@@ -122,7 +100,13 @@ function IAAvatar({ isStreaming, isError }: { isStreaming?: boolean; isError?: b
   );
 }
 
-export function ChatMessage({ message, isStreaming, asesorEmail = '' }: Props) {
+export function ChatMessage({
+  message,
+  isStreaming,
+  asesorEmail = '',
+  asesorDisplayName,
+  asesorPhotoUrl,
+}: Props) {
   const [copied, setCopied] = useState(false);
   const isUser = message.role === 'user';
 
@@ -146,7 +130,12 @@ export function ChatMessage({ message, isStreaming, asesorEmail = '' }: Props) {
             {message.content}
           </div>
         </div>
-        <AsesorAvatar email={asesorEmail} />
+        <UserAvatar
+          email={asesorEmail}
+          displayName={asesorDisplayName}
+          photoUrl={asesorPhotoUrl}
+          size={40}
+        />
       </div>
     );
   }

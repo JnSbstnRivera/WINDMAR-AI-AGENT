@@ -17,6 +17,8 @@ export default async function HomePage() {
     departamento: sessionUser.departamento ?? null,
     rol: sessionUser.rol ?? 'Asesor',
     onboardedAt: sessionUser.onboardedAt ?? null,
+    // Foto de perfil de Microsoft 365 (data URI base64) — null si el usuario no tiene foto.
+    photoUrl: sessionUser.photoUrl ?? null,
     // Nombre completo de Microsoft (para mostrar como referencia en onboarding modal)
     microsoftFullName: session.user.name ?? '',
   };

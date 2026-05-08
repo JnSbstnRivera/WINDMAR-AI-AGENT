@@ -1,6 +1,6 @@
 # 🗺️ Roadmap Visual — WINDMAR AI AGENT
 
-> Mapa conceptual del proyecto. **Última actualización: 8 mayo 2026**
+> Mapa conceptual del proyecto. **Última actualización: 8 mayo 2026 (v2)**
 > Estado: **🟢 EN PRODUCCIÓN — Uso definitivo activo**
 
 ---
@@ -23,6 +23,7 @@ flowchart TD
     Done --> D7[Claude Haiku 4.5]
     Done --> D8[Web Search opt-in]
     Done --> D9[Onboarding asesores]
+    Done --> D10[📸 Foto perfil Microsoft]
 
     Now --> N1[Validación con asesores reales]
     Now --> N2[Recolección feedback]
@@ -45,6 +46,7 @@ flowchart TD
     style D7 fill:#dcfce7,color:#15803d
     style D8 fill:#dcfce7,color:#15803d
     style D9 fill:#dcfce7,color:#15803d
+    style D10 fill:#dcfce7,color:#15803d
     style N1 fill:#fef3c7,color:#92400e
     style N2 fill:#fef3c7,color:#92400e
     style X1 fill:#ede9fe,color:#5b21b6
@@ -251,6 +253,7 @@ gantt
 | 🔧 Tool selection | ✅ Live | 10 cotizadores oficiales |
 | 🤖 Mascot SUN BOT | ✅ Live | 6 estados animados |
 | 🌙 Dark mode | ✅ Live | Default + toggle |
+| 📸 Foto perfil Microsoft | ✅ Live | Sidebar + avatar mensajes (estilo Teams), refresh en cada login |
 
 ---
 
@@ -335,6 +338,18 @@ flowchart LR
 - Reset DB total para arranque limpio (KB intacto: 206)
 - Anuncio a asesores para uso definitivo
 - ROADMAP actualizado en GitHub
+
+**Tarde-Noche extra — Foto de perfil Microsoft 📸:**
+- Migración SQL 007: añade columna `photo_url TEXT` a `user_roles`
+- Provider NextAuth Entra ID con scope explícito `User.Read`
+- `auth.ts` callback `signIn` ahora descarga foto via Microsoft Graph
+  (`GET /v1.0/me/photo/$value`) usando `account.access_token`
+- Foto base64 (~10-50 KB) guardada en `user_roles.photo_url`, refresh en cada login
+- Fallback automático a inicial mayúscula con halo brand si Graph devuelve 404
+- Nuevo componente `UserAvatar.tsx` reutilizable (foto o inicial, configurable)
+- Sidebar muestra avatar circular en bloque "Bienvenido, ..."
+- ChatMessage muestra avatar al lado de cada mensaje del asesor (estilo Teams)
+- JWT y session callbacks propagan `photoUrl` para uso en cliente
 
 **Stack final en producción:**
 - Frontend: Next.js 15.5.18 + React 19 + TypeScript + Tailwind v4

@@ -19,6 +19,8 @@ interface UserData {
   displayName: string | null;
   departamento: string | null;
   rol: string | null;
+  /** Foto de perfil de Microsoft 365 (data URI base64) o null si no la tiene. */
+  photoUrl?: string | null;
 }
 
 interface Props {
@@ -344,6 +346,7 @@ export function ChatApp({ user, onSignOut }: Props) {
           displayName={user.displayName ?? undefined}
           departamento={user.departamento ?? undefined}
           rol={user.rol ?? undefined}
+          photoUrl={user.photoUrl ?? null}
           isOpen={sidebarOpen}
           onClose={() => setSidebarOpen(false)}
         />
@@ -456,6 +459,8 @@ export function ChatApp({ user, onSignOut }: Props) {
               messages={activeConversation.messages}
               isStreaming={isStreaming}
               userEmail={user.email}
+              userDisplayName={user.displayName ?? undefined}
+              userPhotoUrl={user.photoUrl ?? null}
             />
             <ChatInput
               onSend={sendMessage}

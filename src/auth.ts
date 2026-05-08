@@ -17,6 +17,31 @@ export function isAuthEnabled() {
   );
 }
 
+/**
+ * Descarga la foto de perfil del usuario desde Microsoft Graph API.
+ * Endpoint: GET https://graph.microsoft.com/v1.0/me/photo/$value
+ * Devuelve un data URI base64 listo para usar en <img src> o NULL si el usuario
+ * no tiene foto / falla la petición. Tamaño típico: 10-50KB.
+ */
+async function fetchMicrosoftPhoto(accessToken: string): Promise<string | null> {
+  try {
+    const res = await fetch('https://graph.microsoft.com/v1.0/me/photo/$value', {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+    if (!res.ok) {
+      // 404 = usuario sin foto (caso normal); otros errores también caen al fallback
+      return null;
+    }
+    const contentType = res.headers.get('content-type') || 'image/jpeg';
+    const buffer = await res.arrayBuffer();
+    const base64 = Buffer.from(buffer).toString('base64');
+    return `data:${contentType};base64,${base64}`;
+  } catch (err) {
+    console.warn('[auth] fetchMicrosoftPhoto falló:', err);
+    return null;
+  }
+}
+
 export const { handlers, signIn, signOut, auth } = NextAuth({
   trustHost: true,
   session: { maxAge: 28800 }, // 8 horas — auto-logout al final del turno
@@ -25,6 +50,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       clientId: process.env.AUTH_MICROSOFT_ENTRA_ID_ID,
       clientSecret: process.env.AUTH_MICROSOFT_ENTRA_ID_SECRET,
       issuer: getIssuer(),
+      // Pedimos User.Read explícitamente para acceder a /me/photo/$value
+      authorization: { params: { scope: 'openid profile email User.Read' } },
     }),
   ],
   pages: {
@@ -33,8 +60,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   },
   callbacks: {
     // Se ejecuta apenas Microsoft devuelve el usuario.
-    // Restringe el acceso a @windmarhome.com y auto-provisiona el perfil en Supabase.
-    async signIn({ user }) {
+    // Restringe el acceso a @windmarhome.com, auto-provisiona el perfil y descarga la foto.
+    async signIn({ user, account }) {
       const email = user.email?.trim().toLowerCase();
       if (!email) return false;
 
@@ -52,6 +79,12 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         const firstName = fullName.split(/\s+/)[0];
         const capitalizedFirstName = firstName.charAt(0).toUpperCase() + firstName.slice(1).toLowerCase();
 
+        // Descargar foto de perfil de Microsoft Graph (best-effort).
+        // Si falla o el usuario no tiene foto, photoUrl = null y se usa fallback (inicial).
+        const accessToken = account?.access_token;
+        const photoUrl = accessToken ? await fetchMicrosoftPhoto(accessToken) : null;
+
+        // 1) Upsert idempotente del registro inicial (no sobrescribe display_name si ya existe)
         await getSupabaseAdmin()
           .from('user_roles')
           .upsert(
@@ -63,6 +96,15 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             },
             { onConflict: 'user_email', ignoreDuplicates: true }
           );
+
+        // 2) Si tenemos foto, la actualizamos siempre (refresh en cada login).
+        //    Esto se hace por separado para NO depender de ignoreDuplicates: true del upsert anterior.
+        if (photoUrl) {
+          await getSupabaseAdmin()
+            .from('user_roles')
+            .update({ photo_url: photoUrl })
+            .eq('user_email', email);
+        }
       } catch (err) {
         console.error('[auth] Auto-provision falló:', err);
         // No bloqueamos el login si Supabase falla — el JWT callback intentará de nuevo
@@ -90,18 +132,20 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           try {
             const { data } = await getSupabaseAdmin()
               .from('user_roles')
-              .select('display_name, departamento, rol, onboarded_at')
+              .select('display_name, departamento, rol, onboarded_at, photo_url')
               .eq('user_email', email)
               .single();
             token.displayName = data?.display_name || null;
             token.departamento = data?.departamento || null;
             token.userRole = data?.rol || 'Asesor';
             token.onboardedAt = data?.onboarded_at || null;
+            token.photoUrl = data?.photo_url || null;
           } catch {
             token.displayName = null;
             token.departamento = null;
             token.userRole = 'Asesor';
             token.onboardedAt = null;
+            token.photoUrl = null;
           }
         }
       }
@@ -116,6 +160,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         u.departamento = token.departamento ?? null;
         u.rol = token.userRole ?? 'Asesor';
         u.onboardedAt = token.onboardedAt ?? null;
+        u.photoUrl = token.photoUrl ?? null;
       }
       return session;
     },
