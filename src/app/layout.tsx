@@ -9,13 +9,30 @@ export const metadata: Metadata = {
   },
 };
 
+// Script inline que corre ANTES de la hidratación para evitar flash claro→oscuro.
+// Default = dark. Si el usuario eligió 'light' previamente, lo respeta.
+const noFlashScript = `
+(function() {
+  try {
+    var saved = localStorage.getItem('wh-theme');
+    var dark = saved === null ? true : saved === 'dark';
+    if (dark) document.documentElement.classList.add('dark');
+  } catch (e) {
+    document.documentElement.classList.add('dark');
+  }
+})();
+`;
+
 export default function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
   return (
-    <html lang="es">
+    <html lang="es" className="dark">
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: noFlashScript }} />
+      </head>
       <body>{children}</body>
     </html>
   );
