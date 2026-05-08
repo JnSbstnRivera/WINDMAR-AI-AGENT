@@ -10,15 +10,8 @@ export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: TITLE,
   description: DESCRIPTION,
-  // Favicon en la pestaña del navegador
-  icons: {
-    icon: [
-      { url: '/sunbot-feliz.png', type: 'image/png' },
-      { url: '/favicon.svg', type: 'image/svg+xml' },
-    ],
-    shortcut: '/sunbot-feliz.png',
-    apple: '/sunbot-feliz.png',
-  },
+  // Favicon: Next.js auto-detecta src/app/icon.png y genera <link rel="icon">.
+  // No declaramos icons aquí para evitar conflictos.
   // Preview en Teams, WhatsApp, Slack, LinkedIn, Discord, etc.
   openGraph: {
     type: 'website',
