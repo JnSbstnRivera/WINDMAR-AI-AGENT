@@ -64,8 +64,19 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     },
 
     // Enriquecer el JWT con display_name, departamento y rol desde user_roles.
-    async jwt({ token, trigger }) {
-      if (trigger === 'signIn' || trigger === 'update' || !token.userRole) {
+    // En 'update' aceptamos los datos del cliente directamente (más confiable que re-leer DB).
+    async jwt({ token, trigger, session }) {
+      // Caso 1: cliente llamó update({ displayName, departamento, rol }) tras guardar perfil.
+      if (trigger === 'update' && session && typeof session === 'object') {
+        const s = session as Record<string, unknown>;
+        if ('displayName' in s) token.displayName = (s.displayName as string | null) ?? null;
+        if ('departamento' in s) token.departamento = (s.departamento as string | null) ?? null;
+        if ('rol' in s) token.userRole = (s.rol as string | null) ?? 'Asesor';
+        return token;
+      }
+
+      // Caso 2: signIn inicial o token sin info → leer de user_roles
+      if (trigger === 'signIn' || !token.userRole) {
         const email = (token.email || '').toLowerCase();
         if (email) {
           try {

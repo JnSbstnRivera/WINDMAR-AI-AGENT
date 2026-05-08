@@ -59,8 +59,12 @@ export function ProfileModal({ user, onClose, onSaved }: Props) {
       if (!res.ok) {
         setError('No pudimos guardar los cambios. Intenta de nuevo.');
       } else {
-        // Forzar a NextAuth a re-leer user_roles via JWT trigger='update'
-        await update();
+        // Pasar datos directos al JWT para que el callback los use SIN re-consultar DB
+        await update({
+          displayName: capitalizeName(displayName),
+          departamento,
+          rol,
+        });
         setSaved(true);
         onSaved();
         setTimeout(() => onClose(), 900);

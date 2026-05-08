@@ -12,7 +12,9 @@ export default isAuthEnabled()
 
 export const config = {
   matcher: [
-    // Proteger todo excepto: login, api/auth (NextAuth maneja eso solo), assets estáticos
-    '/((?!login|api/auth|_next/static|_next/image|favicon\\.ico|sunbot.*\\.png|logo-inicial-chat\\.png).*)',
+    // Proteger todo excepto: login, api/auth (NextAuth maneja eso solo) y assets estáticos.
+    // Excluimos cualquier path que termine en png/jpg/svg/ico/webp/gif para que favicons,
+    // imágenes públicas y mascotas SUN BOT carguen sin auth.
+    '/((?!login|api/auth|_next/static|_next/image|.*\\.(?:png|jpg|jpeg|svg|ico|webp|gif)$).*)',
   ],
 };
