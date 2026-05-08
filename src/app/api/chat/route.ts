@@ -1,12 +1,13 @@
 import { auth } from '@/auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { SYSTEM_PROMPT } from '@/lib/prompts';
+import Anthropic from '@anthropic-ai/sdk';
 
 export const runtime = 'nodejs';
 export const maxDuration = 30;
 
 // ════════════════════════════════════════
-// HERRAMIENTAS DEL CALL CENTER (igual que el original)
+// HERRAMIENTAS DEL CALL CENTER (lista cerrada — REGLA #0 anti-alucinación)
 // ════════════════════════════════════════
 const TOOLS = [
   { id: 'luma-scanner', name: 'LUMA Scanner', url: 'https://luma-scanner-two.vercel.app/', whenToUse: 'Primer paso del proceso de venta solar. Cuando el cliente menciona su factura de LUMA, cuánto paga de luz, o quiere saber cuánto ahorra con solar.', triggers: ['luma','factura','bill','luz','paga','consumo','kwh','electricidad','recibo','$200','$150','$300','mensual'] },
@@ -32,6 +33,7 @@ function buildToolsContext(message: string): string {
   return `HERRAMIENTAS RELEVANTES:\n${relevant.map(t => `• ${t.name}: ${t.url}\n  Usar cuando: ${t.whenToUse}`).join('\n\n')}`;
 }
 
+// Stop words en español para extracción de keywords del knowledge base
 const STOP_WORDS = new Set([
   'a','al','algo','algun','alguna','algunas','alguno','algunos',
   'ante','antes','aqui','asi','aun','aunque','bajo','bien',
@@ -66,12 +68,44 @@ function extractKeywords(text: string): string {
   return keywords.length >= 2 ? keywords.join(' ') : cleaned;
 }
 
+// ════════════════════════════════════════
+// WEB SEARCH OPT-IN (palabras clave que activan búsqueda en internet)
+// ════════════════════════════════════════
+const WEB_SEARCH_TRIGGERS = [
+  'investiga',
+  'busca online',
+  'busca en internet',
+  'búsqueda en internet',
+  'busca en línea',
+  'buscar online',
+  'actualízame',
+  'noticias',
+  'tarifa actual',
+  'precio actual',
+  'última versión',
+];
+
+function shouldUseWebSearch(message: string): boolean {
+  const lower = message.toLowerCase();
+  return WEB_SEARCH_TRIGGERS.some(t => lower.includes(t));
+}
+
+// ════════════════════════════════════════
+// CLIENTE ANTHROPIC (singleton)
+// ════════════════════════════════════════
+let anthropicClient: Anthropic | null = null;
+function getAnthropic(): Anthropic {
+  if (!anthropicClient) {
+    anthropicClient = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+  }
+  return anthropicClient;
+}
 
 // ════════════════════════════════════════
 // ROUTE HANDLER (POST /api/chat)
 // ════════════════════════════════════════
 export async function POST(req: Request) {
-  // Validar sesión NextAuth
+  // 1. Validar sesión NextAuth
   const session = await auth();
   if (!session?.user?.email) {
     return new Response(JSON.stringify({ error: 'No autenticado', errorType: 'auth_error' }), {
@@ -86,6 +120,7 @@ export async function POST(req: Request) {
   const departamento = sessionUser.departamento ?? null;
   const rol = sessionUser.rol ?? 'Asesor';
 
+  // 2. Parse body
   let body: { message?: string; history?: Array<{ role: string; content: string }> };
   try {
     body = await req.json();
@@ -104,7 +139,7 @@ export async function POST(req: Request) {
     });
   }
 
-  // Nombre del asesor priorizado
+  // 3. Nombre y saludo según hora local PR
   const asesorName = (() => {
     if (displayName?.trim()) {
       const n = displayName.trim();
@@ -115,7 +150,6 @@ export async function POST(req: Request) {
     return first.charAt(0).toUpperCase() + first.slice(1).toLowerCase();
   })();
 
-  // Saludo según hora actual en Puerto Rico (UTC-4)
   const greeting = (() => {
     const hourPR = (new Date().getUTCHours() - 4 + 24) % 24;
     if (hourPR < 12) return 'Buenos días';
@@ -124,9 +158,10 @@ export async function POST(req: Request) {
   })();
 
   const isFirstMessage = history.length === 0;
+  const useWebSearch = shouldUseWebSearch(message);
 
   try {
-    // Buscar en knowledge base
+    // 4. Buscar en knowledge base (Supabase RPC)
     const supabase = getSupabaseAdmin();
     const searchQuery = extractKeywords(message);
 
@@ -143,56 +178,111 @@ export async function POST(req: Request) {
           .join('\n\n---\n\n')
       : 'No se encontró información específica para esta consulta.';
 
-    // Contexto del asesor
+    // 5. Contexto del asesor (volátil — se inyecta en cada turno, NO va en el cache)
     const asesorContext = `DATOS DEL ASESOR ACTUAL Y CONTEXTO:
 - Nombre del asesor: ${asesorName}
 ${departamento ? `- Departamento: ${departamento}` : ''}
 ${rol ? `- Rol: ${rol}` : ''}
 - Saludo según hora actual en PR: "${greeting}"
-- ¿Es el primer mensaje de la conversación? ${isFirstMessage ? 'SÍ — saluda al asesor con: "¡' + greeting + ', ' + asesorName + '! 👋"' : 'NO — NO saludes de nuevo. Mantén el HILO temático.'}`;
+- ¿Es el primer mensaje de la conversación? ${isFirstMessage ? 'SÍ — saluda al asesor con: "¡' + greeting + ', ' + asesorName + '! 👋"' : 'NO — NO saludes de nuevo. Mantén el HILO temático.'}
+${useWebSearch ? '- ⚠️ WEB SEARCH ACTIVADO: el asesor usó una palabra clave de búsqueda en internet. Cuando uses información de internet, indícalo claramente con 🌐 al inicio y cita la fuente.' : ''}`;
 
-    const messages = [
-      { role: 'system', content: SYSTEM_PROMPT },
-      ...history.slice(-8).map(h => ({ role: h.role === 'assistant' ? 'assistant' : 'user', content: h.content })),
-      { role: 'user', content: `${asesorContext}\n\n---\n\n${buildToolsContext(message)}\n\n---\n\nCONTEXTO:\n${knowledgeContext}\n\n---\n\nPREGUNTA: ${message}` },
+    // 6. Mensajes (history + user message con contexto inyectado)
+    const userContent = `${asesorContext}\n\n---\n\n${buildToolsContext(message)}\n\n---\n\nCONTEXTO KNOWLEDGE BASE:\n${knowledgeContext}\n\n---\n\nPREGUNTA: ${message}`;
+
+    const messages: Anthropic.MessageParam[] = [
+      ...history.slice(-8).map(h => ({
+        role: (h.role === 'assistant' ? 'assistant' : 'user') as 'user' | 'assistant',
+        content: h.content,
+      })),
+      { role: 'user', content: userContent },
     ];
 
-    // Llamar a Groq
-    const groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${process.env.GROQ_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'llama-3.3-70b-versatile',
-        messages,
-        stream: true,
-        temperature: 0.7,
-        max_tokens: 2048,
-      }),
+    // 7. Llamar a Claude Haiku 4.5 con prompt caching del SYSTEM_PROMPT + streaming
+    const anthropic = getAnthropic();
+
+    const tools: Anthropic.Messages.ToolUnion[] | undefined = useWebSearch
+      ? [
+          {
+            type: 'web_search_20250305',
+            name: 'web_search',
+            max_uses: 3,
+          },
+        ]
+      : undefined;
+
+    const stream = anthropic.messages.stream({
+      model: 'claude-haiku-4-5',
+      max_tokens: 2048,
+      system: [
+        {
+          type: 'text',
+          text: SYSTEM_PROMPT,
+          cache_control: { type: 'ephemeral' },
+        },
+      ],
+      messages,
+      ...(tools ? { tools } : {}),
     });
 
-    if (!groqRes.ok) {
-      const err = await groqRes.text();
-      console.error('[api/chat] Groq error:', groqRes.status, err);
+    // 8. Stream text deltas al cliente (formato plano, mismo contrato que tenía Groq)
+    const readable = new ReadableStream({
+      async start(controller) {
+        const encoder = new TextEncoder();
+        try {
+          for await (const event of stream) {
+            if (event.type === 'content_block_delta') {
+              if (event.delta.type === 'text_delta') {
+                controller.enqueue(encoder.encode(event.delta.text));
+              }
+            }
+          }
 
+          // Log de uso para monitoreo (cache hits, costo)
+          const finalMessage = await stream.finalMessage();
+          console.log('[chat/haiku] usage:', JSON.stringify({
+            input: finalMessage.usage.input_tokens,
+            output: finalMessage.usage.output_tokens,
+            cache_create: finalMessage.usage.cache_creation_input_tokens,
+            cache_read: finalMessage.usage.cache_read_input_tokens,
+            web_search: useWebSearch,
+            user: email,
+          }));
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : 'Error interno';
+          console.error('[chat/haiku] stream error:', msg);
+          controller.enqueue(encoder.encode(`\n\n[Error en el stream: ${msg}]`));
+        } finally {
+          controller.close();
+        }
+      },
+    });
+
+    return new Response(readable, {
+      headers: {
+        'Content-Type': 'text/plain; charset=utf-8',
+        'Cache-Control': 'no-cache',
+      },
+    });
+  } catch (error: unknown) {
+    // Manejo de errores tipados de Anthropic
+    if (error instanceof Anthropic.APIError) {
       let errorType: string;
       let errorMessage: string;
       let retryAfterSeconds: number | undefined;
 
-      if (groqRes.status === 429) {
+      if (error instanceof Anthropic.RateLimitError) {
         errorType = 'rate_limit';
         errorMessage = 'Hemos hecho muchas consultas en poco tiempo. Espera unos segundos y reintenta.';
-        const retryAfter = groqRes.headers.get('retry-after');
-        if (retryAfter) retryAfterSeconds = parseInt(retryAfter, 10);
-      } else if (groqRes.status === 401 || groqRes.status === 403) {
+        const ra = error.headers?.get('retry-after');
+        if (ra) retryAfterSeconds = parseInt(ra, 10);
+      } else if (error instanceof Anthropic.AuthenticationError || error instanceof Anthropic.PermissionDeniedError) {
         errorType = 'auth_error';
         errorMessage = 'Hay un problema de autenticación con el motor de IA. Avísale a tu líder.';
-      } else if (groqRes.status >= 500) {
+      } else if (error instanceof Anthropic.InternalServerError) {
         errorType = 'service_unavailable';
         errorMessage = 'El motor de IA está temporalmente caído. Espera 30 segundos e intenta de nuevo.';
-      } else if (groqRes.status === 400) {
+      } else if (error instanceof Anthropic.BadRequestError) {
         errorType = 'bad_request';
         errorMessage = 'No pude procesar tu pregunta. Intenta reformularla más corta o específica.';
       } else {
@@ -200,61 +290,15 @@ ${rol ? `- Rol: ${rol}` : ''}
         errorMessage = 'Algo inesperado pasó. Intenta de nuevo en un momento.';
       }
 
-      return new Response(JSON.stringify({
-        error: errorMessage,
-        errorType,
-        retryAfterSeconds,
-      }), {
-        status: groqRes.status,
+      console.error('[chat/haiku]', error.status, error.message);
+      return new Response(JSON.stringify({ error: errorMessage, errorType, retryAfterSeconds }), {
+        status: error.status ?? 500,
         headers: { 'Content-Type': 'application/json' },
       });
     }
 
-    // Stream la respuesta de Groq al cliente
-    const stream = new ReadableStream({
-      async start(controller) {
-        const reader = groqRes.body!.getReader();
-        const decoder = new TextDecoder();
-        let buffer = '';
-
-        try {
-          while (true) {
-            const { done, value } = await reader.read();
-            if (done) break;
-
-            buffer += decoder.decode(value, { stream: true });
-            const lines = buffer.split('\n');
-            buffer = lines.pop() ?? '';
-
-            for (const line of lines) {
-              const trimmed = line.trim();
-              if (!trimmed.startsWith('data:')) continue;
-              const data = trimmed.slice(5).trim();
-              if (data === '[DONE]') continue;
-              try {
-                const json = JSON.parse(data);
-                const text = json.choices?.[0]?.delta?.content ?? '';
-                if (text) controller.enqueue(new TextEncoder().encode(text));
-              } catch {
-                // skip malformed chunk
-              }
-            }
-          }
-        } finally {
-          controller.close();
-        }
-      },
-    });
-
-    return new Response(stream, {
-      headers: {
-        'Content-Type': 'text/plain; charset=utf-8',
-        'Cache-Control': 'no-cache',
-      },
-    });
-  } catch (error: unknown) {
     const msg = error instanceof Error ? error.message : 'Error interno';
-    console.error('[api/chat]', msg);
+    console.error('[chat/haiku] unhandled:', msg);
     return new Response(JSON.stringify({ error: msg, errorType: 'unknown' }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' },
