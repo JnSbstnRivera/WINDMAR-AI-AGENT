@@ -1,5 +1,7 @@
+'use client';
+
 import { useState, useEffect } from 'react';
-import type { Conversation } from '../types';
+import type { Conversation } from '@/types';
 
 interface Props {
   conversations: Conversation[];
@@ -16,7 +18,6 @@ interface Props {
   onClose: () => void;
 }
 
-// Tips de venta y proceso para asesores Windmar Home
 const SALES_TIPS = [
   '☀️ Para Roofing solo: financia WH Financial. Si combina con solar, abre Oriental.',
   '🏠 Lease es ideal para clientes nuevos sin sistema. Loan es mejor para ampliar.',
@@ -38,7 +39,6 @@ export function Sidebar({ conversations, activeId, onSelect, onNew, onDelete, on
   const username = displayName || userEmail.split('@')[0];
   const subtitle = [departamento, rol].filter(Boolean).join(' · ');
 
-  // Rotar tip cada 25 segundos
   useEffect(() => {
     const interval = setInterval(() => {
       setTipIndex((prev) => (prev + 1) % SALES_TIPS.length);
@@ -72,8 +72,6 @@ export function Sidebar({ conversations, activeId, onSelect, onNew, onDelete, on
         boxShadow: '4px 0 24px rgba(27,58,92,0.08)',
       }}
     >
-
-      {/* Logo */}
       <div className="p-4 border-b border-[#b8cfe8] dark:border-white/[0.08] flex-shrink-0">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2.5">
@@ -118,7 +116,6 @@ export function Sidebar({ conversations, activeId, onSelect, onNew, onDelete, on
         </button>
       </div>
 
-      {/* Bienvenida */}
       <div className="px-3 py-2.5 border-b border-[#b8cfe8] dark:border-white/[0.08] flex-shrink-0">
         <p className="text-sm font-semibold text-[#1B3A5C] dark:text-white">
           Bienvenido, {username}
@@ -133,7 +130,6 @@ export function Sidebar({ conversations, activeId, onSelect, onNew, onDelete, on
         </p>
       </div>
 
-      {/* Conversaciones — limitadas en altura para dejar espacio a tips/branding */}
       <div className="overflow-y-auto p-2 max-h-[35%] flex-shrink-0">
         {conversations.length === 0 ? (
           <p className="text-xs text-gray-400 dark:text-gray-500 text-center mt-3 px-2">
@@ -169,7 +165,6 @@ export function Sidebar({ conversations, activeId, onSelect, onNew, onDelete, on
         )}
       </div>
 
-      {/* TIPS ROTATIVOS — flex-1 llena el espacio disponible */}
       <div className="flex-1 flex flex-col min-h-0 px-4 py-4 border-t border-[#b8cfe8] dark:border-white/[0.08] overflow-hidden">
         <div className="flex items-center gap-1.5 mb-3 flex-shrink-0">
           <span className="text-sm">💡</span>
@@ -178,7 +173,6 @@ export function Sidebar({ conversations, activeId, onSelect, onNew, onDelete, on
           </span>
         </div>
 
-        {/* Tip text con animación de fade */}
         <div className="flex-1 flex items-center min-h-0 overflow-hidden">
           <p
             key={tipIndex}
@@ -187,14 +181,12 @@ export function Sidebar({ conversations, activeId, onSelect, onNew, onDelete, on
               animation: 'fadeInTip 0.5s ease-in-out',
             }}
           >
-            "{SALES_TIPS[tipIndex]}"
+            &quot;{SALES_TIPS[tipIndex]}&quot;
           </p>
         </div>
 
-        {/* Indicador de dots */}
         <div className="flex items-center justify-center gap-1 mt-2 flex-shrink-0">
           {SALES_TIPS.slice(0, 5).map((_, i) => {
-            // Mostrar 5 dots representando 5 grupos
             const groupIdx = Math.floor((tipIndex / SALES_TIPS.length) * 5);
             return (
               <div
@@ -215,7 +207,6 @@ export function Sidebar({ conversations, activeId, onSelect, onNew, onDelete, on
         `}</style>
       </div>
 
-      {/* BRANDING — Mini SUN BOT + tagline */}
       <div className="flex items-center justify-center gap-2 px-3 py-2.5 border-t border-[#b8cfe8] dark:border-white/[0.08] flex-shrink-0">
         <div className="relative flex items-center justify-center" style={{ width: 28, height: 28 }}>
           <div
@@ -239,7 +230,6 @@ export function Sidebar({ conversations, activeId, onSelect, onNew, onDelete, on
         </div>
       </div>
 
-      {/* PAPELERA — botón con ícono visible */}
       <div className="px-3 py-3 border-t border-[#b8cfe8] dark:border-white/[0.08] flex-shrink-0">
         {conversations.length > 0 ? (
           <button

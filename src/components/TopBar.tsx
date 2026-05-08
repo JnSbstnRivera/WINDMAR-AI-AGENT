@@ -1,3 +1,5 @@
+'use client';
+
 import { useState, useEffect } from 'react';
 
 interface Props {
@@ -7,7 +9,6 @@ interface Props {
 }
 
 export function TopBar({ onLogout, onOpenProfile, displayName }: Props) {
-  // Por defecto modo oscuro — guardado en localStorage
   const [dark, setDark] = useState<boolean>(() => {
     if (typeof window === 'undefined') return true;
     const saved = localStorage.getItem('wh-theme');
@@ -28,7 +29,6 @@ export function TopBar({ onLogout, onOpenProfile, displayName }: Props) {
 
   return (
     <div className="fixed top-3 right-4 z-40 flex items-center gap-2">
-      {/* Configuración / Perfil */}
       {onOpenProfile && (
         <button
           onClick={onOpenProfile}
@@ -43,7 +43,6 @@ export function TopBar({ onLogout, onOpenProfile, displayName }: Props) {
         </button>
       )}
 
-      {/* Tema */}
       <button
         onClick={toggleDark}
         title={dark ? 'Modo claro' : 'Modo oscuro'}

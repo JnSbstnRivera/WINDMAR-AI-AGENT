@@ -1,3 +1,5 @@
+'use client';
+
 import { ChatInput } from './ChatInput';
 
 interface Props {
@@ -9,7 +11,6 @@ interface Props {
 export function WelcomeScreen({ onSend, disabled, onTypingChange }: Props) {
   return (
     <div className="flex-1 flex flex-col items-center justify-start px-4 pt-[8vh] sm:pt-[10vh] pb-6 sm:pb-8">
-      {/* Logo Windmar Home — glow solo en silueta + partículas flotantes */}
       <div
         className="relative flex items-center justify-center mb-4 sm:mb-5"
         style={{
@@ -17,7 +18,6 @@ export function WelcomeScreen({ onSend, disabled, onTypingChange }: Props) {
           height: 'clamp(260px, 40vw, 320px)',
         }}
       >
-        {/* Logo principal con glow en silueta (drop-shadow) tipo SUN BOT */}
         <img
           src="/logo-inicial-chat.png"
           alt="Windmar Home"
@@ -28,7 +28,6 @@ export function WelcomeScreen({ onSend, disabled, onTypingChange }: Props) {
           }}
         />
 
-        {/* Partículas flotantes hacia arriba (glowmorphism) */}
         <span className="welcome-particle welcome-particle-1" />
         <span className="welcome-particle welcome-particle-2" />
         <span className="welcome-particle welcome-particle-3" />
@@ -37,27 +36,22 @@ export function WelcomeScreen({ onSend, disabled, onTypingChange }: Props) {
         <span className="welcome-particle welcome-particle-6" />
       </div>
 
-      {/* Título principal */}
       <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-[#1B3A5C] dark:text-white mb-2 text-center tracking-tight">
         Agente Windmar Home
       </h1>
 
-      {/* Subtítulo */}
       <p className="text-gray-400 dark:text-gray-500 text-xs sm:text-sm md:text-base text-center max-w-md mb-1 px-2">
         Tu asistente experto en energía solar, roofing, agua y baterías
       </p>
 
-      {/* Pregunta cordial */}
       <p className="text-[#F7941D] dark:text-[#F7941D] text-sm sm:text-base md:text-lg text-center font-semibold mb-6 sm:mb-8 mt-2">
         ¿En qué vamos a trabajar hoy?
       </p>
 
-      {/* Input de chat */}
       <div className="w-full max-w-2xl">
         <ChatInput onSend={onSend} disabled={disabled} onTypingChange={onTypingChange} />
       </div>
 
-      {/* CSS animations: glow silueta + partículas flotantes */}
       <style>{`
         @keyframes welcomeLogoGlow {
           0%, 100% {

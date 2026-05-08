@@ -1,5 +1,7 @@
+'use client';
+
 import { useState } from 'react';
-import type { Message } from '../types';
+import type { Message } from '@/types';
 
 interface Props {
   message: Message;
@@ -59,12 +61,10 @@ function renderContent(text: string) {
   ));
 }
 
-// Avatar del asesor (intenta /asesor.png, fallback a inicial con halo)
 function AsesorAvatar({ email }: { email: string }) {
   const initial = (email.split('@')[0]?.charAt(0) ?? 'A').toUpperCase();
   return (
     <div className="relative flex-shrink-0" style={{ width: 40, height: 40 }}>
-      {/* Halo azul navy */}
       <div
         className="absolute inset-0 rounded-full"
         style={{
@@ -73,7 +73,6 @@ function AsesorAvatar({ email }: { email: string }) {
           filter: 'blur(6px)',
         }}
       />
-      {/* Círculo con inicial */}
       <div
         className="relative z-10 w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-lg shadow-md"
         style={{
@@ -87,9 +86,7 @@ function AsesorAvatar({ email }: { email: string }) {
   );
 }
 
-// Avatar del SUN BOT IA — cambia según estado
 function IAAvatar({ isStreaming, isError }: { isStreaming?: boolean; isError?: boolean }) {
-  // Selecciona la imagen según el estado
   const src = isError
     ? '/sunbot-error.png'
     : isStreaming
@@ -136,7 +133,6 @@ export function ChatMessage({ message, isStreaming, asesorEmail = '' }: Props) {
   }
 
   if (isUser) {
-    // ASESOR — burbuja a la derecha + avatar inicial a la derecha
     return (
       <div className="flex justify-end gap-3 mb-6">
         <div className="flex flex-col items-end max-w-[85%] sm:max-w-[80%]">
@@ -155,12 +151,9 @@ export function ChatMessage({ message, isStreaming, asesorEmail = '' }: Props) {
     );
   }
 
-  // Detecta si el mensaje contiene marcador de error
   const isErrorMessage = message.content.includes('[ERROR_TYPE:');
-  // Limpia el marcador del display
   const displayContent = message.content.replace(/\n*\[ERROR_TYPE:[^\]]+\]/g, '');
 
-  // IA — avatar SUN BOT + texto plano sin burbuja (estilo ChatGPT)
   return (
     <div className="flex justify-start gap-3 mb-8">
       <IAAvatar isStreaming={isStreaming} isError={isErrorMessage} />

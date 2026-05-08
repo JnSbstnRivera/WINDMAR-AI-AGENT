@@ -13,19 +13,9 @@ export interface Conversation {
   updatedAt: Date;
 }
 
-export interface KnowledgeDoc {
-  id: number;
-  categoria: string;
-  subcategoria: string;
-  producto_id: string;
-  titulo: string;
-  contenido: string;
-  metadata: Record<string, unknown>;
-  area: string;
-  activo: boolean;
-}
-
-export interface ChatRequest {
-  message: string;
-  history: Array<{ role: 'user' | 'assistant'; content: string }>;
+export interface UserRole {
+  user_email: string;
+  display_name: string | null;
+  departamento: string | null;
+  rol: 'Asesor' | 'Líder' | 'Channel' | 'Project M';
 }

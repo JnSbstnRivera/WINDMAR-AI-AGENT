@@ -1,6 +1,4 @@
-// MascotPanel — SUN BOT con estados dinámicos
-// Cambia imagen según contexto + animaciones sutiles tipo tech
-// Sin subtítulos ni labels — solo visual
+'use client';
 
 import { useEffect, useState } from 'react';
 
@@ -14,9 +12,9 @@ interface Props {
 const STATE_CONFIG: Record<MascotState, {
   src: string;
   haloAlpha: number;
-  haloColor: string;        // RGB sin alpha
+  haloColor: string;
   animClass: string;
-  showTechRing: boolean;    // anillo giratorio para estados activos
+  showTechRing: boolean;
 }> = {
   idle:     { src: '/sunbot.png',             haloAlpha: 0.50, haloColor: '247,148,29', animClass: 'mascot-breathe',     showTechRing: false },
   typing:   { src: '/sunbot-escribiendo.png', haloAlpha: 0.55, haloColor: '247,148,29', animClass: 'mascot-pulse-fast',  showTechRing: false },
@@ -28,12 +26,8 @@ const STATE_CONFIG: Record<MascotState, {
 
 export function MascotPanel({ state = 'idle', sidebarHidden = false }: Props) {
   const config = STATE_CONFIG[state];
-  // SUN BOT centrado entre sidebar (256px) y chat (centrado horizontalmente)
-  // Cuando sidebar visible: gap entre 256px y main content → centro ~260px
-  // Cuando sidebar oculto: pegado a la izquierda con margen
   const desktopLeft = sidebarHidden ? 'left-[120px]' : 'left-[450px]';
 
-  // Crossfade entre imágenes al cambiar de estado
   const [visibleSrc, setVisibleSrc] = useState(config.src);
   const [imgOpacity, setImgOpacity] = useState(1);
 
@@ -52,22 +46,16 @@ export function MascotPanel({ state = 'idle', sidebarHidden = false }: Props) {
 
   return (
     <>
-      {/* Desktop — bottom-left (lado izquierdo), tamaño aumentado significativamente */}
       <div className={`hidden md:flex fixed ${desktopLeft} bottom-28 z-30 items-center justify-center transition-all duration-300`}>
         <div className="relative" style={{ width: 130, height: 130 }}>
-          {/* Halo principal con animación */}
           <div
             className={`absolute inset-0 rounded-full ${config.animClass}`}
             style={{ background: haloBg, filter: 'blur(14px)' }}
           />
-
-          {/* Halo blanco interno (efecto brillante) */}
           <div
             className="absolute inset-0 rounded-full"
             style={{ background: 'radial-gradient(circle, rgba(255,255,255,0.22) 0%, transparent 60%)' }}
           />
-
-          {/* Tech ring rotativo (solo en thinking/loading) */}
           {config.showTechRing && (
             <div
               className="absolute inset-0 rounded-full mascot-spin"
@@ -77,8 +65,6 @@ export function MascotPanel({ state = 'idle', sidebarHidden = false }: Props) {
               }}
             />
           )}
-
-          {/* Imagen mascota */}
           <img
             src={visibleSrc}
             alt="Windmar Sun Bot"
@@ -96,8 +82,6 @@ export function MascotPanel({ state = 'idle', sidebarHidden = false }: Props) {
               zIndex: 10,
             }}
           />
-
-          {/* Pixel dots flotando (efecto tech sutil) */}
           {(state === 'thinking' || state === 'typing') && (
             <>
               <span className="mascot-particle particle-1" style={{ background: `rgb(${config.haloColor})` }} />
@@ -108,7 +92,6 @@ export function MascotPanel({ state = 'idle', sidebarHidden = false }: Props) {
         </div>
       </div>
 
-      {/* Mobile */}
       <div className="md:hidden fixed bottom-16 left-2 z-30">
         <div className="relative" style={{ width: 68, height: 68 }}>
           <div
@@ -141,7 +124,6 @@ export function MascotPanel({ state = 'idle', sidebarHidden = false }: Props) {
         </div>
       </div>
 
-      {/* CSS animations */}
       <style>{`
         @keyframes mascot-breathe {
           0%, 100% { opacity: 0.6;  transform: scale(1); }
@@ -182,7 +164,6 @@ export function MascotPanel({ state = 'idle', sidebarHidden = false }: Props) {
         .mascot-error-shake { animation: mascot-error-shake 0.5s ease-in-out 2; }
         .mascot-spin        { animation: mascot-spin 2.6s linear infinite; }
 
-        /* Pixel particles para tech feel */
         .mascot-particle {
           position: absolute;
           width: 4px;

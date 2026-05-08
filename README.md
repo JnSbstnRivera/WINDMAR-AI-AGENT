@@ -1,102 +1,132 @@
-# WINDMAR AI AGENT
+# WINDMAR AI AGENT — Next.js + Microsoft SSO
 
-Agente de inteligencia artificial para el call center de **Windmar Home Puerto Rico** — la empresa líder en energía solar, roofing, productos de agua y baterías portátiles con más de 22 años de experiencia en la isla.
+App migrada del proyecto Vite original. Stack:
 
----
-
-## ¿Qué hace?
-
-Es un chat de IA diseñado para los asesores del call center. El agente:
-
-- Responde preguntas sobre productos, procesos de venta y manejo de objeciones
-- Recomienda la herramienta correcta (cotizador o calculadora) según la conversación
-- Aplica psicología de ventas consultiva para ayudar a cerrar
-- Guarda el historial de conversaciones por asesor
-- Acceso solo para correos `@windmarhome.com`
+- **Next.js 15** + **React 19** + **TypeScript**
+- **NextAuth v5** + **Microsoft Entra ID** (SSO Windmar)
+- **Supabase** (base de datos: conversations, messages, knowledge_base, user_roles)
+- **Groq** (motor LLM — `llama-3.3-70b-versatile`)
+- **Tailwind CSS v4**
 
 ---
 
-## Herramientas del Call Center
+## Estado actual
 
-| Herramienta | URL | Área |
-|---|---|---|
-| LUMA Scanner | https://luma-scanner-two.vercel.app/ | Telemercadeo, Ventas |
-| Cotizador Loan | https://cotizador-loan.vercel.app/ | VASS, Ventas |
-| Cotizador Lease / PPA | https://cotizador-lease-ppa.vercel.app/ | VASS, Ventas |
-| Cotizador Roofing Pro | https://cotizador-roofing-pro.vercel.app/ | Todos |
-| Cotizador Agua | https://cotizador-agua.vercel.app/ | Todos |
-| Calculadora Anker | https://calculador-anker.vercel.app/ | Todos |
-| Calculadora Placas x Aires | https://calculadora-placas-aires-acondicion.vercel.app/ | VASS, Ventas |
-| Calculadora Solar EV | https://calculadora-solar-ev.vercel.app/ | Ventas |
-| Proyecto Completo | https://proyecto-completo-three.vercel.app/ | Todos |
-| Panel General | https://panel-de-herramientas-call-center.vercel.app/ | Todos |
+✅ Migración completa — código compilado y listo.
+⏸️ **Pendiente solo de:** Client ID + Client Secret + Tenant ID que IT debe entregar.
 
 ---
 
-## Áreas del Call Center
+## Cuando IT entregue los datos — pasos para activar el SSO
 
-- **Telemercadeo** — Prospectan bases de datos, ofrecen productos y agendan citas
-- **VASS** — Corren crédito. Loan si aprueba, Lease (LightReach) como alternativa
-- **Ventas** — Consultores telefónicos con orientación completa y cierre de contratos
+### 1. Rellenar `.env.local` en este directorio
 
----
+```bash
+AUTH_SECRET=<ya_generado_no_tocar>
+AUTH_MICROSOFT_ENTRA_ID_ID=<APPLICATION_CLIENT_ID_DE_AZURE>
+AUTH_MICROSOFT_ENTRA_ID_SECRET=<CLIENT_SECRET_VALUE_DE_AZURE>
+AUTH_MICROSOFT_ENTRA_ID_ISSUER=<TENANT_ID>
 
-## Stack Técnico
+SUPABASE_URL=https://psyfmkmlmvrijdxsirph.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=<copiar_del_dashboard_de_supabase>
 
-| Capa | Tecnología |
-|---|---|
-| Frontend | React 19 + TypeScript + Vite + Tailwind CSS 4 |
-| Backend | Vercel Serverless Functions (Node.js) |
-| Base de datos | Supabase (PostgreSQL + RLS) |
-| Autenticación | Supabase Auth (solo @windmarhome.com) |
-| IA | Groq — llama-3.3-70b-versatile (streaming) |
-| Búsqueda | Supabase RPC full-text search en español |
-
----
-
-## Despliegue
-
-**Producción:** https://windmar-ai-agent.vercel.app
-
-Variables de entorno necesarias en Vercel:
-
+GROQ_API_KEY=<copiar_del_proyecto_viejo>
 ```
-GROQ_API_KEY=
-SUPABASE_URL=
-SUPABASE_ANON_KEY=
-VITE_SUPABASE_URL=
-VITE_SUPABASE_PUBLISHABLE_KEY=
+
+> **Service role key:** Supabase Dashboard → Settings → API → `service_role` key (la secreta, NO la `anon`)
+
+### 2. Ejecutar migraciones SQL en Supabase
+
+En orden, en el SQL Editor de Supabase:
+
+1. `supabase/migrations/004_user_roles.sql` — crea tabla `user_roles` y migra metadata existente
+2. `supabase/migrations/005_conversations_email.sql` — agrega columna `user_email` a conversations
+
+### 3. Probar localmente
+
+```powershell
+npm run dev
+```
+
+Abre http://localhost:3000 → debería redirigir a `/login` → click "Iniciar sesión con Microsoft" → autenticarte → vuelves al chat.
+
+### 4. Deploy a producción
+
+**Variables de entorno en Vercel** (Project Settings → Environment Variables):
+
+Mismas que `.env.local`. Asegúrate que `AUTH_MICROSOFT_ENTRA_ID_ISSUER` es el tenant ID correcto.
+
+**Confirmar con IT** que el redirect URI registrado en Azure es:
+```
+https://windmar-ai-agent.vercel.app/api/auth/callback/microsoft-entra-id
 ```
 
 ---
 
-## Estructura del Proyecto
+## Estructura del proyecto
 
 ```
-WINDMAR-AI-AGENT/
-├── api/
-│   ├── chat.ts          # Serverless function — Groq streaming
-│   └── package.json     # CommonJS override para Vercel
+windmar-ai-agent-next/
 ├── src/
+│   ├── app/
+│   │   ├── api/
+│   │   │   ├── auth/[...nextauth]/route.ts    # NextAuth handlers
+│   │   │   ├── chat/route.ts                  # Chat con Groq
+│   │   │   ├── conversations/route.ts         # CRUD conversaciones
+│   │   │   ├── conversations/[id]/route.ts    # DELETE individual
+│   │   │   ├── messages/route.ts              # Guardar mensajes
+│   │   │   └── profile/route.ts               # Update user_roles
+│   │   ├── login/page.tsx                     # Botón Microsoft
+│   │   ├── layout.tsx                         # Esqueleto HTML
+│   │   ├── globals.css                        # Estilos globales (Tailwind v4)
+│   │   └── page.tsx                           # Home (chat principal)
 │   ├── components/
-│   │   ├── ChatMessage.tsx   # Renderizado markdown + hipervínculos
-│   │   ├── ChatWindow.tsx
+│   │   ├── ChatApp.tsx                        # Lógica principal del chat
 │   │   ├── ChatInput.tsx
-│   │   ├── Sidebar.tsx       # Historial + borrar conversaciones
-│   │   ├── LoginScreen.tsx   # Auth @windmarhome.com
+│   │   ├── ChatMessage.tsx
+│   │   ├── ChatWindow.tsx
+│   │   ├── MascotPanel.tsx                    # SUN BOT
+│   │   ├── ProfileModal.tsx
+│   │   ├── Sidebar.tsx
+│   │   ├── TopBar.tsx
 │   │   └── WelcomeScreen.tsx
-│   ├── lib/supabase.ts
-│   ├── types.ts
-│   └── App.tsx
-├── supabase/
-│   ├── 01_schema.sql         # Tablas + RLS
-│   ├── 02_seed_tools.sql     # Base de conocimiento inicial
-│   └── 03_seed_missing_tools.sql
-├── public/
-│   └── favicon.svg
-└── vercel.json
+│   ├── lib/
+│   │   ├── supabase.ts                        # Cliente admin
+│   │   └── prompts.ts                         # SYSTEM_PROMPT del LLM
+│   ├── auth.ts                                # Config NextAuth
+│   ├── middleware.ts                          # Protección de rutas
+│   └── types.ts
+├── supabase/migrations/
+│   ├── 004_user_roles.sql
+│   └── 005_conversations_email.sql
+├── public/                                     # Imágenes (sunbot, logo)
+├── .env.local                                  # Variables locales (NO Git)
+├── .env.example                                # Plantilla
+├── package.json
+└── README.md
 ```
 
 ---
 
-*Desarrollado para Windmar Home Puerto Rico — Call Center Operations*
+## Diferencias importantes vs. el proyecto viejo (Vite)
+
+| Aspecto | Antes (Vite) | Ahora (Next.js) |
+|---|---|---|
+| **Login** | Email + password en Supabase Auth | Botón "Iniciar sesión con Microsoft" |
+| **Sesiones** | Token Supabase | JWT cifrado (cookie 8h) |
+| **Restricción** | Validación frontend de @windmarhome.com | A nivel de tenant Azure + callback signIn |
+| **Conversaciones** | `user_id` UUID | `user_email` TEXT |
+| **Profile data** | `auth.users.user_metadata` | Tabla `user_roles` |
+| **Acceso a DB** | Supabase anon key con RLS | service_role key bypass |
+| **Endpoint chat** | `api/chat.ts` (Vercel function) | `app/api/chat/route.ts` (Next.js) |
+
+---
+
+## Comandos útiles
+
+```powershell
+npm run dev      # Servidor de desarrollo (localhost:3000)
+npm run build    # Build de producción
+npm run start    # Correr build en local (después de build)
+npm run lint     # Linter
+```

@@ -1,3 +1,5 @@
+'use client';
+
 import { useState, useRef } from 'react';
 
 interface Props {
@@ -36,17 +38,14 @@ export function ChatInput({ onSend, disabled, onTypingChange }: Props) {
   return (
     <div className="px-4 py-4">
       <div className="max-w-3xl mx-auto">
-        {/* Wrapper con glassmorphism + glow */}
         <div
           className="relative rounded-2xl transition-all duration-300"
           style={{
-            // Glow naranja sutil que se intensifica al enfocar
             boxShadow: focused
               ? '0 0 0 3px rgba(247,148,29,0.18), 0 12px 40px rgba(247,148,29,0.25), 0 4px 16px rgba(0,0,0,0.08)'
               : '0 8px 32px rgba(247,148,29,0.10), 0 2px 12px rgba(0,0,0,0.06)',
           }}
         >
-          {/* Halo de fondo sutil para el glassmorphism */}
           <div
             className="absolute inset-0 rounded-2xl pointer-events-none"
             style={{
@@ -96,7 +95,6 @@ export function ChatInput({ onSend, disabled, onTypingChange }: Props) {
           </div>
         </div>
 
-        {/* Hint pequeño debajo */}
         <p className="text-[10px] text-gray-400 dark:text-gray-500 text-center mt-2">
           Enter para enviar · Shift+Enter para nueva línea
         </p>

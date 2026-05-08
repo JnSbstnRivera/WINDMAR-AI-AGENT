@@ -1,39 +1,47 @@
-import { useState, useEffect } from 'react';
-import { supabase } from './lib/supabase';
-import { LoginScreen } from './components/LoginScreen';
-import { Sidebar } from './components/Sidebar';
-import { ChatWindow } from './components/ChatWindow';
-import { ChatInput } from './components/ChatInput';
-import { WelcomeScreen } from './components/WelcomeScreen';
-import { MascotPanel } from './components/MascotPanel';
-import { TopBar } from './components/TopBar';
-import { ProfileModal } from './components/ProfileModal';
-import type { MascotState } from './components/MascotPanel';
-import type { Message, Conversation } from './types';
-import type { User } from '@supabase/supabase-js';
+'use client';
+
+import { useState, useEffect, useCallback } from 'react';
+import { Sidebar } from './Sidebar';
+import { ChatWindow } from './ChatWindow';
+import { ChatInput } from './ChatInput';
+import { WelcomeScreen } from './WelcomeScreen';
+import { MascotPanel, type MascotState } from './MascotPanel';
+import { TopBar } from './TopBar';
+import { ProfileModal } from './ProfileModal';
+import type { Message, Conversation } from '@/types';
 
 function generateId() {
   return Math.random().toString(36).slice(2) + Date.now().toString(36);
 }
 
-export default function App() {
-  const [user, setUser] = useState<User | null>(null);
-  const [authLoading, setAuthLoading] = useState(true);
+interface UserData {
+  email: string;
+  displayName: string | null;
+  departamento: string | null;
+  rol: string | null;
+}
+
+interface Props {
+  user: UserData;
+  onSignOut: () => Promise<void>;
+}
+
+export function ChatApp({ user, onSignOut }: Props) {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [isStreaming, setIsStreaming] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  // Por defecto sidebar cerrada — se persiste en localStorage
   const [desktopSidebarHidden, setDesktopSidebarHidden] = useState<boolean>(() => {
     if (typeof window === 'undefined') return true;
     const saved = localStorage.getItem('wh-sidebar-hidden');
     return saved === null ? true : saved === 'true';
   });
   const [mascotState, setMascotState] = useState<MascotState>('idle');
-  const [postLoginLoading, setPostLoginLoading] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
-  // Versión bump al guardar perfil para forzar re-lectura de metadata
-  const [profileVersion, setProfileVersion] = useState(0);
+  const [postLoginLoading, setPostLoginLoading] = useState(false);
+
+  const displayName = user.displayName || user.email.split('@')[0].split('.')[0];
+  const capDisplayName = displayName ? displayName.charAt(0).toUpperCase() + displayName.slice(1) : 'asesor';
 
   useEffect(() => {
     try {
@@ -41,33 +49,8 @@ export default function App() {
     } catch {}
   }, [desktopSidebarHidden]);
 
+  // Loader breve después de iniciar sesión
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null);
-      setAuthLoading(false);
-    });
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
-    });
-    return () => subscription.unsubscribe();
-  }, []);
-
-  // Refresca user después de guardar perfil
-  useEffect(() => {
-    if (profileVersion === 0) return;
-    supabase.auth.getUser().then(({ data: { user: u } }) => {
-      if (u) setUser(u);
-    });
-  }, [profileVersion]);
-
-  // Metadata helpers
-  const meta = (user?.user_metadata ?? {}) as { display_name?: string; departamento?: string; rol?: string };
-  const displayName = meta.display_name || (user?.email ?? '').split('@')[0].split('.')[0];
-  const capDisplayName = displayName ? displayName.charAt(0).toUpperCase() + displayName.slice(1) : 'asesor';
-
-  // Cuando el usuario hace login fresco (desde LoginScreen), muestra loader 2s
-  useEffect(() => {
-    if (!user) return;
     try {
       if (sessionStorage.getItem('wh-just-logged-in') === '1') {
         sessionStorage.removeItem('wh-just-logged-in');
@@ -76,56 +59,37 @@ export default function App() {
         return () => clearTimeout(t);
       }
     } catch {}
-  }, [user]);
+  }, []);
+
+  const loadConversations = useCallback(async () => {
+    try {
+      const res = await fetch('/api/conversations');
+      if (!res.ok) return;
+      const data = await res.json() as { conversations: Conversation[] };
+      // Convertir strings a Date
+      const convs: Conversation[] = data.conversations.map(c => ({
+        ...c,
+        createdAt: new Date(c.createdAt),
+        updatedAt: new Date(c.updatedAt),
+        messages: c.messages.map(m => ({ ...m, timestamp: new Date(m.timestamp) })),
+      }));
+      setConversations(convs);
+    } catch (err) {
+      console.error('[loadConversations]', err);
+    }
+  }, []);
 
   useEffect(() => {
-    if (!user) {
-      setConversations([]);
-      setActiveId(null);
-      return;
-    }
     loadConversations();
-  }, [user]);
+  }, [loadConversations]);
 
-  async function loadConversations() {
-    const { data: convs } = await supabase
-      .from('conversations')
-      .select('id, title, created_at, updated_at')
-      .order('updated_at', { ascending: false });
+  const activeConversation = conversations.find((c) => c.id === activeId) ?? null;
 
-    if (!convs) return;
-
-    const full: Conversation[] = await Promise.all(
-      convs.map(async (c) => {
-        const { data: msgs } = await supabase
-          .from('messages')
-          .select('id, role, content, created_at')
-          .eq('conversation_id', c.id)
-          .order('created_at', { ascending: true });
-
-        return {
-          id: c.id as string,
-          title: c.title as string,
-          createdAt: new Date(c.created_at as string),
-          updatedAt: new Date(c.updated_at as string),
-          messages: (msgs ?? []).map((m) => ({
-            id: m.id as string,
-            role: m.role as 'user' | 'assistant',
-            content: m.content as string,
-            timestamp: new Date(m.created_at as string),
-          })),
-        };
-      })
-    );
-    setConversations(full);
-  }
-
-  // Drive mascot state from streaming
+  // Driver del estado del SUN BOT
   useEffect(() => {
     if (isStreaming) {
       setMascotState('thinking');
     } else {
-      // Detecta si la última respuesta es un error
       const lastMsg = activeConversation?.messages[activeConversation.messages.length - 1];
       if (lastMsg?.role === 'assistant' && lastMsg.content.includes('[ERROR_TYPE:')) {
         setMascotState('error');
@@ -136,38 +100,32 @@ export default function App() {
       const t = setTimeout(() => setMascotState('idle'), 3500);
       return () => clearTimeout(t);
     }
-  }, [isStreaming]);
+  }, [isStreaming, activeConversation]);
 
-  const activeConversation = conversations.find((c) => c.id === activeId) ?? null;
-
-  async function newConversation() {
+  function newConversation() {
     setActiveId(null);
     setSidebarOpen(false);
   }
 
-  async function selectConversation(id: string) {
+  function selectConversation(id: string) {
     setActiveId(id);
     setSidebarOpen(false);
   }
 
   async function deleteConversation(id: string) {
-    await supabase.from('messages').delete().eq('conversation_id', id);
-    await supabase.from('conversations').delete().eq('id', id);
+    await fetch(`/api/conversations/${id}`, { method: 'DELETE' });
     setConversations((prev) => prev.filter((c) => c.id !== id));
     if (activeId === id) setActiveId(null);
   }
 
   async function deleteAllConversations() {
-    for (const conv of conversations) {
-      await supabase.from('messages').delete().eq('conversation_id', conv.id);
-    }
-    await supabase.from('conversations').delete().eq('user_id', user!.id);
+    await fetch('/api/conversations', { method: 'DELETE' });
     setConversations([]);
     setActiveId(null);
   }
 
   async function sendMessage(text: string) {
-    if (!text.trim() || isStreaming || !user) return;
+    if (!text.trim() || isStreaming) return;
 
     const userMsg: Message = {
       id: generateId(),
@@ -178,37 +136,36 @@ export default function App() {
 
     let convId = activeId;
 
+    // Crear conversación si no hay activa
     if (!convId) {
-      const { data: newConv } = await supabase
-        .from('conversations')
-        .insert({ title: text.slice(0, 60), user_id: user.id })
-        .select('id')
-        .single();
+      const res = await fetch('/api/conversations', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: text.slice(0, 60) }),
+      });
+      if (!res.ok) return;
+      const { conversation } = await res.json() as { conversation: Conversation };
+      convId = conversation.id;
 
-      if (!newConv) return;
-      convId = newConv.id as string;
-
-      const newConversation: Conversation = {
-        id: convId,
-        title: text.slice(0, 60),
+      const newConv: Conversation = {
+        ...conversation,
+        createdAt: new Date(conversation.createdAt),
+        updatedAt: new Date(conversation.updatedAt),
         messages: [],
-        createdAt: new Date(),
-        updatedAt: new Date(),
       };
-      setConversations((prev) => [newConversation, ...prev]);
+      setConversations((prev) => [newConv, ...prev]);
       setActiveId(convId);
     }
 
-    await supabase.from('messages').insert({
-      conversation_id: convId,
-      role: 'user',
-      content: text.trim(),
+    // Guardar mensaje del usuario
+    await fetch('/api/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ conversation_id: convId, role: 'user', content: text.trim() }),
     });
 
     setConversations((prev) =>
-      prev.map((c) =>
-        c.id === convId ? { ...c, messages: [...c.messages, userMsg] } : c
-      )
+      prev.map((c) => (c.id === convId ? { ...c, messages: [...c.messages, userMsg] } : c))
     );
 
     const assistantMsgId = generateId();
@@ -219,9 +176,7 @@ export default function App() {
       timestamp: new Date(),
     };
     setConversations((prev) =>
-      prev.map((c) =>
-        c.id === convId ? { ...c, messages: [...c.messages, assistantMsg] } : c
-      )
+      prev.map((c) => (c.id === convId ? { ...c, messages: [...c.messages, assistantMsg] } : c))
     );
 
     setIsStreaming(true);
@@ -236,18 +191,10 @@ export default function App() {
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          message: text.trim(),
-          history,
-          email: user?.email ?? '',
-          displayName: meta.display_name ?? '',
-          departamento: meta.departamento ?? '',
-          rol: meta.rol ?? '',
-        }),
+        body: JSON.stringify({ message: text.trim(), history }),
       });
 
       if (!response.ok) {
-        // Intenta parsear error JSON con tipo
         let errorType = 'unknown';
         let errorMessage = 'Algo inesperado pasó. Intenta de nuevo.';
         let retryAfterSeconds: number | undefined;
@@ -256,7 +203,7 @@ export default function App() {
           errorType = errBody.errorType ?? 'unknown';
           errorMessage = errBody.error ?? errorMessage;
           retryAfterSeconds = errBody.retryAfterSeconds;
-        } catch { /* ignore parse errors */ }
+        } catch { /* ignore */ }
 
         const retryHint = retryAfterSeconds
           ? `\n\n⏱️ Espera ~${retryAfterSeconds} segundos antes de reintentar.`
@@ -304,17 +251,12 @@ export default function App() {
         );
       }
 
-      await supabase.from('messages').insert({
-        conversation_id: convId,
-        role: 'assistant',
-        content: fullText,
+      // Guardar respuesta del asistente
+      await fetch('/api/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ conversation_id: convId, role: 'assistant', content: fullText }),
       });
-
-      await supabase
-        .from('conversations')
-        .update({ updated_at: new Date().toISOString() })
-        .eq('id', convId);
-
     } catch {
       const friendlyMessage = `🤖 ¡Ay, perdona ${capDisplayName}! Parece que hay un problema de conexión. Verifica tu internet e intenta de nuevo.\n\n[ERROR_TYPE:network]`;
 
@@ -324,9 +266,7 @@ export default function App() {
             ? {
                 ...c,
                 messages: c.messages.map((m) =>
-                  m.id === assistantMsgId
-                    ? { ...m, content: friendlyMessage }
-                    : m
+                  m.id === assistantMsgId ? { ...m, content: friendlyMessage } : m
                 ),
               }
             : c
@@ -337,21 +277,10 @@ export default function App() {
     }
   }
 
-  if (authLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="w-8 h-8 border-2 border-[#F7941D] border-t-transparent rounded-full animate-spin" />
-      </div>
-    );
-  }
-
-  if (!user) return <LoginScreen />;
-
-  // Loader breve después de iniciar sesión
+  // Loader breve post-login
   if (postLoginLoading) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-[#eef4fa] dark:bg-[#0a1628] px-4">
-        {/* SUN BOT cargando con halo respirando */}
         <div className="relative flex items-center justify-center mb-5" style={{ width: 100, height: 100 }}>
           <div
             className="absolute inset-0 rounded-full"
@@ -369,31 +298,17 @@ export default function App() {
             style={{ imageRendering: 'pixelated' }}
           />
         </div>
-
-        {/* Saludo personalizado */}
         <p className="text-lg sm:text-xl font-bold text-[#1B3A5C] dark:text-white mb-1">
           ¡Hola, {capDisplayName}! 👋
         </p>
         <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mb-5">
           Preparando tu asistente...
         </p>
-
-        {/* 3 puntos animados */}
         <div className="flex items-center gap-2">
-          <span
-            className="w-2.5 h-2.5 rounded-full bg-[#F7941D]"
-            style={{ animation: 'dotBounce 1.2s ease-in-out 0s infinite' }}
-          />
-          <span
-            className="w-2.5 h-2.5 rounded-full bg-[#F7941D]"
-            style={{ animation: 'dotBounce 1.2s ease-in-out 0.2s infinite' }}
-          />
-          <span
-            className="w-2.5 h-2.5 rounded-full bg-[#F7941D]"
-            style={{ animation: 'dotBounce 1.2s ease-in-out 0.4s infinite' }}
-          />
+          <span className="w-2.5 h-2.5 rounded-full bg-[#F7941D]" style={{ animation: 'dotBounce 1.2s ease-in-out 0s infinite' }} />
+          <span className="w-2.5 h-2.5 rounded-full bg-[#F7941D]" style={{ animation: 'dotBounce 1.2s ease-in-out 0.2s infinite' }} />
+          <span className="w-2.5 h-2.5 rounded-full bg-[#F7941D]" style={{ animation: 'dotBounce 1.2s ease-in-out 0.4s infinite' }} />
         </div>
-
         <style>{`
           @keyframes haloBreathe {
             0%, 100% { opacity: 0.55; transform: scale(1); }
@@ -410,7 +325,6 @@ export default function App() {
 
   return (
     <div className="flex h-screen bg-[#eef4fa] dark:bg-[#0a1628] overflow-hidden">
-      {/* Mobile backdrop */}
       {sidebarOpen && (
         <div
           className="fixed inset-0 bg-black/40 z-40 md:hidden"
@@ -426,16 +340,15 @@ export default function App() {
           onNew={newConversation}
           onDelete={deleteConversation}
           onDeleteAll={deleteAllConversations}
-          userEmail={user.email ?? ''}
-          displayName={meta.display_name}
-          departamento={meta.departamento}
-          rol={meta.rol}
+          userEmail={user.email}
+          displayName={user.displayName ?? undefined}
+          departamento={user.departamento ?? undefined}
+          rol={user.rol ?? undefined}
           isOpen={sidebarOpen}
           onClose={() => setSidebarOpen(false)}
         />
       </div>
 
-      {/* Desktop sidebar toggle — sin fondo, solo ícono con halo + animación sutil */}
       <button
         onClick={() => setDesktopSidebarHidden(!desktopSidebarHidden)}
         className={`hidden md:flex fixed z-40 top-1/2 -translate-y-1/2 w-9 h-9 items-center justify-center transition-all duration-300 cursor-pointer group ${
@@ -444,7 +357,6 @@ export default function App() {
         title={desktopSidebarHidden ? 'Mostrar conversaciones' : 'Ocultar conversaciones'}
         aria-label={desktopSidebarHidden ? 'Mostrar conversaciones' : 'Ocultar conversaciones'}
       >
-        {/* Halo naranja con respiración (pulse) */}
         <div
           className="absolute inset-0 rounded-full group-hover:opacity-100 transition-opacity"
           style={{
@@ -453,7 +365,6 @@ export default function App() {
             animation: 'haloPulse 2.4s ease-in-out infinite',
           }}
         />
-        {/* Ícono con micro-bounce */}
         <svg
           width="18"
           height="18"
@@ -474,8 +385,6 @@ export default function App() {
             <polyline points="15 18 9 12 15 6"/>
           )}
         </svg>
-
-        {/* Animaciones */}
         <style>{`
           @keyframes haloPulse {
             0%, 100% { opacity: 0.5; transform: scale(0.95); }
@@ -493,32 +402,36 @@ export default function App() {
       </button>
 
       <TopBar
-        onLogout={() => supabase.auth.signOut()}
+        onLogout={() => onSignOut()}
         onOpenProfile={() => setProfileOpen(true)}
-        displayName={meta.display_name}
+        displayName={user.displayName ?? undefined}
       />
 
       {profileOpen && (
         <ProfileModal
-          user={user}
+          user={{
+            email: user.email,
+            displayName: user.displayName,
+            departamento: user.departamento,
+            rol: user.rol,
+          }}
           onClose={() => setProfileOpen(false)}
-          onSaved={() => setProfileVersion((v) => v + 1)}
+          onSaved={() => {
+            // Refresca página para que NextAuth vuelva a leer user_roles
+            window.location.reload();
+          }}
         />
       )}
 
-      {/* Mascota SUN BOT bottom-left con estados dinámicos */}
       <MascotPanel state={mascotState} sidebarHidden={desktopSidebarHidden} />
 
-      {/* Copyright sutil abajo y centrado */}
       <div className="fixed bottom-1 left-1/2 -translate-x-1/2 z-20 pointer-events-none select-none">
         <p className="text-[9px] text-gray-400/35 dark:text-gray-500/35 tracking-wider">
           © Juan Sebastian Rivera · {new Date().getFullYear()}
         </p>
       </div>
 
-      {/* Main — padded left on desktop to give room to mascot */}
       <main className={`flex-1 flex flex-col min-w-0 transition-all duration-300 ${desktopSidebarHidden ? 'md:pl-16' : 'md:pl-28'}`}>
-        {/* Mobile top bar */}
         <div className="md:hidden flex items-center gap-3 px-4 py-3 border-b border-[#b8cfe8] dark:border-gray-700 bg-[#eef4fa] dark:bg-[#0f1c2e] flex-shrink-0">
           <button
             onClick={() => setSidebarOpen(true)}
@@ -542,7 +455,7 @@ export default function App() {
             <ChatWindow
               messages={activeConversation.messages}
               isStreaming={isStreaming}
-              userEmail={user.email ?? ''}
+              userEmail={user.email}
             />
             <ChatInput
               onSend={sendMessage}

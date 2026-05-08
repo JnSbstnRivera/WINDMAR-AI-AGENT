@@ -1,7 +1,7 @@
 # 🗺️ Roadmap Visual — WINDMAR AI AGENT
 
-> Mapa conceptual del proyecto. **Última actualización: 4 mayo 2026**
-> Estado: **Fase de Validación con Pilotos** 🔄
+> Mapa conceptual del proyecto. **Última actualización: 7 mayo 2026**
+> Estado: **Migración a Next.js + SSO Microsoft (sin DNS/email)** 🔄
 
 ---
 
@@ -18,11 +18,11 @@ flowchart TD
     Done --> D2[Conocimiento]
     Done --> D3[Inteligencia]
     Done --> D4[UX/UI]
-    Done --> D5[Auth + Perfil]
-    Done --> D6[Email profesional]
+    Done --> D5[Auth + Perfil v1]
+    Done --> D7[Migración Next.js<br/>+ SSO Microsoft]
 
-    Now --> N1[Validación con asesores]
-    Now --> N2[Verificación DNS<br/>esperando IT]
+    Now --> N1[SSO Microsoft Entra ID<br/>esperando IT]
+    Now --> N2[Validación con asesores]
 
     Next --> X1[Claude API]
     Next --> X2[Dashboard admin]
@@ -38,7 +38,7 @@ flowchart TD
     style D3 fill:#dcfce7,color:#15803d
     style D4 fill:#dcfce7,color:#15803d
     style D5 fill:#dcfce7,color:#15803d
-    style D6 fill:#dcfce7,color:#15803d
+    style D7 fill:#dcfce7,color:#15803d
     style N1 fill:#fef3c7,color:#92400e
     style N2 fill:#fef3c7,color:#92400e
     style X1 fill:#ede9fe,color:#5b21b6
@@ -58,8 +58,9 @@ flowchart TD
     A --> B[🟢 BLOQUE B<br/>Conocimiento<br/>✅]
     B --> C[🟢 BLOQUE C<br/>Prompt IA<br/>✅]
     C --> D[🟢 BLOQUE D<br/>UX/UI<br/>✅]
-    D --> H[🟢 BLOQUE H<br/>Auth + Perfil<br/>✅]
-    H --> E{🟡 BLOQUE E<br/>Validación<br/>📍 AQUÍ}
+    D --> H[🟢 BLOQUE H<br/>Auth + Perfil v1<br/>✅]
+    H --> I{🟡 BLOQUE I<br/>Migración Next.js<br/>+ SSO Microsoft<br/>📍 AQUÍ}
+    I -->|IT entrega creds| E[⏳ BLOQUE E<br/>Validación con<br/>asesores]
     E -->|Feedback OK| F[⏳ BLOQUE F<br/>Optimización]
     F --> V1([🎯 v1.0 PRODUCCIÓN])
     V1 --> G[🔮 BLOQUE G<br/>Integraciones<br/>Backlog]
@@ -69,7 +70,8 @@ flowchart TD
     style C fill:#22c55e,color:#fff
     style D fill:#22c55e,color:#fff
     style H fill:#22c55e,color:#fff
-    style E fill:#fbbf24,color:#000
+    style I fill:#fbbf24,color:#000
+    style E fill:#94a3b8,color:#fff
     style F fill:#94a3b8,color:#fff
     style G fill:#a78bfa,color:#fff
     style V1 fill:#f97316,color:#fff
@@ -175,41 +177,72 @@ flowchart LR
     style UI fill:#1B3A5C,color:#fff
 ```
 
-### 🟢 BLOQUE H — Auth + Perfil ✅
+### 🟢 BLOQUE H — Auth + Perfil v1 ✅ (REEMPLAZADO por BLOQUE I)
+
+> Sistema de email + password de Supabase Auth. Funcional pero reemplazado por SSO corporativo.
+
+### 🟡 BLOQUE I — Migración Next.js + SSO Microsoft 📍 EN CURSO
 
 ```mermaid
 flowchart TD
-    Auth[🔐 Sistema Auth]
-    Auth --> Login[🚪 Login]
-    Auth --> Register[📝 Registro]
-    Auth --> Forgot[🔑 Recuperar]
+    Migration[🔄 Migración Next.js + SSO]
+    Migration --> M1[📦 Reescritura completa<br/>Vite → Next.js 15]
+    Migration --> M2[🔐 NextAuth v5<br/>+ Microsoft Entra ID]
+    Migration --> M3[🗄️ Refactor DB<br/>user_id → user_email]
 
-    Login --> Flip[🎴 Flip Card 3D]
-    Register --> Flip
-    Flip --> Fields[📋 Campos:<br/>nombre, depto, rol,<br/>contraseña x2, T&C]
-    Fields --> Validate{✅ Valida}
-    Validate -->|OK| Confirm[✨ Modal confirmación]
-    Validate -->|Email duplicado| Red[❌ Banner rojo]
-    Confirm --> Save[💾 user_metadata]
+    M2 --> Login[🚪 Login simplificado]
+    Login --> L1[Botón único<br/>'Iniciar sesión con Microsoft']
+    L1 --> L2[Sesión 8h<br/>JWT cifrado]
+    L2 --> L3[Solo @windmarhome.com<br/>validación tenant + dominio]
 
-    Save --> Profile[👤 ProfileModal]
-    Profile --> Edit[✏️ Editar nombre/<br/>depto/rol]
-    Edit --> Sync[🔄 Refresca app]
+    M3 --> DB1[Tabla user_roles<br/>display_name, departamento, rol]
+    M3 --> DB2[conversations.user_email<br/>migrado desde user_id]
 
-    style Auth fill:#1B3A5C,color:#fff
-    style Flip fill:#F7941D,color:#fff
-    style Confirm fill:#22c55e,color:#fff
-    style Red fill:#ef4444,color:#fff
-    style Profile fill:#a78bfa,color:#fff
+    style Migration fill:#fbbf24,color:#000
+    style M1 fill:#1B3A5C,color:#fff
+    style M2 fill:#1B3A5C,color:#fff
+    style M3 fill:#1B3A5C,color:#fff
 ```
 
-### 🟡 BLOQUE E — Validación 📍 EN CURSO
+**Stack nuevo:**
+
+| Capa | Antes (v1) | Ahora (v2) |
+|---|---|---|
+| Framework | React + Vite | **Next.js 15** + React 19 |
+| Auth | Supabase Auth (email/password) | **NextAuth v5** + Microsoft Entra ID |
+| Sesiones | Token Supabase | **JWT cifrado, 8h TTL** |
+| Identidad | UUID `auth.users.id` | **Email corporativo** |
+| Profile data | `auth.users.user_metadata` | Tabla `user_roles` |
+| Acceso DB | Anon key + RLS | **Service role + checks en API layer** |
+| Email | Resend SMTP via Supabase | **Removido** (decisión: SSO es self-explanatory) |
+
+**Flujo SSO completo:**
+
+```mermaid
+sequenceDiagram
+    participant U as Asesor
+    participant A as App Next.js
+    participant M as Microsoft Entra ID
+    participant S as Supabase
+
+    U->>A: Click "Iniciar sesión con Microsoft"
+    A->>M: Redirect a login.microsoftonline.com
+    U->>M: Autentica con cuenta Windmar
+    M->>A: Callback con auth code
+    A->>M: Intercambia code por tokens
+    A->>A: Valida @windmarhome.com
+    A->>S: Upsert user_roles (auto-provision)
+    S-->>A: Perfil listo
+    A->>U: Cookie sesión (8h) + redirect al chat
+```
+
+### 🟡 BLOQUE E — Validación (próximo, después de SSO)
 
 ```mermaid
 flowchart TD
-    E[📍 ESTAMOS AQUÍ]
-    E --> E1[👥 Pilotaje<br/>3-5 asesores]
-    E1 --> E2[📊 Monitor<br/>Dashboard Groq]
+    E[👥 Pilotaje]
+    E --> E1[3-5 asesores<br/>con cuenta Windmar]
+    E1 --> E2[📊 Monitor<br/>Dashboard Groq + logs Vercel]
     E2 --> E3[📝 Feedback<br/>cualitativo]
     E3 --> E4{¿Respuestas<br/>buenas?}
     E4 -->|Sí| E5[✅ Aprobación<br/>gerencia]
@@ -217,12 +250,11 @@ flowchart TD
     E6 --> E1
     E5 --> Next([➡️ Bloque F])
 
-    style E fill:#fbbf24,color:#000
+    style E fill:#94a3b8,color:#fff
     style Next fill:#22c55e,color:#fff
 ```
 
 ### ⏳ BLOQUE F — Optimización (próximo)
-
 
 ```mermaid
 flowchart LR
@@ -269,19 +301,21 @@ gantt
     Infraestructura      :done,    a1, 2026-03-01, 7d
     Knowledge Base       :done,    b1, 2026-03-08, 14d
     Prompt + UI          :done,    c1, 2026-03-22, 21d
-    Auth + Perfil 🆕     :done,    h1, 2026-04-29, 2d
+    Auth + Perfil v1     :done,    h1, 2026-04-29, 2d
+    Email pro Resend     :done,    h2, 2026-05-04, 1d
 
     section Fase 4 (Ahora)
-    Pilotaje asesores    :active,  e1, 2026-05-01, 14d
-    Recolectar feedback  :active,  e2, 2026-05-01, 14d
+    Migración Next.js    :done,    i1, 2026-05-07, 1d
+    SSO Microsoft        :active,  i3, 2026-05-07, 5d
 
     section Fase 5 (Próximo)
-    Migrar a Claude API  :         f1, 2026-05-15, 3d
-    Botones feedback     :         f2, 2026-05-18, 3d
-    Demo gerencia        :         f3, 2026-05-21, 2d
+    Pilotaje asesores    :         e1, 2026-05-12, 14d
+    Migrar a Claude API  :         f1, 2026-05-26, 3d
+    Botones feedback     :         f2, 2026-05-29, 3d
+    Demo gerencia        :         f3, 2026-06-01, 2d
 
     section Lanzamiento
-    🎯 v1.0 Producción   :crit,    v1, 2026-05-23, 1d
+    🎯 v1.0 Producción   :crit,    v1, 2026-06-03, 1d
 ```
 
 ---
@@ -298,13 +332,13 @@ quadrantChart
     quadrant-3 Delegar
     quadrant-4 Ignorar
 
-    Pilotaje asesores: [0.2, 0.95]
-    Monitor Groq dashboard: [0.1, 0.7]
-    Feedback informal: [0.15, 0.85]
-    Migrar Claude: [0.5, 0.8]
-    Botones 👍👎: [0.4, 0.5]
-    Zoho CRM: [0.9, 0.6]
-    Multi-idioma: [0.6, 0.2]
+    Esperar credenciales IT: [0.1, 0.95]
+    Test SSO en localhost: [0.3, 0.9]
+    Deploy prod con maintenance window: [0.4, 0.85]
+    Comunicar cambio a asesores: [0.2, 0.7]
+    Pilotaje post-SSO: [0.4, 0.6]
+    Migrar Claude: [0.5, 0.5]
+    Botones feedback: [0.4, 0.4]
 ```
 
 ---
@@ -318,7 +352,7 @@ flowchart LR
     R3[🟡 Adopción baja] -->|Mitigación| M3[Demo + onboarding]
     R4[🟡 Info desactualizada] -->|Mitigación| M4[Update trimestral]
     R5[🟢 Costo API] -->|Mitigación| M5[Claude $3/M tokens]
-    R6[🟡 DNS sin verificar<br/>esperando IT] -->|Mitigación| M6[Pilotaje sin email<br/>confirmation por ahora]
+    R6[🟡 SSO falla en prod] -->|Mitigación| M6[Test localhost<br/>+ rollback Vercel<br/>+ maintenance window]
 
     style R1 fill:#f97316,color:#fff
     style R2 fill:#22c55e,color:#fff
@@ -332,7 +366,50 @@ flowchart LR
 
 ## 📅 Bitácora de Cambios
 
-### 4 mayo 2026 — Email profesional con Resend + Reset total + IT ticket 🆕
+### 7 mayo 2026 — Migración Next.js + SSO Microsoft 🆕
+
+**Reescritura completa Vite → Next.js 15:**
+- Proyecto nuevo en paralelo: `windmar-ai-agent-next/` (44 archivos, 0 errores de build)
+- App actual `WINDMAR-AI-AGENT-main/` sigue corriendo intacto en producción durante la migración
+- Stack: Next.js 15 + React 19 + TypeScript + NextAuth v5
+- Todos los componentes (Sidebar, ChatWindow, ChatMessage, MascotPanel, etc.) migrados con `'use client'`
+- Endpoint `api/chat.ts` (Vercel function) → `app/api/chat/route.ts` (Next.js route handler con streaming)
+- Nuevos endpoints: `/api/conversations`, `/api/conversations/[id]`, `/api/messages`, `/api/profile`
+- SYSTEM_PROMPT extraído a `src/lib/prompts.ts` para mejor mantenimiento
+
+**SSO Microsoft Entra ID via NextAuth v5:**
+- Provider built-in `microsoft-entra-id`
+- Restricción a dominio `@windmarhome.com` en callback `signIn`
+- Sesión JWT cifrada de 8 horas (auto-logout al final del turno)
+- Middleware protege todas las rutas (excepto `/login` y assets estáticos)
+- LoginScreen rediseñado: un solo botón "Iniciar sesión con Microsoft" (logo oficial 4 cuadrados)
+- Eliminados: pantalla de registro, flip card 3D, recuperar contraseña, validación de email duplicado — Microsoft maneja todo
+
+**Refactor de identidad y base de datos:**
+- Tabla nueva `user_roles` reemplaza `auth.users.user_metadata` para `display_name`, `departamento`, `rol`
+- `conversations.user_id` (UUID) → `conversations.user_email` (TEXT) — backfill incluido
+- Migraciones SQL: `004_user_roles.sql` + `005_conversations_email.sql`
+- RLS sin políticas → solo `service_role` accede (más simple, validación a nivel API)
+
+**Decisión: sin emails / sin DNS**
+- Se descartó la verificación DNS de `windmarhome.com` en GoDaddy/Resend
+- Welcome email REMOVIDO — el SSO es self-explanatory: el asesor sabe que entró cuando ve a Microsoft autenticarlo
+- `resend` y dependencias eliminadas del proyecto (-18 paquetes, middleware más liviano)
+- Si en el futuro se requiere email, se puede agregar Microsoft Graph API (Mail.Send) sin necesidad de DNS
+
+**Solicitudes a IT:**
+- ⏳ Client ID + Client Secret + Tenant ID del App Registration en Azure
+- 📌 Redirect URI registrada: `https://windmar-ai-agent.vercel.app/api/auth/callback/microsoft-entra-id`
+
+**Plan de despliegue:**
+- Test local en `http://localhost:3000` cuando llegue creds
+- Ventana de mantenimiento ~10 min para deploy a producción
+- Mismo URL público `windmar-ai-agent.vercel.app` (Vercel auto-detecta cambio Vite → Next.js)
+- Rollback inmediato disponible vía dashboard Vercel si falla
+
+---
+
+### 4 mayo 2026 — Email profesional con Resend + Reset total + IT ticket
 
 **Reset total y rebuild:**
 - Eliminados todos los usuarios, conversaciones y sesiones
@@ -347,13 +424,7 @@ flowchart LR
   - Port: `465`
   - Username: `resend`
   - Sender temporal: `onboarding@resend.dev`
-- Plantilla HTML personalizada en Supabase con branding Windmar:
-  - Hero gradient navy + naranja
-  - SUN BOT (sunbot-feliz.png) hosted en Vercel
-  - Saludo personalizado con `{{ .Data.display_name }}`
-  - Botón naranja "☀️ Confirmar mi cuenta"
-  - Footer con tagline "22 años iluminando hogares"
-  - Tip de validación incluido
+- Plantilla HTML personalizada en Supabase con branding Windmar
 - Subject: "¡Bienvenido al Agente Windmar Home! ☀️"
 
 **Identificadas 2 limitaciones del free tier:**
@@ -374,22 +445,22 @@ flowchart LR
 
 ---
 
-### 🔮 PENDIENTES — Por hacer cuando IT confirme DNS
+### 🔮 PENDIENTES — Por hacer cuando IT entregue lo que falta
 
-| # | Tarea | Cuándo |
-|---|---|---|
-| 1 | IT pega 3 records DNS en GoDaddy (windmarhome.com) | ⏳ 1-2 días |
-| 2 | Verificar dominio en Resend (esperar propagación 15min-24h) | Día 2-3 |
-| 3 | Cambiar `Sender email` en Supabase a `noreply@windmarhome.com` | Día 3 |
-| 4 | Reactivar `Confirm email` en Supabase Auth | Día 3 |
-| 5 | Probar registro con asesor de prueba | Día 3 |
-| 6 | Comunicar a pilotos que ya pueden registrarse normalmente | Día 3 |
+| # | Tarea | Cuándo | Bloqueado por |
+|---|---|---|---|
+| 1 | Recibir Client ID + Secret + Tenant ID de Azure | ⏳ | IT |
+| 2 | Pegar 4 variables en `.env.local` y probar SSO en localhost | 1 día | Credenciales IT |
+| 3 | Correr migraciones SQL `004` y `005` en Supabase | 30 min | — |
+| 4 | Push a GitHub + deploy Vercel + smoke test | 1 hora | Test local OK |
+| 5 | Ventana de mantenimiento + comunicar a asesores | 30 min | Deploy listo |
 
-**Beneficios después de verificación DNS:**
-- ✅ Emails salen de `noreply@windmarhome.com` (look profesional)
-- ✅ Imágenes cargan automáticamente sin click extra
-- ✅ Cero problemas de spam (sender confiable)
-- ✅ Escala a todo el call center sin restricciones
+**Beneficios después del SSO:**
+- ✅ Cero passwords que recordar — entrada con cuenta Microsoft Windmar
+- ✅ Acceso restringido a nivel de tenant Azure (más seguro que validación frontend)
+- ✅ Auto-logout 8h alineado al turno de trabajo
+- ✅ Flujo idéntico al resto de apps Windmar (TechSupportHub etc.)
+- ✅ Sin dependencia de DNS, GoDaddy ni servicios de email externos
 
 ---
 
@@ -399,65 +470,33 @@ flowchart LR
 - Renombrado "Jefe" → **Líder** (terminología más actual)
 - Nuevo rol **Project M** (Project Manager — jefe de líderes)
 - 4 niveles de tono ahora: Asesor / Líder / Channel / Project M
-- Project M recibe el tono más ejecutivo: KPIs, stakeholders, visión 360, alineación con dirección
 
 **Rediseño de chat tipo ChatGPT:**
 - Burbuja IA eliminada (sin fondo, sin borde, sin sombra)
-- Acento naranja vertical eliminado
 - Texto IA fluye libre estilo ChatGPT
 - Avatar SUN BOT mantenido al lado
 - Cursor parpadeante streaming mantenido
-- Botón "Copiar para WhatsApp" mantenido
-- Chat ancho a max-w-3xl (estilo ChatGPT)
-- Burbuja del usuario sin tocar (navy gradient derecha)
-- Más respiro entre mensajes
 
 **Reglas anti-alucinación (críticas):**
-- 🔴 REGLA #0 — Lista cerrada de 10 herramientas reales. Bot NO puede inventar URLs/herramientas (ej: "Calculadora de ahorro de agua" — no existe)
-- 🔴 REGLA #1 — Solo precios literales del knowledge_base. NO promos/descuentos inventados
-- 🔴 REGLA #2 — Si hay duda, omite. Mejor respuesta corta sin dato que larga con dato falso
-
-**Otros ajustes:**
-- Login/Registro sin scroll en cualquier viewport (grid stacking)
-- Logo decorativo welcome +80px con glow blanco
-- Botón "Perfil" reemplazado por engranaje ⚙️ (look uniforme TopBar)
-- launch.json eliminado (equipo corporativo, deploy via Vercel únicamente)
+- 🔴 REGLA #0 — Lista cerrada de 10 herramientas reales
+- 🔴 REGLA #1 — Solo precios literales del knowledge_base
+- 🔴 REGLA #2 — Si hay duda, omite
 
 ---
 
-### 30 abril 2026 — Auth avanzado + perfil de usuario
+### 30 abril 2026 — Auth avanzado + perfil de usuario (v1, ahora reemplazado)
 
 **Login/Registro completamente rediseñado:**
-- Tarjeta con animación 3D flip (eje Y, 0.7s premium curve)
-- Cara frontal: login + "¿Olvidaste contraseña?" + logo decorativo con partículas
-- Cara trasera: registro con campos completos (nombre amigable, depto, rol, contraseñas, T&C)
-- Grid stacking para auto-altura sin scroll en cualquier viewport
-- Detección de email duplicado con banner rojo + icono
-- Modal de confirmación del nombre antes de crear cuenta
-- T&C con modal expandible (versionado v1.0 — Abril 2026)
-- Recuperar contraseña con email reset
+- Tarjeta con animación 3D flip
+- Cara frontal: login + recuperar contraseña
+- Cara trasera: registro completo
+- T&C versionado v1.0
 
 **Sistema de perfil:**
-- ProfileModal con campos editables (nombre, depto, rol)
-- Engranaje ⚙️ en TopBar abre el modal
+- ProfileModal con campos editables
 - Datos persisten en `user_metadata` de Supabase
-- Refetch automático después de guardar
 
-**Personalización del bot:**
-- Bot saluda con `display_name` (no más "juan.s", ahora "Don Pepe")
-- Sidebar muestra nombre + departamento · rol
-- Tono del bot adaptado por rol:
-  - **Asesor** → tono normal
-  - **Jefe** → "para tu equipo...", "puedes comunicar a tus asesores..."
-  - **Channel** → "para tu canal...", "tus distribuidores..."
-
-**UI polish:**
-- Welcome screen con logo grande +80px y glow blanco
-- Welcome shifted hacia arriba (justify-start + pt-vh)
-- Logo decorativo con brillo blanco + partículas amarillas (login + welcome)
-- SUN BOT mascota reposicionado al lado del input
-
-**Commits del día**: 12 commits, ~1,200 líneas de código nuevas/modificadas
+**Nota:** este sistema fue reemplazado el 7 mayo por SSO Microsoft. El ProfileModal sigue vivo pero ahora escribe a la tabla `user_roles` en lugar de `user_metadata`.
 
 ---
 
@@ -479,11 +518,6 @@ flowchart LR
 2. Abre `ROADMAP.md`
 3. `Ctrl+Shift+V` para preview
 
-### Opción 4 — Notion
-1. Crea página nueva
-2. `/code` → selecciona "mermaid"
-3. Pega el bloque que quieras
-
 ---
 
 ## 🔄 Cómo actualizar este mapa
@@ -496,5 +530,5 @@ Cuando completes algo:
 
 ---
 
-**Última actualización**: 4 mayo 2026
-**Próxima revisión sugerida**: cuando IT confirme DNS o tengas feedback de pilotos
+**Última actualización**: 7 mayo 2026
+**Próxima revisión sugerida**: cuando IT entregue las credenciales del App Registration de Azure

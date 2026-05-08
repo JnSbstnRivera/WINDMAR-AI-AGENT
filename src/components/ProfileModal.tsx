@@ -1,9 +1,16 @@
+'use client';
+
 import { useState } from 'react';
-import { supabase } from '../lib/supabase';
-import type { User } from '@supabase/supabase-js';
+
+interface UserData {
+  email: string;
+  displayName?: string | null;
+  departamento?: string | null;
+  rol?: string | null;
+}
 
 interface Props {
-  user: User;
+  user: UserData;
   onClose: () => void;
   onSaved: () => void;
 }
@@ -22,10 +29,9 @@ function capitalizeName(name: string): string {
 }
 
 export function ProfileModal({ user, onClose, onSaved }: Props) {
-  const meta = (user.user_metadata ?? {}) as { display_name?: string; departamento?: string; rol?: string };
-  const [displayName, setDisplayName] = useState(meta.display_name ?? '');
-  const [departamento, setDepartamento] = useState(meta.departamento ?? '');
-  const [rol, setRol] = useState(meta.rol ?? '');
+  const [displayName, setDisplayName] = useState(user.displayName ?? '');
+  const [departamento, setDepartamento] = useState(user.departamento ?? '');
+  const [rol, setRol] = useState(user.rol ?? '');
   const [loading, setLoading] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState('');
@@ -38,19 +44,25 @@ export function ProfileModal({ user, onClose, onSaved }: Props) {
     if (!formValid) return;
     setError('');
     setLoading(true);
-    const { error: err } = await supabase.auth.updateUser({
-      data: {
-        display_name: capitalizeName(displayName),
-        departamento,
-        rol,
-      },
-    });
-    if (err) {
-      setError('No pudimos guardar los cambios. Intenta de nuevo.');
-    } else {
-      setSaved(true);
-      onSaved();
-      setTimeout(() => onClose(), 900);
+    try {
+      const res = await fetch('/api/profile', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          display_name: capitalizeName(displayName),
+          departamento,
+          rol,
+        }),
+      });
+      if (!res.ok) {
+        setError('No pudimos guardar los cambios. Intenta de nuevo.');
+      } else {
+        setSaved(true);
+        onSaved();
+        setTimeout(() => onClose(), 900);
+      }
+    } catch {
+      setError('Error de conexión. Verifica tu internet.');
     }
     setLoading(false);
   }
@@ -86,7 +98,6 @@ export function ProfileModal({ user, onClose, onSaved }: Props) {
           </button>
         </div>
 
-        {/* Email (readonly) */}
         <div className="mb-3">
           <label className="text-xs font-medium text-gray-600 dark:text-gray-400 block mb-1">
             Correo corporativo
@@ -97,7 +108,6 @@ export function ProfileModal({ user, onClose, onSaved }: Props) {
         </div>
 
         <form onSubmit={handleSave} className="space-y-3">
-          {/* Nombre */}
           <div>
             <label className="text-xs font-medium text-gray-600 dark:text-gray-400 block mb-1">
               ¿Cómo quieres que te llame?
@@ -118,7 +128,6 @@ export function ProfileModal({ user, onClose, onSaved }: Props) {
             )}
           </div>
 
-          {/* Departamento + Rol */}
           <div className="grid grid-cols-2 gap-2">
             <div>
               <label className="text-xs font-medium text-gray-600 dark:text-gray-400 block mb-1">Departamento</label>
