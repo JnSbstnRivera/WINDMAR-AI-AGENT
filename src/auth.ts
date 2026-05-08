@@ -45,12 +45,19 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       }
 
       try {
+        // Por defecto extraemos solo el PRIMER NOMBRE de Microsoft.
+        // Microsoft devuelve "Juan Sebastian Rivera Jiménez" → guardamos "Juan".
+        // El asesor puede personalizarlo en el OnboardingModal o en el perfil.
+        const fullName = user.name?.trim() || email.split('@')[0];
+        const firstName = fullName.split(/\s+/)[0];
+        const capitalizedFirstName = firstName.charAt(0).toUpperCase() + firstName.slice(1).toLowerCase();
+
         await getSupabaseAdmin()
           .from('user_roles')
           .upsert(
             {
               user_email: email,
-              display_name: user.name?.trim() || email.split('@')[0],
+              display_name: capitalizedFirstName,
               rol: 'Asesor',
               assigned_by: 'auto',
             },
@@ -63,15 +70,16 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       return true;
     },
 
-    // Enriquecer el JWT con display_name, departamento y rol desde user_roles.
+    // Enriquecer el JWT con display_name, departamento, rol y onboarded_at desde user_roles.
     // En 'update' aceptamos los datos del cliente directamente (más confiable que re-leer DB).
     async jwt({ token, trigger, session }) {
-      // Caso 1: cliente llamó update({ displayName, departamento, rol }) tras guardar perfil.
+      // Caso 1: cliente llamó update({ displayName, departamento, rol, onboardedAt }) tras guardar perfil/onboarding
       if (trigger === 'update' && session && typeof session === 'object') {
         const s = session as Record<string, unknown>;
         if ('displayName' in s) token.displayName = (s.displayName as string | null) ?? null;
         if ('departamento' in s) token.departamento = (s.departamento as string | null) ?? null;
         if ('rol' in s) token.userRole = (s.rol as string | null) ?? 'Asesor';
+        if ('onboardedAt' in s) token.onboardedAt = (s.onboardedAt as string | null) ?? null;
         return token;
       }
 
@@ -82,16 +90,18 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           try {
             const { data } = await getSupabaseAdmin()
               .from('user_roles')
-              .select('display_name, departamento, rol')
+              .select('display_name, departamento, rol, onboarded_at')
               .eq('user_email', email)
               .single();
             token.displayName = data?.display_name || null;
             token.departamento = data?.departamento || null;
             token.userRole = data?.rol || 'Asesor';
+            token.onboardedAt = data?.onboarded_at || null;
           } catch {
             token.displayName = null;
             token.departamento = null;
             token.userRole = 'Asesor';
+            token.onboardedAt = null;
           }
         }
       }
@@ -101,9 +111,11 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     // Exponer los datos en session.user para que el cliente los pueda leer.
     async session({ session, token }) {
       if (session.user) {
-        (session.user as unknown as Record<string, unknown>).displayName = token.displayName ?? null;
-        (session.user as unknown as Record<string, unknown>).departamento = token.departamento ?? null;
-        (session.user as unknown as Record<string, unknown>).rol = token.userRole ?? 'Asesor';
+        const u = session.user as unknown as Record<string, unknown>;
+        u.displayName = token.displayName ?? null;
+        u.departamento = token.departamento ?? null;
+        u.rol = token.userRole ?? 'Asesor';
+        u.onboardedAt = token.onboardedAt ?? null;
       }
       return session;
     },

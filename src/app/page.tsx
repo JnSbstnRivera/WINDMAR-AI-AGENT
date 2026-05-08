@@ -1,5 +1,6 @@
 import { auth, signOut } from '@/auth';
 import { ChatApp } from '@/components/ChatApp';
+import { OnboardingGate } from '@/components/OnboardingGate';
 
 export default async function HomePage() {
   const session = await auth();
@@ -15,12 +16,35 @@ export default async function HomePage() {
     displayName: sessionUser.displayName ?? null,
     departamento: sessionUser.departamento ?? null,
     rol: sessionUser.rol ?? 'Asesor',
+    onboardedAt: sessionUser.onboardedAt ?? null,
+    // Nombre completo de Microsoft (para mostrar como referencia en onboarding modal)
+    microsoftFullName: session.user.name ?? '',
   };
+
+  // Saludo según hora local Puerto Rico (UTC-4)
+  const greeting = (() => {
+    const hourPR = (new Date().getUTCHours() - 4 + 24) % 24;
+    if (hourPR < 12) return 'Buenos días';
+    if (hourPR < 18) return 'Buenas tardes';
+    return 'Buenas noches';
+  })();
 
   async function handleSignOut() {
     'use server';
     await signOut({ redirectTo: '/login' });
   }
 
-  return <ChatApp user={userData} onSignOut={handleSignOut} />;
+  // Si el asesor no ha completado onboarding (primera vez), mostrar OnboardingGate
+  // que renderiza el modal de bienvenida + el chat detrás (bloqueado).
+  return (
+    <OnboardingGate
+      needsOnboarding={!userData.onboardedAt}
+      initialDisplayName={userData.displayName ?? 'Asesor'}
+      microsoftFullName={userData.microsoftFullName}
+      email={userData.email}
+      greeting={greeting}
+    >
+      <ChatApp user={userData} onSignOut={handleSignOut} />
+    </OnboardingGate>
+  );
 }
