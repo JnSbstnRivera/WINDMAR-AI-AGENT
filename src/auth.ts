@@ -126,26 +126,27 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       }
 
       // Caso 2: signIn inicial o token sin info → leer de user_roles
+      // IMPORTANTE: NO guardamos photo_url en el JWT (la foto base64 es ~30KB y
+      // hace que la cookie supere el límite de Vercel → REQUEST_HEADER_TOO_LARGE).
+      // La foto se lee del servidor (page.tsx) directamente de Supabase.
       if (trigger === 'signIn' || !token.userRole) {
         const email = (token.email || '').toLowerCase();
         if (email) {
           try {
             const { data } = await getSupabaseAdmin()
               .from('user_roles')
-              .select('display_name, departamento, rol, onboarded_at, photo_url')
+              .select('display_name, departamento, rol, onboarded_at')
               .eq('user_email', email)
               .single();
             token.displayName = data?.display_name || null;
             token.departamento = data?.departamento || null;
             token.userRole = data?.rol || 'Asesor';
             token.onboardedAt = data?.onboarded_at || null;
-            token.photoUrl = data?.photo_url || null;
           } catch {
             token.displayName = null;
             token.departamento = null;
             token.userRole = 'Asesor';
             token.onboardedAt = null;
-            token.photoUrl = null;
           }
         }
       }
@@ -153,6 +154,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     },
 
     // Exponer los datos en session.user para que el cliente los pueda leer.
+    // photo_url NO se incluye aquí — se lee directamente del servidor en page.tsx.
     async session({ session, token }) {
       if (session.user) {
         const u = session.user as unknown as Record<string, unknown>;
@@ -160,7 +162,6 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         u.departamento = token.departamento ?? null;
         u.rol = token.userRole ?? 'Asesor';
         u.onboardedAt = token.onboardedAt ?? null;
-        u.photoUrl = token.photoUrl ?? null;
       }
       return session;
     },

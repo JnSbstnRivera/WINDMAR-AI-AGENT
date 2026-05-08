@@ -1,6 +1,7 @@
 import { auth, signOut } from '@/auth';
 import { ChatApp } from '@/components/ChatApp';
 import { OnboardingGate } from '@/components/OnboardingGate';
+import { getSupabaseAdmin } from '@/lib/supabase';
 
 export default async function HomePage() {
   const session = await auth();
@@ -10,15 +11,30 @@ export default async function HomePage() {
   }
 
   const sessionUser = session.user as unknown as Record<string, string | null | undefined>;
+  const email = session.user.email;
+
+  // Foto de perfil leída server-side (NO en el JWT — sería demasiado grande).
+  // Se lee aquí en cada render, lo que es eficiente porque page.tsx ya es Server Component.
+  let photoUrl: string | null = null;
+  try {
+    const { data } = await getSupabaseAdmin()
+      .from('user_roles')
+      .select('photo_url')
+      .eq('user_email', email.toLowerCase())
+      .single();
+    photoUrl = data?.photo_url ?? null;
+  } catch {
+    photoUrl = null;
+  }
 
   const userData = {
-    email: session.user.email,
+    email,
     displayName: sessionUser.displayName ?? null,
     departamento: sessionUser.departamento ?? null,
     rol: sessionUser.rol ?? 'Asesor',
     onboardedAt: sessionUser.onboardedAt ?? null,
     // Foto de perfil de Microsoft 365 (data URI base64) — null si el usuario no tiene foto.
-    photoUrl: sessionUser.photoUrl ?? null,
+    photoUrl,
     // Nombre completo de Microsoft (para mostrar como referencia en onboarding modal)
     microsoftFullName: session.user.name ?? '',
   };
