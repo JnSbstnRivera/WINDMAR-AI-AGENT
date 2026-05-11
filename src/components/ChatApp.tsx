@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Sidebar } from './Sidebar';
 import { ChatWindow } from './ChatWindow';
 import { ChatInput } from './ChatInput';
@@ -41,6 +41,79 @@ export function ChatApp({ user, onSignOut }: Props) {
   const [mascotState, setMascotState] = useState<MascotState>('idle');
   const [profileOpen, setProfileOpen] = useState(false);
   const [postLoginLoading, setPostLoginLoading] = useState(false);
+
+  // AbortController para poder cortar el fetch del streaming desde el botón "detener".
+  // Lo guardamos en ref para que persista entre renders sin disparar re-renders.
+  const abortControllerRef = useRef<AbortController | null>(null);
+
+  function stopStreaming() {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+    }
+  }
+
+  /**
+   * Regenera el último mensaje del asistente.
+   * Estrategia:
+   *  1. Encuentra el último mensaje del asistente en la conversación activa
+   *  2. Encuentra el último mensaje del USUARIO anterior a ese
+   *  3. Borra el mensaje del asistente del state (visible) Y de Supabase (persistente)
+   *  4. Llama sendMessage() con el mismo prompt del usuario para regenerar
+   */
+  async function regenerateLastResponse() {
+    if (isStreaming || !activeId) return;
+
+    const conv = conversations.find((c) => c.id === activeId);
+    if (!conv || conv.messages.length < 2) return;
+
+    // Última respuesta de asistente
+    const lastAssistantIdx = [...conv.messages].reverse().findIndex((m) => m.role === 'assistant');
+    if (lastAssistantIdx === -1) return;
+    const assistantIdx = conv.messages.length - 1 - lastAssistantIdx;
+    const assistantMsg = conv.messages[assistantIdx];
+
+    // Último mensaje de usuario ANTES de esa respuesta
+    let userMsg: Message | null = null;
+    for (let i = assistantIdx - 1; i >= 0; i--) {
+      if (conv.messages[i].role === 'user') {
+        userMsg = conv.messages[i];
+        break;
+      }
+    }
+    if (!userMsg) return;
+
+    // 1) Borrar mensaje del asistente del state local
+    setConversations((prev) =>
+      prev.map((c) =>
+        c.id === activeId
+          ? { ...c, messages: c.messages.filter((m) => m.id !== assistantMsg.id) }
+          : c
+      )
+    );
+
+    // 2) Borrar de Supabase (best-effort, no bloqueamos UI si falla).
+    // El servidor borra el ÚLTIMO mensaje del asistente de esa conversación.
+    fetch(`/api/messages?conversation_id=${encodeURIComponent(activeId)}&role=assistant`, {
+      method: 'DELETE',
+    }).catch(() => {/* ignorar — el state local ya está limpio */});
+
+    // 3) Regenerar llamando a sendMessage con el prompt original.
+    // Como sendMessage agrega un nuevo userMsg al state, primero lo quitamos
+    // del state para evitar duplicarlo — y luego sendMessage lo re-añadirá.
+    setConversations((prev) =>
+      prev.map((c) =>
+        c.id === activeId
+          ? { ...c, messages: c.messages.filter((m) => m.id !== userMsg!.id) }
+          : c
+      )
+    );
+
+    // setTimeout 0 garantiza que React procese los setState anteriores
+    // (limpieza del state) ANTES de que sendMessage lea conversations.
+    const prompt = userMsg.content;
+    setTimeout(() => sendMessage(prompt), 0);
+  }
 
   const displayName = user.displayName || user.email.split('@')[0].split('.')[0];
   const capDisplayName = displayName ? displayName.charAt(0).toUpperCase() + displayName.slice(1) : 'asesor';
@@ -190,10 +263,15 @@ export function ChatApp({ user, onSignOut }: Props) {
         content: m.content,
       }));
 
+      // Crear nuevo AbortController para este request — permite cortar con botón "detener"
+      const abortController = new AbortController();
+      abortControllerRef.current = abortController;
+
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ message: text.trim(), history }),
+        signal: abortController.signal,
       });
 
       if (!response.ok) {
@@ -282,23 +360,44 @@ export function ChatApp({ user, onSignOut }: Props) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ conversation_id: convId, role: 'assistant', content: fullText }),
       });
-    } catch {
-      const friendlyMessage = `🤖 ¡Ay, perdona ${capDisplayName}! Parece que hay un problema de conexión. Verifica tu internet e intenta de nuevo.\n\n[ERROR_TYPE:network]`;
+    } catch (err) {
+      // Si el usuario presionó "detener", NO mostramos error rojo — solo añadimos
+      // una nota discreta al final del texto parcial que ya se generó.
+      const isAbort = err instanceof DOMException && err.name === 'AbortError';
 
-      setConversations((prev) =>
-        prev.map((c) =>
-          c.id === convId
-            ? {
-                ...c,
-                messages: c.messages.map((m) =>
-                  m.id === assistantMsgId ? { ...m, content: friendlyMessage } : m
-                ),
-              }
-            : c
-        )
-      );
+      if (isAbort) {
+        setConversations((prev) =>
+          prev.map((c) =>
+            c.id === convId
+              ? {
+                  ...c,
+                  messages: c.messages.map((m) =>
+                    m.id === assistantMsgId
+                      ? { ...m, content: (m.content || '') + '\n\n_(generación detenida por el asesor)_' }
+                      : m
+                  ),
+                }
+              : c
+          )
+        );
+      } else {
+        const friendlyMessage = `🤖 ¡Ay, perdona ${capDisplayName}! Parece que hay un problema de conexión. Verifica tu internet e intenta de nuevo.\n\n[ERROR_TYPE:network]`;
+        setConversations((prev) =>
+          prev.map((c) =>
+            c.id === convId
+              ? {
+                  ...c,
+                  messages: c.messages.map((m) =>
+                    m.id === assistantMsgId ? { ...m, content: friendlyMessage } : m
+                  ),
+                }
+              : c
+          )
+        );
+      }
     } finally {
       setIsStreaming(false);
+      abortControllerRef.current = null;
     }
   }
 
@@ -484,10 +583,13 @@ export function ChatApp({ user, onSignOut }: Props) {
               userEmail={user.email}
               userDisplayName={user.displayName ?? undefined}
               userPhotoUrl={user.photoUrl ?? null}
+              onRegenerate={regenerateLastResponse}
             />
             <ChatInput
               onSend={sendMessage}
               disabled={isStreaming}
+              isStreaming={isStreaming}
+              onStop={stopStreaming}
               onTypingChange={(typing) => {
                 if (!isStreaming) setMascotState(typing ? 'typing' : 'idle');
               }}

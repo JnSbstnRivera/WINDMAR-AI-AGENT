@@ -28,14 +28,25 @@ export function useTypewriter(target: string, isStreaming: boolean): string {
     targetRef.current = target;
   }, [target]);
 
-  // Cuando termina streaming, asegurar que mostramos TODO el target
+  // Cuando termina streaming, SIEMPRE mostrar todo el target inmediatamente.
+  // Sin esto, el typewriter podría seguir "tipeando" después de que el stream
+  // terminó si se había quedado atrás (efecto "lento al final").
   useEffect(() => {
     if (!isStreaming) {
       setDisplayed(targetRef.current);
+      if (rafRef.current !== null) {
+        cancelAnimationFrame(rafRef.current);
+        rafRef.current = null;
+      }
     }
   }, [isStreaming]);
 
-  // Loop de animación: avanza el displayed hacia el target a velocidad adaptativa
+  // Loop de animación: avanza el displayed hacia el target a velocidad adaptativa.
+  // Velocidades calibradas para Haiku 4.5 (~600-800 cps real):
+  //  - Buffer pequeño (<20): 2 chars/frame (~120 cps) — fluido cómodo
+  //  - Buffer mediano (20-80): 6 chars/frame (~360 cps) — al ritmo del stream
+  //  - Buffer grande (80-200): 12 chars/frame (~720 cps) — alcanza streams normales
+  //  - Buffer enorme (>200): 20 chars/frame (~1200 cps) — recupera atrasos
   useEffect(() => {
     if (!isStreaming) return;
 
@@ -43,17 +54,16 @@ export function useTypewriter(target: string, isStreaming: boolean): string {
       setDisplayed((current) => {
         const t = targetRef.current;
         if (current.length >= t.length) {
-          // Ya alcanzamos al target — esperar próximo chunk
           rafRef.current = requestAnimationFrame(tick);
           return current;
         }
 
-        // Velocidad adaptativa:
-        //  - Buffer pequeño (<20 chars): typewriter cómodo (~2 chars/frame ≈ 120 char/s)
-        //  - Buffer mediano (20-100): 4 chars/frame (~240 char/s)
-        //  - Buffer grande (>100): 8 chars/frame (~480 char/s — alcanza streams rápidos)
         const buffer = t.length - current.length;
-        const charsPerFrame = buffer > 100 ? 8 : buffer > 20 ? 4 : 2;
+        const charsPerFrame =
+          buffer > 200 ? 20 :
+          buffer > 80  ? 12 :
+          buffer > 20  ? 6  :
+                         2;
         const nextLen = Math.min(current.length + charsPerFrame, t.length);
 
         rafRef.current = requestAnimationFrame(tick);

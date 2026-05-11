@@ -10,6 +10,7 @@ interface Props {
   userEmail?: string;
   userDisplayName?: string;
   userPhotoUrl?: string | null;
+  onRegenerate?: () => void;
 }
 
 export function ChatWindow({
@@ -18,6 +19,7 @@ export function ChatWindow({
   userEmail = '',
   userDisplayName,
   userPhotoUrl,
+  onRegenerate,
 }: Props) {
   const bottomRef = useRef<HTMLDivElement>(null);
   const lastScrollRef = useRef<number>(0);
@@ -43,18 +45,28 @@ export function ChatWindow({
   return (
     <div className="flex-1 overflow-y-auto px-3 sm:px-6 md:px-10 py-6">
       <div className="max-w-3xl mx-auto">
-        {messages.map((msg, i) => (
-          <ChatMessage
-            key={msg.id}
-            message={msg}
-            asesorEmail={userEmail}
-            asesorDisplayName={userDisplayName}
-            asesorPhotoUrl={userPhotoUrl}
-            isStreaming={
-              isStreaming && i === messages.length - 1 && msg.role === 'assistant'
-            }
-          />
-        ))}
+        {messages.map((msg, i) => {
+          // El botón "Regenerar" SOLO aparece en el último mensaje del asistente
+          // (no en mensajes anteriores) y solo cuando NO está en streaming.
+          const isLastAssistant =
+            msg.role === 'assistant' &&
+            i === messages.length - 1 &&
+            !isStreaming;
+          return (
+            <ChatMessage
+              key={msg.id}
+              message={msg}
+              asesorEmail={userEmail}
+              asesorDisplayName={userDisplayName}
+              asesorPhotoUrl={userPhotoUrl}
+              isStreaming={
+                isStreaming && i === messages.length - 1 && msg.role === 'assistant'
+              }
+              showRegenerate={isLastAssistant}
+              onRegenerate={isLastAssistant ? onRegenerate : undefined}
+            />
+          );
+        })}
         <div ref={bottomRef} />
       </div>
     </div>

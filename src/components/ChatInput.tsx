@@ -6,9 +6,13 @@ interface Props {
   onSend: (text: string) => void;
   disabled?: boolean;
   onTypingChange?: (typing: boolean) => void;
+  /** Si true, hay un stream en curso y se muestra botón "detener" en vez de "enviar" */
+  isStreaming?: boolean;
+  /** Handler para detener el streaming activo (AbortController) */
+  onStop?: () => void;
 }
 
-export function ChatInput({ onSend, disabled, onTypingChange }: Props) {
+export function ChatInput({ onSend, disabled, onTypingChange, isStreaming, onStop }: Props) {
   const [text, setText] = useState('');
   const [focused, setFocused] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -78,20 +82,36 @@ export function ChatInput({ onSend, disabled, onTypingChange }: Props) {
               className="flex-1 resize-none bg-transparent text-[15px] text-gray-800 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed py-2"
               style={{ minHeight: '44px', maxHeight: '140px' }}
             />
-            <button
-              onClick={handleSend}
-              disabled={disabled || !text.trim()}
-              className="bg-gradient-to-br from-[#F7941D] to-[#e8830d] hover:from-[#e8830d] hover:to-[#d97700] disabled:opacity-40 disabled:cursor-not-allowed text-white rounded-xl w-11 h-11 flex items-center justify-center transition-all flex-shrink-0 cursor-pointer shadow-md hover:shadow-lg active:scale-95"
-              aria-label="Enviar"
-              style={{
-                boxShadow: '0 4px 12px rgba(247,148,29,0.4)',
-              }}
-            >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M22 2L11 13" />
-                <path d="M22 2L15 22L11 13L2 9L22 2Z" />
-              </svg>
-            </button>
+            {isStreaming && onStop ? (
+              // Botón DETENER — visible solo mientras hay stream activo.
+              // Estilo rojo discreto para diferenciar claramente de "enviar".
+              <button
+                onClick={onStop}
+                className="bg-gradient-to-br from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white rounded-xl w-11 h-11 flex items-center justify-center transition-all flex-shrink-0 cursor-pointer shadow-md hover:shadow-lg active:scale-95"
+                aria-label="Detener generación"
+                title="Detener generación"
+                style={{ boxShadow: '0 4px 12px rgba(239,68,68,0.4)' }}
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                  <rect x="4" y="4" width="16" height="16" rx="2" />
+                </svg>
+              </button>
+            ) : (
+              <button
+                onClick={handleSend}
+                disabled={disabled || !text.trim()}
+                className="bg-gradient-to-br from-[#F7941D] to-[#e8830d] hover:from-[#e8830d] hover:to-[#d97700] disabled:opacity-40 disabled:cursor-not-allowed text-white rounded-xl w-11 h-11 flex items-center justify-center transition-all flex-shrink-0 cursor-pointer shadow-md hover:shadow-lg active:scale-95"
+                aria-label="Enviar"
+                style={{
+                  boxShadow: '0 4px 12px rgba(247,148,29,0.4)',
+                }}
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M22 2L11 13" />
+                  <path d="M22 2L15 22L11 13L2 9L22 2Z" />
+                </svg>
+              </button>
+            )}
           </div>
         </div>
 

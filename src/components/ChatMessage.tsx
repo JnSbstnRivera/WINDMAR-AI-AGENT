@@ -11,6 +11,9 @@ interface Props {
   asesorEmail?: string;
   asesorDisplayName?: string;
   asesorPhotoUrl?: string | null;
+  /** Si true Y este mensaje es del asistente, muestra botón "Regenerar" */
+  showRegenerate?: boolean;
+  onRegenerate?: () => void;
 }
 
 function stripForCopy(text: string): string {
@@ -107,6 +110,8 @@ function ChatMessageImpl({
   asesorEmail = '',
   asesorDisplayName,
   asesorPhotoUrl,
+  showRegenerate,
+  onRegenerate,
 }: Props) {
   const [copied, setCopied] = useState(false);
   const isUser = message.role === 'user';
@@ -150,24 +155,61 @@ function ChatMessageImpl({
   const typedContent = useTypewriter(cleanContent, !!isStreaming);
   const displayContent = isStreaming ? typedContent : cleanContent;
 
+  // Loading skeleton: si el mensaje está en streaming pero AÚN no llega texto,
+  // mostramos tres dots animados. Le da al asesor confirmación inmediata de que
+  // la IA está "pensando" (resuelve el "vacío" de los primeros 300-500ms / TTFT).
+  const showSkeleton = isStreaming && cleanContent.length === 0;
+
   return (
     <div className="flex justify-start gap-3 mb-8">
       <IAAvatar isStreaming={isStreaming} isError={isErrorMessage} />
       <div className="flex flex-col items-start min-w-0 flex-1 pt-1.5">
         <div className="text-[15px] sm:text-[15.5px] text-gray-800 dark:text-gray-100 whitespace-pre-wrap leading-relaxed w-full">
-          {renderContent(displayContent)}
-          {isStreaming && (
-            <span className="inline-block w-[2px] h-[14px] bg-[#F7941D] ml-1 align-middle animate-pulse" />
+          {showSkeleton ? (
+            <span className="inline-flex items-center gap-1.5 py-1" aria-label="Generando respuesta">
+              <span className="w-2 h-2 rounded-full bg-[#F7941D]" style={{ animation: 'wmDotBounce 1.2s ease-in-out 0s infinite' }} />
+              <span className="w-2 h-2 rounded-full bg-[#F7941D]" style={{ animation: 'wmDotBounce 1.2s ease-in-out 0.2s infinite' }} />
+              <span className="w-2 h-2 rounded-full bg-[#F7941D]" style={{ animation: 'wmDotBounce 1.2s ease-in-out 0.4s infinite' }} />
+              <style>{`
+                @keyframes wmDotBounce {
+                  0%, 80%, 100% { transform: translateY(0); opacity: 0.4; }
+                  40%            { transform: translateY(-4px); opacity: 1; }
+                }
+              `}</style>
+            </span>
+          ) : (
+            <>
+              {renderContent(displayContent)}
+              {isStreaming && (
+                <span className="inline-block w-[2px] h-[14px] bg-[#F7941D] ml-1 align-middle animate-pulse" />
+              )}
+            </>
           )}
         </div>
 
         {!isStreaming && message.content && (
-          <button
-            onClick={handleCopy}
-            className="mt-3 text-xs text-gray-400 hover:text-[#F7941D] dark:hover:text-[#F7941D] transition-colors flex items-center gap-1 cursor-pointer"
-          >
-            {copied ? '✓ Copiado' : '⎘ Copiar para WhatsApp'}
-          </button>
+          <div className="mt-3 flex items-center gap-4">
+            <button
+              onClick={handleCopy}
+              className="text-xs text-gray-400 hover:text-[#F7941D] dark:hover:text-[#F7941D] transition-colors flex items-center gap-1 cursor-pointer"
+            >
+              {copied ? '✓ Copiado' : '⎘ Copiar para WhatsApp'}
+            </button>
+            {showRegenerate && onRegenerate && (
+              <button
+                onClick={onRegenerate}
+                className="text-xs text-gray-400 hover:text-[#F7941D] dark:hover:text-[#F7941D] transition-colors flex items-center gap-1 cursor-pointer"
+                title="Generar otra respuesta a la misma pregunta"
+              >
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="23 4 23 10 17 10"/>
+                  <polyline points="1 20 1 14 7 14"/>
+                  <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+                </svg>
+                <span>Regenerar</span>
+              </button>
+            )}
+          </div>
         )}
       </div>
     </div>
@@ -189,6 +231,9 @@ export const ChatMessage = memo(ChatMessageImpl, (prev, next) => {
     prev.isStreaming === next.isStreaming &&
     prev.asesorEmail === next.asesorEmail &&
     prev.asesorDisplayName === next.asesorDisplayName &&
-    prev.asesorPhotoUrl === next.asesorPhotoUrl
+    prev.asesorPhotoUrl === next.asesorPhotoUrl &&
+    prev.showRegenerate === next.showRegenerate
+    // onRegenerate intencionalmente excluido — la prop cambia en cada render
+    // del padre pero apunta a la misma lógica. No re-rendereamos por eso.
   );
 });
