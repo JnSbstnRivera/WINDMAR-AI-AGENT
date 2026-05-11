@@ -7,6 +7,10 @@ import { QualityDonut } from './QualityDonut';
 import { TopAsesoresTable } from './TopAsesoresTable';
 import { DownvotesTable } from './DownvotesTable';
 import { ConversationsList } from './ConversationsList';
+import { DepartmentChart } from './DepartmentChart';
+import { TopKeywords } from './TopKeywords';
+import { WeekComparison } from './WeekComparison';
+import { HourlyChart } from './HourlyChart';
 
 type Period = 'today' | 'week' | 'month' | 'all';
 
@@ -55,12 +59,44 @@ interface ConvRow {
   created_at: string;
 }
 
+interface DeptRow {
+  departamento: string;
+  total_messages: number;
+  active_users: number;
+}
+
+interface KeywordRow {
+  word: string;
+  frequency: number;
+}
+
+interface WeekCmp {
+  thisWeekMsgs: number;
+  lastWeekMsgs: number;
+  msgsChangePct: number | null;
+  thisWeekUsers: number;
+  lastWeekUsers: number;
+  usersChangePct: number | null;
+  thisWeekConvs: number;
+  lastWeekConvs: number;
+  convsChangePct: number | null;
+}
+
+interface HourRow {
+  hour_pr: number;
+  total_messages: number;
+}
+
 interface InitialData {
   kpis: Kpis;
   usage: UsageDay[];
   topAsesores: AsesorRow[];
   downvotes: DownvoteRow[];
   conversations: ConvRow[];
+  departments: DeptRow[];
+  keywords: KeywordRow[];
+  weekComparison: WeekCmp;
+  hourly: HourRow[];
 }
 
 interface Props {
@@ -212,13 +248,25 @@ export function AdminDashboard({ initialPeriod, initial }: Props) {
         />
       </div>
 
-      {/* Gráficas */}
+      {/* Comparativa semana — narrativa de crecimiento para presentaciones */}
+      <WeekComparison data={data.weekComparison} />
+
+      {/* Gráficas — uso temporal y calidad */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <UsageChart data={data.usage} />
         <QualityDonut thumbsUp={data.kpis.thumbsUp} thumbsDown={data.kpis.thumbsDown} />
       </div>
 
-      {/* Tablas */}
+      {/* Gráficas — uso por departamento y hora pico */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <DepartmentChart data={data.departments} />
+        <HourlyChart data={data.hourly} />
+      </div>
+
+      {/* Insights de contenido */}
+      <TopKeywords data={data.keywords} />
+
+      {/* Tablas: ranking + downvotes */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <TopAsesoresTable data={data.topAsesores} />
         <DownvotesTable data={data.downvotes} />
