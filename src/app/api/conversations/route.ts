@@ -13,10 +13,13 @@ export async function GET() {
 
   const supabase = getSupabaseAdmin();
 
+  // Soft delete: el asesor NO ve sus conversaciones "borradas".
+  // El admin sí las ve desde /admin con badge indicador.
   const { data: convs, error } = await supabase
     .from('conversations')
     .select('id, title, created_at, updated_at')
     .eq('user_email', email)
+    .is('deleted_at', null)
     .order('updated_at', { ascending: false });
 
   if (error) {
@@ -99,7 +102,12 @@ export async function POST(req: Request) {
   });
 }
 
-// DELETE /api/conversations — borra TODAS las conversaciones del asesor
+// DELETE /api/conversations — SOFT DELETE de TODAS las conversaciones del asesor.
+// NO borra físicamente — solo marca deleted_at = NOW(). Esto permite:
+//  - El chat del asesor: ya no las ve (filtro deleted_at IS NULL)
+//  - El dashboard admin: las sigue viendo con badge "Eliminada"
+//  - Métricas y feedback: permanecen intactos
+//  - Reversible: cambiar deleted_at a NULL las "restaura"
 export async function DELETE() {
   const session = await auth();
   if (!session?.user?.email) {
@@ -109,11 +117,11 @@ export async function DELETE() {
 
   const supabase = getSupabaseAdmin();
 
-  // ON DELETE CASCADE en messages limpiará automáticamente
   const { error } = await supabase
     .from('conversations')
-    .delete()
-    .eq('user_email', email);
+    .update({ deleted_at: new Date().toISOString() })
+    .eq('user_email', email)
+    .is('deleted_at', null); // solo afecta las que aún están activas
 
   if (error) {
     console.error('[api/conversations DELETE]', error);

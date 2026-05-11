@@ -3,7 +3,9 @@ import { getSupabaseAdmin } from '@/lib/supabase';
 
 export const runtime = 'nodejs';
 
-// DELETE /api/conversations/:id — borra una conversación específica del asesor
+// DELETE /api/conversations/:id — SOFT DELETE de una conversación específica.
+// NO borra físicamente — marca deleted_at = NOW(). El asesor deja de verla,
+// pero el admin la sigue auditando desde /admin con badge "Eliminada".
 export async function DELETE(
   _req: Request,
   { params }: { params: Promise<{ id: string }> }
@@ -17,9 +19,10 @@ export async function DELETE(
 
   const { error } = await getSupabaseAdmin()
     .from('conversations')
-    .delete()
+    .update({ deleted_at: new Date().toISOString() })
     .eq('id', id)
-    .eq('user_email', email);
+    .eq('user_email', email)
+    .is('deleted_at', null);
 
   if (error) {
     console.error('[api/conversations/:id DELETE]', error);

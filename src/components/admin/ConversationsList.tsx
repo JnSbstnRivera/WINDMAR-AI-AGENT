@@ -13,6 +13,8 @@ interface ConvRow {
   first_user_message: string | null;
   last_message_at: string;
   created_at: string;
+  is_deleted?: boolean;
+  deleted_at?: string | null;
 }
 
 interface MsgRow {
@@ -218,9 +220,19 @@ export function ConversationsList({ data }: Props) {
                           </p>
                         </td>
                         <td className="px-5 py-3 hidden md:table-cell max-w-md">
-                          <p className="text-slate-700 dark:text-slate-200 truncate">
-                            {row.title || 'Sin título'}
-                          </p>
+                          <div className="flex items-center gap-2">
+                            <p className="text-slate-700 dark:text-slate-200 truncate flex-1">
+                              {row.title || 'Sin título'}
+                            </p>
+                            {row.is_deleted && (
+                              <span
+                                className="text-[10px] font-medium px-2 py-0.5 rounded bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-800 whitespace-nowrap flex-shrink-0"
+                                title={row.deleted_at ? `Eliminada el ${new Date(row.deleted_at).toLocaleString('es-PR')}` : 'Eliminada por el asesor'}
+                              >
+                                🗑 Eliminada
+                              </span>
+                            )}
+                          </div>
                           {row.first_user_message && (
                             <p className="text-xs text-slate-400 truncate italic">
                               &ldquo;{row.first_user_message}&rdquo;
@@ -264,9 +276,19 @@ export function ConversationsList({ data }: Props) {
             {/* Header del modal */}
             <div className="p-5 border-b border-slate-200 dark:border-slate-800 flex items-start justify-between gap-4 bg-slate-50 dark:bg-slate-800/50">
               <div className="min-w-0 flex-1">
-                <h3 className="font-bold text-[#1B3A5C] dark:text-white truncate">
-                  {selectedConv.title || 'Sin título'}
-                </h3>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h3 className="font-bold text-[#1B3A5C] dark:text-white truncate">
+                    {selectedConv.title || 'Sin título'}
+                  </h3>
+                  {selectedConv.is_deleted && (
+                    <span
+                      className="text-[10px] font-medium px-2 py-0.5 rounded bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-800 whitespace-nowrap"
+                      title={selectedConv.deleted_at ? `Eliminada el ${new Date(selectedConv.deleted_at).toLocaleString('es-PR')}` : ''}
+                    >
+                      🗑 Eliminada por el asesor
+                    </span>
+                  )}
+                </div>
                 <p className="text-xs text-slate-500 mt-0.5">
                   <strong>{selectedConv.display_name || selectedConv.user_email.split('@')[0]}</strong>
                   {' · '}
