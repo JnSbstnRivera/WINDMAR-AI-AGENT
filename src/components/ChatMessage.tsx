@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { memo, useState } from 'react';
 import type { Message } from '@/types';
 import { UserAvatar } from './UserAvatar';
 
@@ -100,7 +100,7 @@ function IAAvatar({ isStreaming, isError }: { isStreaming?: boolean; isError?: b
   );
 }
 
-export function ChatMessage({
+function ChatMessageImpl({
   message,
   isStreaming,
   asesorEmail = '',
@@ -166,3 +166,22 @@ export function ChatMessage({
     </div>
   );
 }
+
+/**
+ * ChatMessage memoizado. Re-renderiza SOLO cuando cambia contenido, streaming,
+ * o el avatar del asesor — NO cuando llegan chunks de OTROS mensajes.
+ *
+ * Esto es crítico durante streaming: sin memo, cada chunk del último mensaje
+ * dispara re-render de TODOS los mensajes anteriores, lo que se siente
+ * "pausado" en conversaciones largas.
+ */
+export const ChatMessage = memo(ChatMessageImpl, (prev, next) => {
+  return (
+    prev.message.id === next.message.id &&
+    prev.message.content === next.message.content &&
+    prev.isStreaming === next.isStreaming &&
+    prev.asesorEmail === next.asesorEmail &&
+    prev.asesorDisplayName === next.asesorDisplayName &&
+    prev.asesorPhotoUrl === next.asesorPhotoUrl
+  );
+});
