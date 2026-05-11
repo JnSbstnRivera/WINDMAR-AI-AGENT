@@ -157,40 +157,56 @@ export function AdminDashboard({ initialPeriod, initial }: Props) {
 
   return (
     <div className="space-y-6">
-      {/* Barra de filtros + refresh */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div className="flex items-center gap-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-1 w-fit">
-          {(['today', 'week', 'month', 'all'] as Period[]).map((p) => (
-            <button
-              key={p}
-              onClick={() => changePeriod(p)}
-              className={`text-xs px-3 py-1.5 rounded font-medium transition-colors cursor-pointer ${
-                period === p
-                  ? 'bg-[#1B3A5C] text-white'
-                  : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
-              }`}
-            >
-              {{ today: 'Hoy', week: '7 días', month: '30 días', all: 'Todo' }[p]}
-            </button>
-          ))}
-        </div>
+      {/* Toolbar superior — sticky, siempre visible al hacer scroll.
+          Filtros de periodo a la izquierda, indicador de actividad + refresh a la derecha. */}
+      <div className="sticky top-0 z-20 -mx-4 sm:-mx-6 px-4 sm:px-6 py-3 bg-slate-50/95 dark:bg-slate-950/95 backdrop-blur-md border-b border-slate-200 dark:border-slate-800">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 max-w-7xl mx-auto">
+          {/* Filtros de periodo — grandes y prominentes */}
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wide hidden sm:inline">
+              Periodo:
+            </span>
+            <div className="flex items-center gap-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-1 shadow-sm">
+              {(['today', 'week', 'month', 'all'] as Period[]).map((p) => (
+                <button
+                  key={p}
+                  onClick={() => changePeriod(p)}
+                  className={`text-xs px-3 py-1.5 rounded font-semibold transition-colors cursor-pointer ${
+                    period === p
+                      ? 'bg-[#1B3A5C] text-white shadow-sm'
+                      : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
+                  }`}
+                >
+                  {{ today: 'Hoy', week: '7 días', month: '30 días', all: 'Todo' }[p]}
+                </button>
+              ))}
+            </div>
+          </div>
 
-        <div className="flex items-center gap-3">
-          <p className="text-xs text-slate-400">
-            Última actualización: {lastUpdate.toLocaleTimeString('es-PR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
-          </p>
-          <button
-            onClick={refresh}
-            disabled={isPending}
-            className="text-xs px-3 py-1.5 border border-slate-300 dark:border-slate-700 rounded hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
-          >
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className={isPending ? 'animate-spin' : ''}>
-              <polyline points="23 4 23 10 17 10"/>
-              <polyline points="1 20 1 14 7 14"/>
-              <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
-            </svg>
-            {isPending ? 'Actualizando...' : 'Refresh'}
-          </button>
+          {/* Última actualización + botón refresh */}
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
+              <span className="relative flex w-2 h-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-60" />
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
+              </span>
+              <span className="tabular-nums">
+                {lastUpdate.toLocaleTimeString('es-PR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+              </span>
+            </div>
+            <button
+              onClick={refresh}
+              disabled={isPending}
+              className="text-xs px-3 py-1.5 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-50 shadow-sm"
+            >
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className={isPending ? 'animate-spin' : ''}>
+                <polyline points="23 4 23 10 17 10"/>
+                <polyline points="1 20 1 14 7 14"/>
+                <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+              </svg>
+              {isPending ? 'Actualizando...' : 'Refresh'}
+            </button>
+          </div>
         </div>
       </div>
 

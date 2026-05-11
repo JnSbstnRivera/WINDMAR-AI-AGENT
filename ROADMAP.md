@@ -1,7 +1,7 @@
 # 🗺️ Roadmap Visual — WINDMAR AI AGENT
 
-> Mapa conceptual del proyecto. **Última actualización: 8 mayo 2026 (v2)**
-> Estado: **🟢 EN PRODUCCIÓN — Uso definitivo activo**
+> Mapa conceptual del proyecto. **Última actualización: 11 mayo 2026 (v3)**
+> Estado: **🟢 EN PRODUCCIÓN — Uso activo + Panel admin operativo**
 
 ---
 
@@ -24,9 +24,14 @@ flowchart TD
     Done --> D8[Web Search opt-in]
     Done --> D9[Onboarding asesores]
     Done --> D10[📸 Foto perfil Microsoft]
+    Done --> D11[⚡ Streaming optimizado]
+    Done --> D12[📊 Dashboard admin]
+    Done --> D13[👍 Feedback 👍/👎]
+    Done --> D14[📝 Markdown completo]
+    Done --> D15[🎨 UX Polish v2]
 
     Now --> N1[Validación con asesores reales]
-    Now --> N2[Recolección feedback]
+    Now --> N2[Recolección feedback en /admin]
 
     Next --> X1[📸 Vision: factura LUMA]
     Next --> X2[📊 Gráficos ROI]
@@ -47,6 +52,11 @@ flowchart TD
     style D8 fill:#dcfce7,color:#15803d
     style D9 fill:#dcfce7,color:#15803d
     style D10 fill:#dcfce7,color:#15803d
+    style D11 fill:#dcfce7,color:#15803d
+    style D12 fill:#dcfce7,color:#15803d
+    style D13 fill:#dcfce7,color:#15803d
+    style D14 fill:#dcfce7,color:#15803d
+    style D15 fill:#dcfce7,color:#15803d
     style N1 fill:#fef3c7,color:#92400e
     style N2 fill:#fef3c7,color:#92400e
     style X1 fill:#ede9fe,color:#5b21b6
@@ -70,7 +80,8 @@ flowchart TD
     H --> I[🟢 BLOQUE I<br/>Migración Next.js<br/>+ SSO Microsoft<br/>✅]
     I --> J[🟢 BLOQUE J<br/>Haiku 4.5<br/>+ Web Search<br/>✅]
     J --> K[🟢 BLOQUE K<br/>Onboarding<br/>asesores nuevos<br/>✅]
-    K --> E{🟡 BLOQUE E<br/>Validación<br/>📍 AQUÍ}
+    K --> L[🟢 BLOQUE L<br/>Polish + Dashboard<br/>11 mayo 2026<br/>✅]
+    L --> E{🟡 BLOQUE E<br/>Validación con<br/>feedback real<br/>📍 AQUÍ}
     E -->|Feedback OK| F[⏳ BLOQUE F<br/>Vision + Gráficos<br/>+ Maps]
     F --> V1([🎯 v2.0 PRODUCCIÓN COMPLETA])
     V1 --> G[🔮 BLOQUE G<br/>Integraciones<br/>Zoho/Smartsheet]
@@ -83,6 +94,7 @@ flowchart TD
     style I fill:#22c55e,color:#fff
     style J fill:#22c55e,color:#fff
     style K fill:#22c55e,color:#fff
+    style L fill:#22c55e,color:#fff
     style E fill:#fbbf24,color:#000
     style F fill:#a78bfa,color:#fff
     style G fill:#a78bfa,color:#fff
@@ -200,6 +212,46 @@ flowchart LR
     style New fill:#22c55e,color:#fff
 ```
 
+### 🟢 BLOQUE L — Polish + Dashboard Admin ✅ (11 mayo 2026)
+
+Día completo de polish + creación del panel administrativo para 4 admins.
+
+```mermaid
+flowchart TD
+    Day11[11 mayo 2026]
+    Day11 --> SP[SYSTEM_PROMPT v3 estilo coach]
+    Day11 --> Stream[Streaming optimizado 3 capas]
+    Day11 --> KB[KB +9 entradas: Campaña Madres + Powerwall compat]
+    Day11 --> T1[TIER 1: UX core]
+    Day11 --> T2[TIER 2: Robustez]
+    Day11 --> T3[TIER 3: Feedback + Mobile]
+    Day11 --> T4[TIER 4: Dashboard /admin]
+
+    Stream --> S1[X-Accel-Buffering server]
+    Stream --> S2[rAF coalescing cliente]
+    Stream --> S3[useTypewriter adaptativo]
+
+    T1 --> T1a[Skeleton + Detener + Regenerar]
+    T1 --> T1b[Error Boundary global]
+
+    T2 --> T2a[Markdown completo react-markdown]
+    T2 --> T2b[Rate limit 30 msgs/min]
+    T2 --> T2c[Logout 15 min inactividad]
+    T2 --> T2d[RAG con boost por categoría]
+
+    T3 --> T3a[Feedback 👍/👎 con razón]
+    T3 --> T3b[Mobile UX safe areas]
+
+    T4 --> T4a[/admin con allowlist 4 emails]
+    T4 --> T4b[KPIs + 4 gráficas Recharts]
+    T4 --> T4c[Top palabras + hora pico]
+    T4 --> T4d[Comparativa semanal]
+    T4 --> T4e[Conversaciones colapsable]
+
+    style Day11 fill:#1B3A5C,color:#fff
+    style T4 fill:#F7941D,color:#fff
+```
+
 ---
 
 ## 🛣️ Línea de Tiempo
@@ -224,8 +276,17 @@ gantt
     Onboarding modal     :done,    k1, 2026-05-08, 1d
     System Prompt v2     :done,    c2, 2026-05-08, 1d
 
-    section Fase 5 (Próximo)
-    Validación asesores  :active,  e1, 2026-05-09, 14d
+    section Fase 5 (11 mayo)
+    Streaming optimizado :done,    l1, 2026-05-11, 1d
+    Estilo coach v3      :done,    l2, 2026-05-11, 1d
+    KB Campaña Madres    :done,    l3, 2026-05-11, 1d
+    TIER 1 UX core       :done,    l4, 2026-05-11, 1d
+    TIER 2 Robustez      :done,    l5, 2026-05-11, 1d
+    TIER 3 Feedback      :done,    l6, 2026-05-11, 1d
+    TIER 4 Dashboard     :done,    l7, 2026-05-11, 1d
+
+    section Fase 6 (Próximo)
+    Validación con datos :active,  e1, 2026-05-12, 14d
     Vision facturas LUMA :         f1, 2026-05-15, 1d
     Gráficos ROI         :         f2, 2026-05-16, 1d
     Maps + direcciones   :         f3, 2026-05-17, 1d
@@ -233,40 +294,82 @@ gantt
     section Lanzamiento
     🎯 v2.0 Completa     :crit,    v1, 2026-05-23, 1d
 
-    section Fase 6 (Backlog)
+    section Fase 7 (Backlog)
     Zoho integration     :         g1, 2026-06-01, 5d
-    Dashboard métricas   :         g2, 2026-06-08, 5d
+    Export PDF + emails  :         g2, 2026-06-08, 5d
 ```
 
 ---
 
 ## 🎯 Capacidades Disponibles AHORA
 
+### 👥 Para el ASESOR (chat principal)
+
 | Capacidad | Estado | Notas |
 |---|---|---|
-| 💬 Chat texto streaming | ✅ Live | Haiku 4.5 con prompt caching |
+| 💬 Chat streaming fluido | ✅ Live | Haiku 4.5 + anti-buffering + rAF + typewriter adaptativo |
 | 🔐 SSO Microsoft Entra ID | ✅ Live | NextAuth v5, JWT 8h |
 | 👋 Onboarding nuevo asesor | ✅ Live | Auto-extract primer nombre |
 | 🧠 Memoria conversacional | ✅ Live | Mantiene hilo dentro de sesión |
-| 📚 Knowledge base oficial | ✅ Live | 206 entradas, full-text search |
+| 📚 Knowledge base oficial | ✅ Live | **215 entradas** (+ Campaña Madres + Powerwall compat) |
 | 🌐 Web search | ✅ Live | Opt-in con palabras clave |
 | 🔧 Tool selection | ✅ Live | 10 cotizadores oficiales |
 | 🤖 Mascot SUN BOT | ✅ Live | 6 estados animados |
 | 🌙 Dark mode | ✅ Live | Default + toggle |
-| 📸 Foto perfil Microsoft | ✅ Live | Sidebar + avatar mensajes (estilo Teams), refresh en cada login |
+| 📸 Foto perfil Microsoft | ✅ Live | Sidebar + avatar mensajes (estilo Teams) |
+| 📝 Markdown completo | ✅ Live | Listas, tablas, code blocks, blockquotes (react-markdown) |
+| 💀 Loading skeleton | ✅ Live | 3 dots animados antes del primer token |
+| ⏹ Botón detener generación | ✅ Live | AbortController.signal |
+| 🔄 Botón regenerar respuesta | ✅ Live | Borra y vuelve a generar |
+| 👍 Feedback 👍/👎 por mensaje | ✅ Live | Con razón opcional para downvotes |
+| 🛡️ Error Boundary global | ✅ Live | No más pantallas blancas |
+| 🚦 Rate limit 30 msgs/min | ✅ Live | Protege TPM compartido |
+| ⏱️ Logout por inactividad | ✅ Live | 15 min sin actividad + warning 1 min antes |
+| 📱 Mobile UX optimizado | ✅ Live | Safe areas iPhone + auto-scroll al focus |
+
+### 📊 Para el ADMIN (panel /admin)
+
+| Capacidad | Estado | Notas |
+|---|---|---|
+| 🔒 Allowlist por email | ✅ Live | 4 admins: juan.s, a.rengifo, jesus.castro, d.buitrago |
+| 📊 4 KPIs principales | ✅ Live | Mensajes, Asesores activos, Convs, Satisfacción |
+| 📈 Gráfica uso 7 días | ✅ Live | Line chart Recharts |
+| 🎯 Donut 👍 vs 👎 | ✅ Live | Con porcentaje central |
+| 📈 Comparativa semanal | ✅ Live | Esta vs anterior, flechas ↑↓ % cambio |
+| 🏢 Uso por departamento | ✅ Live | Bar chart con paleta brand |
+| 🕐 Hora pico de uso | ✅ Live | 24h en hora local PR (UTC-4) |
+| 🔥 Top palabras buscadas | ✅ Live | Tag cloud, stop words ES |
+| 🏆 Top asesores activos | ✅ Live | Top 10 con depto/rol |
+| ⚠️ Downvotes para revisar | ✅ Live | Con razón del asesor |
+| 💬 Conversaciones recientes | ✅ Live | Tabla colapsable + buscador (lupa) + modal con mensajes |
+| 🔄 Auto-refresh 60s | ✅ Live | + botón refresh manual + indicador "live" |
+| 🎨 Visual ejecutivo | ✅ Live | Sticky filters, SUN BOT en header, distinto del chat |
 
 ---
 
-## 🎯 Próximas Capacidades (1-3 días dev cada una)
+## 🎯 Próximas Capacidades
+
+### 🚀 Para asesores (chat principal)
 
 | # | Capacidad | Esfuerzo | Impacto | Caso de uso |
 |---|---|---|---|---|
 | 1 | 📸 **Vision** — factura LUMA | 1h | ⭐⭐⭐⭐⭐ | Asesor sube foto, bot extrae kWh + monto |
 | 2 | 📊 **Gráficos ROI** | 1h | ⭐⭐⭐⭐ | PNG de proyección 25 años para mandar al cliente |
-| 3 | 🗺️ **Maps/Direcciones** | 30min | ⭐⭐⭐⭐ | Link Google Maps con ruta cliente → Windmar |
+| 3 | 🗺️ **Maps/Direcciones** | 30min | ⭐⭐⭐⭐ | Link Google Maps showroom más cercano |
 | 4 | 📄 **PDF processing** | 30min | ⭐⭐⭐ | Subir contrato competencia, comparar |
 | 5 | 🧠 **Memory tool** | 2h | ⭐⭐⭐ | Recuerda datos persistentes del asesor |
 | 6 | 🔌 **Zoho integration** | 3h | ⭐⭐⭐ | Bot consulta CRM directo desde chat |
+
+### 📊 Para admins (dashboard)
+
+| # | Capacidad | Esfuerzo | Impacto |
+|---|---|---|---|
+| A | 🐛 **Tabla de errores** (429, 500, abortados) | 30min | ⭐⭐⭐⭐ |
+| B | 🖼 **Modo presentación** (fullscreen, oculta filtros) | 30min | ⭐⭐⭐ |
+| C | 📸 **Export dashboard como PNG** | 1h | ⭐⭐⭐ |
+| D | 📑 **Export conversación a PDF** | 1h | ⭐⭐⭐ |
+| E | 🔔 **Email semanal a admins** con resumen | 2h | ⭐⭐⭐ |
+| F | 🏷 **Tags en conversaciones** (ejemplar, revisar) | 1.5h | ⭐⭐ |
 
 ---
 
@@ -292,6 +395,71 @@ flowchart LR
 ---
 
 ## 📅 Bitácora de Cambios
+
+### 11 mayo 2026 — Día de polish + Dashboard admin 📊
+
+Marathón completo de **17 commits** transformando la app de "MVP funcional" a "producto empresarial con telemetría".
+
+**Mañana — Calidad de respuestas:**
+- Formato fluido del prompt: prohibir `---` separadores y headers gigantes con emoji
+- Estilo coach socrático (preguntar antes de responder largo, una idea a la vez, terminar con siguiente paso)
+- KB +9 entradas: **Campaña Madres 2026** completa (8 entradas con vigencia 7-14 mayo, reglas showroom, descuentos por producto/financiamiento) + **Compatibilidad Powerwall 2 vs 3** (entrada crítica anti-info-incorrecta)
+- 4 actualizaciones a entradas existentes de Powerwall con nota de incompatibilidad
+- SYSTEM_PROMPT v3 con nueva sección PROMOCION_VIGENTE y reglas para compatibilidad PW
+- `max_tokens`: 2048 → 1024 (mejora velocidad percibida sin perder calidad)
+
+**Tarde 1 — Streaming optimizado (3 capas):**
+- **Server**: Headers anti-buffering (`X-Accel-Buffering: no`, `Cache-Control: no-transform`, `Transfer-Encoding: chunked`) para evitar que Vercel/CDN bufferreen chunks pequeños
+- **Cliente**: `requestAnimationFrame` coalescing — antes ~15 setState/seg con árbol pesado, ahora máximo 60fps con cada update mucho más liviano
+- **UX**: Nuevo hook `useTypewriter` con velocidad adaptativa (120/240/480/1200 cps según buffer). Resultado: streaming visualmente fluido aunque Anthropic mande chunks irregulares
+- Logs de TTFT, throughput y max_gap para diagnóstico futuro
+- Decisión informada: mantener Haiku (no volver a Groq) — el razonamiento + anti-alucinación vale los pocos segundos extra
+
+**Tarde 2 — TIER 1 (UX core, ~1h):**
+- 💀 **Loading skeleton**: 3 dots naranjas animados antes del primer token (resuelve "vacío" de 300-500ms TTFT)
+- ⏹ **Botón detener generación**: AbortController.signal en el fetch, handling gracioso del AbortError con nota "(detenido por el asesor)"
+- 🔄 **Botón regenerar**: borra última respuesta del asistente (local + DB) y re-envía mismo prompt. Endpoint `DELETE /api/messages?conversation_id=X&role=assistant`
+- 🛡 **ErrorBoundary global**: class component envolviendo toda la app, UI amigable con SUN BOT triste + botón "Recargar" si algo rompe
+- ChatMessage memoizado con custom comparator
+- ChatWindow con scroll `auto` throttled 100ms
+
+**Tarde 3 — TIER 2 (robustez, ~2h):**
+- 📝 **Markdown completo** con `react-markdown` + `remark-gfm`: listas, tablas, code blocks, blockquotes — estilos custom Tailwind con brand Windmar
+- 🚦 **Rate limit 30 msgs/min/usuario** vía SELECT COUNT en messages JOIN conversations último minuto. Return 429 con `retryAfterSeconds`
+- ⏱ **Auto-logout 15 min inactividad**: nuevo hook `useInactivityLogout` escucha mouse/keyboard/scroll/touch, warning amber 1 min antes
+- 🔍 **RAG mejorado**: 8 → 12 candidatos por query + re-rank con boost por intención (PROMOCION_VIGENTE x1.5, FINANCIAMIENTO x1.3, etc.), top 8 finales al prompt
+- 🎯 **TEST_CASES.md**: 10 prompts representativos con respuesta esperada para validación manual
+
+**Tarde 4 — TIER 3 (feedback + mobile, ~1h):**
+- 👍 **Sistema feedback 👍/👎**: nueva tabla `message_feedback` + endpoint `/api/feedback` + UI con thumbs en cada respuesta IA. Downvote ofrece textarea opcional para razón
+- 📱 **Mobile UX**: `viewport-fit=cover` para safe areas iPhone notch + clase `.safe-bottom` con `env(safe-area-inset-bottom)` + auto-scroll al focus en mobile (<768px) + soporte 100dvh
+- ✨ **Fade-in animation** en mensajes nuevos (300ms con keyframe `wmFadeInUp`)
+- Theme color `#1B3A5C` (navy brand) en barra del navegador
+
+**Tarde 5 — TIER 4 (Dashboard admin, ~4h):**
+
+Construcción del panel administrativo completo en `/admin`:
+
+- 🔒 **Seguridad allowlist 3 capas**: middleware (sesión) + layout server-side (validación email) + endpoint API (doble check). Inmune a cambios de perfil del usuario
+- 👥 **4 admins hardcoded + env var**: juan.s, a.rengifo, jesus.castro, d.buitrago. `ADMIN_EMAILS` extensible
+- 🎨 **Visual ejecutivo distinto al chat**: header navy oscuro, sin sidebar/mascot, tipografía densa, SUN BOT en header con halo brand
+- 📊 **9 funciones SQL** para métricas: KPIs, uso por día, top asesores, downvotes, conversaciones, departamentos, keywords, comparativa semanal, hora pico
+- 📈 **Recharts 3.8.1** para gráficas: line chart, donut, bar charts
+- 🎯 **TIER A — narrativa de presentación**: comparativa semanal con flechas ↑↓, gráfica por departamento, top palabras buscadas (tag cloud con stop words ES), hora pico de uso (24h)
+- 💬 **Vista de conversaciones**: tabla colapsable + buscador con lupa (filtra nombre/email/depto/título) + modal con detalle de mensajes
+- 🔄 **Auto-refresh 60s** + botón manual + indicador "live" pulsante
+- 📌 **Toolbar sticky** al hacer scroll, filtros siempre visibles
+- 🏠 Default = "Todo" para mostrar panorama histórico al abrir
+
+**Stack final acumulado:**
+- Frontend: Next.js 15.5.18 + React 19 + Tailwind v4 + Recharts + react-markdown
+- Backend: NextAuth v5 + Microsoft Entra ID + Anthropic SDK + Supabase
+- DB: PostgreSQL 17 con 13 funciones SQL custom y 215 entradas KB
+- Hosting: Vercel — 1 deploy unificado con admin protegido
+
+**Total del día: 17 commits, ~12 archivos nuevos, ~3,500 líneas de código.**
+
+---
 
 ### 8 mayo 2026 — Día de lanzamiento definitivo 🎉
 

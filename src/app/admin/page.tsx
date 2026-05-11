@@ -52,8 +52,9 @@ async function loadMetrics(period: Period) {
 }
 
 export default async function AdminPage() {
-  // Default: vista "Hoy" para que abra rápido con datos relevantes
-  const initialPeriod: Period = 'today';
+  // Default: vista "Todo" para mostrar el panorama completo histórico al abrir.
+  // El admin puede filtrar a Hoy / 7 días / 30 días desde la toolbar superior.
+  const initialPeriod: Period = 'all';
   const initial = await loadMetrics(initialPeriod);
 
   return <AdminDashboard initialPeriod={initialPeriod} initial={initial} />;
