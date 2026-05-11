@@ -161,19 +161,85 @@ export async function POST(req: Request) {
   const useWebSearch = shouldUseWebSearch(message);
 
   try {
-    // 4. Buscar en knowledge base (Supabase RPC)
     const supabase = getSupabaseAdmin();
+
+    // ════════════════════════════════════════
+    // 3.5. RATE LIMIT — 30 mensajes/minuto por usuario
+    // ════════════════════════════════════════
+    // Protege contra spam accidental (bug client, Enter trabado) y limita
+    // consumo del TPM compartido de la cuenta Anthropic.
+    // Implementación: count de mensajes role='user' del último minuto.
+    const oneMinuteAgo = new Date(Date.now() - 60 * 1000).toISOString();
+    const { count: recentCount } = await supabase
+      .from('messages')
+      .select('id, conversation:conversations!inner(user_email)', { count: 'exact', head: true })
+      .eq('role', 'user')
+      .eq('conversation.user_email', email)
+      .gte('created_at', oneMinuteAgo);
+
+    if ((recentCount ?? 0) >= 30) {
+      return new Response(JSON.stringify({
+        error: 'Estás enviando mensajes muy rápido. Espera unos segundos antes de continuar — esto protege la herramienta para todos los asesores.',
+        errorType: 'rate_limit',
+        retryAfterSeconds: 30,
+      }), {
+        status: 429,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
+    // 4. Buscar en knowledge base (Supabase RPC) — RAG mejorado.
+    // Estrategia:
+    //  a) Traer 12 candidatos (más material a evaluar)
+    //  b) Re-rank: dar boost a entradas cuya CATEGORÍA matchea palabras clave
+    //     de la intención del asesor (ej: "promo" → PROMOCION_VIGENTE +50%)
+    //  c) Quedarse con top 8 finales para no inflar el prompt
     const searchQuery = extractKeywords(message);
 
-    const { data: docs } = await supabase.rpc('search_knowledge', {
+    const { data: rawDocs } = await supabase.rpc('search_knowledge', {
       search_query: searchQuery,
       filter_categoria: null,
       filter_area: null,
-      result_limit: 8,
+      result_limit: 12,
     });
 
-    const knowledgeContext = docs?.length
-      ? (docs as Array<{ titulo: string; contenido: string; categoria: string }>)
+    type Doc = { titulo: string; contenido: string; categoria: string; rank?: number };
+    const docs = (rawDocs ?? []) as Doc[];
+
+    // Boost por intención del asesor — los términos detectados aumentan la
+    // prioridad de entradas en categorías relacionadas.
+    const lower = message.toLowerCase();
+    const intentBoosts: Array<{ triggers: string[]; categoria: string; boost: number }> = [
+      { triggers: ['promo', 'promoción', 'promocion', 'descuento', 'oferta', 'campaña', 'campana', 'madres', 'mes de'], categoria: 'PROMOCION_VIGENTE', boost: 1.5 },
+      { triggers: ['precio', 'cuánto', 'cuanto', 'cuesta', 'vale', 'monto'], categoria: 'PRODUCTO_', boost: 1.2 }, // prefix match
+      { triggers: ['financiamiento', 'financiar', 'préstamo', 'prestamo', 'loan', 'lease', 'plazo', 'mensualidad'], categoria: 'FINANCIAMIENTO', boost: 1.3 },
+      { triggers: ['garantía', 'garantia', 'cubre', 'incluye'], categoria: 'GARANTIA', boost: 1.3 },
+      { triggers: ['objeción', 'objecion', 'me dice', 'cliente dice', 'caro', 'no quiere', 'no le interesa'], categoria: 'OBJECION_ARGUMENTO', boost: 1.3 },
+      { triggers: ['cotizador', 'herramienta', 'calculadora', 'link', 'enlace'], categoria: 'HERRAMIENTA', boost: 1.2 },
+    ];
+
+    const scored = docs.map((d, originalRank) => {
+      // Score base: posición inversa (12 - rank). El más relevante por full-text gana.
+      let score = 12 - originalRank;
+      for (const rule of intentBoosts) {
+        const matches = rule.triggers.some((t) => lower.includes(t));
+        if (!matches) continue;
+        // Soporte para prefix match (ej: PRODUCTO_ matchea PRODUCTO_SOLAR, PRODUCTO_WATER)
+        const categoryMatches = rule.categoria.endsWith('_')
+          ? d.categoria.startsWith(rule.categoria)
+          : d.categoria === rule.categoria;
+        if (categoryMatches) score *= rule.boost;
+      }
+      return { doc: d, score };
+    });
+
+    const top8 = scored
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 8)
+      .map((s) => s.doc);
+
+    const knowledgeContext = top8.length
+      ? top8
           .map(d => `## ${d.titulo} [${d.categoria}]\n${d.contenido}`)
           .join('\n\n---\n\n')
       : 'No se encontró información específica para esta consulta.';

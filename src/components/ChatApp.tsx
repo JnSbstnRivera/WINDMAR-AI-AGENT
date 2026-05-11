@@ -8,6 +8,7 @@ import { WelcomeScreen } from './WelcomeScreen';
 import { MascotPanel, type MascotState } from './MascotPanel';
 import { TopBar } from './TopBar';
 import { ProfileModal } from './ProfileModal';
+import { useInactivityLogout } from '@/hooks/useInactivityLogout';
 import type { Message, Conversation } from '@/types';
 
 function generateId() {
@@ -45,6 +46,17 @@ export function ChatApp({ user, onSignOut }: Props) {
   // AbortController para poder cortar el fetch del streaming desde el botón "detener".
   // Lo guardamos en ref para que persista entre renders sin disparar re-renders.
   const abortControllerRef = useRef<AbortController | null>(null);
+
+  // Auto-logout por inactividad: tras 15 min sin actividad (movimiento de mouse,
+  // teclado, click, scroll, touch), cierra la sesión automáticamente.
+  // 1 minuto antes muestra warning para que el asesor pueda quedarse si está activo.
+  const { showWarning: showInactivityWarning } = useInactivityLogout({
+    timeoutMs: 15 * 60 * 1000, // 15 minutos
+    warningMs: 60 * 1000,       // último minuto = warning visible
+    onTimeout: () => {
+      onSignOut().catch(() => window.location.href = '/login');
+    },
+  });
 
   function stopStreaming() {
     if (abortControllerRef.current) {
@@ -549,6 +561,23 @@ export function ChatApp({ user, onSignOut }: Props) {
       )}
 
       <MascotPanel state={mascotState} sidebarHidden={desktopSidebarHidden} />
+
+      {/* Warning de inactividad: aparece 1 minuto antes del logout automático */}
+      {showInactivityWarning && (
+        <div className="fixed top-20 left-1/2 -translate-x-1/2 z-50 bg-amber-50 dark:bg-amber-900/30 border-2 border-amber-400 dark:border-amber-600 rounded-lg shadow-lg px-5 py-3 max-w-md mx-4">
+          <div className="flex items-start gap-3">
+            <span className="text-2xl">⏱️</span>
+            <div className="flex-1">
+              <p className="text-sm font-semibold text-amber-900 dark:text-amber-100">
+                ¿Sigues ahí, {capDisplayName}?
+              </p>
+              <p className="text-xs text-amber-800 dark:text-amber-200 mt-1">
+                Por seguridad, vamos a cerrar tu sesión en 1 minuto si no hay actividad. Mueve el mouse o toca el teclado para continuar.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="fixed bottom-1 left-1/2 -translate-x-1/2 z-20 pointer-events-none select-none">
         <p className="text-[9px] text-gray-400/35 dark:text-gray-500/35 tracking-wider">

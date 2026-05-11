@@ -1,6 +1,8 @@
 'use client';
 
 import { memo, useState } from 'react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import type { Message } from '@/types';
 import { UserAvatar } from './UserAvatar';
 import { useTypewriter } from '@/hooks/useTypewriter';
@@ -27,45 +29,98 @@ function stripForCopy(text: string): string {
     .trim();
 }
 
-type Segment = { type: 'text'; value: string } | { type: 'bold'; value: string } | { type: 'link'; text: string; url: string };
-
-function parseLine(line: string): Segment[] {
-  const pattern = /\[([^\]]+)\]\((https?:\/\/[^)]+)\)|\*\*([^*]+)\*\*|(https?:\/\/\S+)/g;
-  const segments: Segment[] = [];
-  let last = 0;
-  let match: RegExpExecArray | null;
-
-  while ((match = pattern.exec(line)) !== null) {
-    if (match.index > last) segments.push({ type: 'text', value: line.slice(last, match.index) });
-    if (match[1] && match[2]) {
-      segments.push({ type: 'link', text: match[1], url: match[2] });
-    } else if (match[3]) {
-      segments.push({ type: 'bold', value: match[3] });
-    } else if (match[4]) {
-      segments.push({ type: 'link', text: match[4], url: match[4] });
-    }
-    last = pattern.lastIndex;
-  }
-  if (last < line.length) segments.push({ type: 'text', value: line.slice(last) });
-  return segments;
-}
-
+/**
+ * Renderiza contenido del mensaje del asistente con Markdown completo.
+ * Soporta: bold, italic, listas (numeradas y bullet), tablas, code blocks,
+ * blockquotes, links. Todos los estilos siguen el brand Windmar.
+ *
+ * Usamos react-markdown + remark-gfm (GitHub Flavored Markdown para tablas).
+ * Plain text se renderiza igual; el componente es seguro (no acepta HTML raw).
+ */
 function renderContent(text: string) {
-  return text.split('\n').map((line, i, arr) => (
-    <span key={i}>
-      {parseLine(line).map((seg, j) => {
-        if (seg.type === 'bold') return <strong key={j} className="font-bold text-[#1B3A5C] dark:text-white">{seg.value}</strong>;
-        if (seg.type === 'link') return (
-          <a key={j} href={seg.url} target="_blank" rel="noopener noreferrer"
-            className="text-[#F7941D] dark:text-[#F7941D] underline font-semibold hover:text-[#e8830d] transition-colors">
-            {seg.text}
+  return (
+    <ReactMarkdown
+      remarkPlugins={[remarkGfm]}
+      components={{
+        // Negritas — color brand azul, peso fuerte
+        strong: ({ children }) => (
+          <strong className="font-bold text-[#1B3A5C] dark:text-white">{children}</strong>
+        ),
+        // Itálicas — sutiles, mismo color del cuerpo
+        em: ({ children }) => <em className="italic text-gray-700 dark:text-gray-300">{children}</em>,
+        // Enlaces — naranja brand, clicables, abren en nueva pestaña
+        a: ({ href, children }) => (
+          <a
+            href={href}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-[#F7941D] dark:text-[#F7941D] underline font-semibold hover:text-[#e8830d] transition-colors"
+          >
+            {children}
           </a>
-        );
-        return <span key={j}>{seg.value}</span>;
-      })}
-      {i < arr.length - 1 && '\n'}
-    </span>
-  ));
+        ),
+        // Listas con bullets — spacing cómodo, padding izquierdo claro
+        ul: ({ children }) => <ul className="list-disc list-outside pl-6 my-2 space-y-1">{children}</ul>,
+        // Listas numeradas — mismo styling
+        ol: ({ children }) => <ol className="list-decimal list-outside pl-6 my-2 space-y-1">{children}</ol>,
+        li: ({ children }) => <li className="leading-relaxed">{children}</li>,
+        // Code inline — fondo gris, monospace, padding pequeño
+        code: ({ children, className }) => {
+          const isInline = !className;
+          if (isInline) {
+            return (
+              <code className="bg-gray-100 dark:bg-gray-800 text-[#1B3A5C] dark:text-orange-300 px-1.5 py-0.5 rounded text-[0.9em] font-mono">
+                {children}
+              </code>
+            );
+          }
+          // Code block — pre lo maneja, solo retornamos el code styled
+          return <code className={`${className} font-mono text-sm`}>{children}</code>;
+        },
+        // Code block container — fondo gris oscuro, scroll horizontal si largo
+        pre: ({ children }) => (
+          <pre className="bg-gray-100 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg p-3 my-3 overflow-x-auto text-sm">
+            {children}
+          </pre>
+        ),
+        // Blockquote — barra naranja brand a la izquierda
+        blockquote: ({ children }) => (
+          <blockquote className="border-l-4 border-[#F7941D] pl-4 my-3 italic text-gray-600 dark:text-gray-300">
+            {children}
+          </blockquote>
+        ),
+        // Tablas (vía remark-gfm) — bordes sutiles, header destacado
+        table: ({ children }) => (
+          <div className="my-3 overflow-x-auto">
+            <table className="min-w-full border-collapse border border-gray-200 dark:border-gray-700 text-sm">
+              {children}
+            </table>
+          </div>
+        ),
+        thead: ({ children }) => (
+          <thead className="bg-gray-50 dark:bg-gray-800">{children}</thead>
+        ),
+        th: ({ children }) => (
+          <th className="border border-gray-200 dark:border-gray-700 px-3 py-2 text-left font-semibold text-[#1B3A5C] dark:text-white">
+            {children}
+          </th>
+        ),
+        td: ({ children }) => (
+          <td className="border border-gray-200 dark:border-gray-700 px-3 py-2">{children}</td>
+        ),
+        // Headers — sutiles, no gigantes (el prompt los prohíbe pero por si llegan)
+        h1: ({ children }) => <h1 className="text-lg font-bold text-[#1B3A5C] dark:text-white mt-3 mb-1">{children}</h1>,
+        h2: ({ children }) => <h2 className="text-base font-bold text-[#1B3A5C] dark:text-white mt-3 mb-1">{children}</h2>,
+        h3: ({ children }) => <h3 className="text-sm font-bold text-[#1B3A5C] dark:text-white mt-2 mb-1">{children}</h3>,
+        // Separador horizontal — sutil, gris (el prompt los prohíbe pero por si llegan)
+        hr: () => <hr className="my-3 border-gray-200 dark:border-gray-700" />,
+        // Párrafo — sin margin top exagerado (se ve mejor en chat)
+        p: ({ children }) => <p className="my-1 leading-relaxed">{children}</p>,
+      }}
+    >
+      {text}
+    </ReactMarkdown>
+  );
 }
 
 function IAAvatar({ isStreaming, isError }: { isStreaming?: boolean; isError?: boolean }) {
@@ -164,7 +219,7 @@ function ChatMessageImpl({
     <div className="flex justify-start gap-3 mb-8">
       <IAAvatar isStreaming={isStreaming} isError={isErrorMessage} />
       <div className="flex flex-col items-start min-w-0 flex-1 pt-1.5">
-        <div className="text-[15px] sm:text-[15.5px] text-gray-800 dark:text-gray-100 whitespace-pre-wrap leading-relaxed w-full">
+        <div className="text-[15px] sm:text-[15.5px] text-gray-800 dark:text-gray-100 leading-relaxed w-full break-words">
           {showSkeleton ? (
             <span className="inline-flex items-center gap-1.5 py-1" aria-label="Generando respuesta">
               <span className="w-2 h-2 rounded-full bg-[#F7941D]" style={{ animation: 'wmDotBounce 1.2s ease-in-out 0s infinite' }} />
