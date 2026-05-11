@@ -41,11 +41,21 @@ export default async function AdminLayout({ children }: { children: React.ReactN
       <header className="bg-[#0f1c2e] dark:bg-[#0a1422] border-b border-slate-700/50 text-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-lg bg-[#F7941D]/20 border border-[#F7941D]/40 flex items-center justify-center">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#F7941D" strokeWidth="2" strokeLinecap="round">
-                <path d="M3 3v18h18"/>
-                <path d="m19 9-5 5-4-4-3 3"/>
-              </svg>
+            {/* SUN BOT con halo brand — preserva la esencia Windmar en el panel admin */}
+            <div className="relative flex items-center justify-center flex-shrink-0" style={{ width: 44, height: 44 }}>
+              <div
+                className="absolute inset-0 rounded-full"
+                style={{
+                  background: 'radial-gradient(circle, rgba(247,148,29,0.5) 0%, rgba(247,148,29,0.15) 50%, transparent 75%)',
+                  filter: 'blur(8px)',
+                }}
+              />
+              <img
+                src="/sunbot-feliz.png"
+                alt="SUN BOT — Windmar AI"
+                className="mascot-img relative z-10 w-11 h-11 object-contain"
+                style={{ imageRendering: 'pixelated' }}
+              />
             </div>
             <div>
               <h1 className="text-lg font-bold tracking-tight">Windmar AI · Analytics</h1>

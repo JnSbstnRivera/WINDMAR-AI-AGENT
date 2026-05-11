@@ -6,6 +6,7 @@ import { UsageChart } from './UsageChart';
 import { QualityDonut } from './QualityDonut';
 import { TopAsesoresTable } from './TopAsesoresTable';
 import { DownvotesTable } from './DownvotesTable';
+import { ConversationsList } from './ConversationsList';
 
 type Period = 'today' | 'week' | 'month' | 'all';
 
@@ -41,11 +42,25 @@ interface DownvoteRow {
   created_at: string;
 }
 
+interface ConvRow {
+  conv_id: string;
+  user_email: string;
+  display_name: string | null;
+  departamento: string | null;
+  rol: string | null;
+  title: string;
+  total_messages: number;
+  first_user_message: string | null;
+  last_message_at: string;
+  created_at: string;
+}
+
 interface InitialData {
   kpis: Kpis;
   usage: UsageDay[];
   topAsesores: AsesorRow[];
   downvotes: DownvoteRow[];
+  conversations: ConvRow[];
 }
 
 interface Props {
@@ -208,6 +223,9 @@ export function AdminDashboard({ initialPeriod, initial }: Props) {
         <TopAsesoresTable data={data.topAsesores} />
         <DownvotesTable data={data.downvotes} />
       </div>
+
+      {/* Lista de conversaciones recientes (auditoría completa) */}
+      <ConversationsList data={data.conversations} />
     </div>
   );
 }

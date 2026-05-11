@@ -10,12 +10,13 @@ type Period = 'today' | 'week' | 'month' | 'all';
 async function loadMetrics(period: Period) {
   const supabase = getSupabaseAdmin();
 
-  // Ejecutamos las 4 queries en paralelo para minimizar latencia
-  const [kpisRes, usageRes, topRes, downvotesRes] = await Promise.all([
+  // Ejecutamos las 5 queries en paralelo para minimizar latencia
+  const [kpisRes, usageRes, topRes, downvotesRes, convsRes] = await Promise.all([
     supabase.rpc('admin_metrics_kpis', { period }),
     supabase.rpc('admin_usage_by_day'),
     supabase.rpc('admin_top_asesores', { period, max_rows: 10 }),
     supabase.rpc('admin_recent_downvotes', { max_rows: 20 }),
+    supabase.rpc('admin_recent_conversations', { max_rows: 30 }),
   ]);
 
   return {
@@ -30,6 +31,7 @@ async function loadMetrics(period: Period) {
     usage: usageRes.data ?? [],
     topAsesores: topRes.data ?? [],
     downvotes: downvotesRes.data ?? [],
+    conversations: convsRes.data ?? [],
   };
 }
 

@@ -31,11 +31,12 @@ export async function GET(req: Request) {
 
   const supabase = getSupabaseAdmin();
 
-  const [kpisRes, usageRes, topRes, downvotesRes] = await Promise.all([
+  const [kpisRes, usageRes, topRes, downvotesRes, convsRes] = await Promise.all([
     supabase.rpc('admin_metrics_kpis', { period }),
     supabase.rpc('admin_usage_by_day'),
     supabase.rpc('admin_top_asesores', { period, max_rows: 10 }),
     supabase.rpc('admin_recent_downvotes', { max_rows: 20 }),
+    supabase.rpc('admin_recent_conversations', { max_rows: 30 }),
   ]);
 
   return Response.json({
@@ -50,5 +51,6 @@ export async function GET(req: Request) {
     usage: usageRes.data ?? [],
     topAsesores: topRes.data ?? [],
     downvotes: downvotesRes.data ?? [],
+    conversations: convsRes.data ?? [],
   });
 }
