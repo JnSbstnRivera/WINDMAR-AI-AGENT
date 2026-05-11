@@ -235,23 +235,46 @@ export function ChatApp({ user, onSignOut }: Props) {
       const decoder = new TextDecoder();
       let fullText = '';
 
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        fullText += decoder.decode(value, { stream: true });
+      // Coalescer chunks con requestAnimationFrame para evitar render storm.
+      // Antes: cada chunk (~15/seg) hacía setConversations → re-render pesado del árbol.
+      // Ahora: acumulamos en fullText y solo hacemos setState cuando el navegador
+      // está listo para pintar (~60 fps, pero React colapsa updates si llegan más rápido).
+      // Resultado: streaming fluido tipo ChatGPT en lugar de tartamudeante.
+      let rafScheduled = false;
+      let pendingText = '';
+
+      const flushUpdate = () => {
+        rafScheduled = false;
+        const textSnapshot = pendingText;
         setConversations((prev) =>
           prev.map((c) =>
             c.id === convId
               ? {
                   ...c,
                   messages: c.messages.map((m) =>
-                    m.id === assistantMsgId ? { ...m, content: fullText } : m
+                    m.id === assistantMsgId ? { ...m, content: textSnapshot } : m
                   ),
                 }
               : c
           )
         );
+      };
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        fullText += decoder.decode(value, { stream: true });
+        pendingText = fullText;
+        if (!rafScheduled) {
+          rafScheduled = true;
+          requestAnimationFrame(flushUpdate);
+        }
       }
+
+      // Flush final garantizado: el último chunk SIEMPRE se renderiza,
+      // aunque el rAF anterior aún no haya disparado.
+      pendingText = fullText;
+      flushUpdate();
 
       // Guardar respuesta del asistente
       await fetch('/api/messages', {

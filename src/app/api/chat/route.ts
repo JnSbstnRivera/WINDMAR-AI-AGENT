@@ -261,10 +261,17 @@ ${useWebSearch ? '- ⚠️ WEB SEARCH ACTIVADO: el asesor usó una palabra clave
       },
     });
 
+    // Headers críticos para que el streaming NO sea bufferreado por Vercel/CDN/navegador.
+    // - X-Accel-Buffering: no  → desactiva buffering de Nginx (Vercel lo respeta)
+    // - Cache-Control: no-transform → prevent que algún proxy comprima/junte chunks
+    // - Connection: keep-alive → mantiene la conexión abierta para chunks pequeños
     return new Response(readable, {
       headers: {
         'Content-Type': 'text/plain; charset=utf-8',
-        'Cache-Control': 'no-cache',
+        'Cache-Control': 'no-cache, no-transform',
+        'Connection': 'keep-alive',
+        'X-Accel-Buffering': 'no',
+        'Transfer-Encoding': 'chunked',
       },
     });
   } catch (error: unknown) {
