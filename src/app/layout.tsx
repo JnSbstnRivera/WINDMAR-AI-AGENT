@@ -1,7 +1,17 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import { Providers } from '@/components/Providers';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
+
+// viewport-fit=cover habilita el uso de env(safe-area-inset-*) en CSS
+// para que el contenido respete el notch del iPhone y la home indicator.
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  viewportFit: 'cover',
+  // Mantener el theme color brand (azul Windmar) en la barra del navegador
+  themeColor: '#1B3A5C',
+};
 
 const SITE_URL = 'https://windmar-ai-agent.vercel.app';
 const TITLE = 'Agente Windmar Home AI';

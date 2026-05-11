@@ -11,6 +11,7 @@ interface Props {
   userDisplayName?: string;
   userPhotoUrl?: string | null;
   onRegenerate?: () => void;
+  conversationId?: string | null;
 }
 
 export function ChatWindow({
@@ -20,6 +21,7 @@ export function ChatWindow({
   userDisplayName,
   userPhotoUrl,
   onRegenerate,
+  conversationId,
 }: Props) {
   const bottomRef = useRef<HTMLDivElement>(null);
   const lastScrollRef = useRef<number>(0);
@@ -64,6 +66,7 @@ export function ChatWindow({
               }
               showRegenerate={isLastAssistant}
               onRegenerate={isLastAssistant ? onRegenerate : undefined}
+              conversationId={conversationId}
             />
           );
         })}

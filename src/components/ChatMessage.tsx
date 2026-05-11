@@ -16,6 +16,8 @@ interface Props {
   /** Si true Y este mensaje es del asistente, muestra botón "Regenerar" */
   showRegenerate?: boolean;
   onRegenerate?: () => void;
+  /** ID de la conversación (necesario para guardar feedback) */
+  conversationId?: string | null;
 }
 
 function stripForCopy(text: string): string {
@@ -167,9 +169,55 @@ function ChatMessageImpl({
   asesorPhotoUrl,
   showRegenerate,
   onRegenerate,
+  conversationId,
 }: Props) {
   const [copied, setCopied] = useState(false);
+  // Feedback state: null = no votado, 'up'/'down' = ya votó.
+  // Una vez votado, los botones quedan deshabilitados y solo se ve el que eligió.
+  const [feedback, setFeedback] = useState<'up' | 'down' | null>(null);
+  const [showReasonInput, setShowReasonInput] = useState(false);
+  const [reasonText, setReasonText] = useState('');
   const isUser = message.role === 'user';
+
+  async function submitFeedback(rating: 'up' | 'down', reason?: string) {
+    if (!conversationId) return;
+    setFeedback(rating);
+    // Best-effort — no bloqueamos UI si falla
+    try {
+      await fetch('/api/feedback', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          conversation_id: conversationId,
+          message_content: message.content,
+          rating,
+          reason: reason?.trim() || undefined,
+        }),
+      });
+    } catch {
+      /* feedback es best-effort */
+    }
+  }
+
+  function handleThumbUp() {
+    if (feedback !== null) return;
+    submitFeedback('up');
+  }
+
+  function handleThumbDown() {
+    if (feedback !== null) return;
+    setShowReasonInput(true);
+  }
+
+  function submitReason() {
+    submitFeedback('down', reasonText);
+    setShowReasonInput(false);
+  }
+
+  function skipReason() {
+    submitFeedback('down');
+    setShowReasonInput(false);
+  }
 
   async function handleCopy() {
     await navigator.clipboard.writeText(stripForCopy(message.content));
@@ -179,7 +227,7 @@ function ChatMessageImpl({
 
   if (isUser) {
     return (
-      <div className="flex justify-end gap-3 mb-6">
+      <div className="flex justify-end gap-3 mb-6 wm-fade-in">
         <div className="flex flex-col items-end max-w-[85%] sm:max-w-[80%]">
           <div
             className="text-white rounded-2xl px-5 sm:px-6 py-4 text-[15px] leading-relaxed"
@@ -216,7 +264,7 @@ function ChatMessageImpl({
   const showSkeleton = isStreaming && cleanContent.length === 0;
 
   return (
-    <div className="flex justify-start gap-3 mb-8">
+    <div className="flex justify-start gap-3 mb-8 wm-fade-in">
       <IAAvatar isStreaming={isStreaming} isError={isErrorMessage} />
       <div className="flex flex-col items-start min-w-0 flex-1 pt-1.5">
         <div className="text-[15px] sm:text-[15.5px] text-gray-800 dark:text-gray-100 leading-relaxed w-full break-words">
@@ -243,10 +291,11 @@ function ChatMessageImpl({
         </div>
 
         {!isStreaming && message.content && (
-          <div className="mt-3 flex items-center gap-4">
+          <div className="mt-3 flex items-center gap-4 flex-wrap">
             <button
               onClick={handleCopy}
               className="text-xs text-gray-400 hover:text-[#F7941D] dark:hover:text-[#F7941D] transition-colors flex items-center gap-1 cursor-pointer"
+              title="Copiar respuesta limpia (sin emojis ni markdown)"
             >
               {copied ? '✓ Copiado' : '⎘ Copiar para WhatsApp'}
             </button>
@@ -264,6 +313,81 @@ function ChatMessageImpl({
                 <span>Regenerar</span>
               </button>
             )}
+            {/* Botones de feedback (👍/👎). Solo visibles si tenemos conversationId */}
+            {conversationId && (
+              <div className="flex items-center gap-2 ml-auto">
+                {feedback === null ? (
+                  <>
+                    <button
+                      onClick={handleThumbUp}
+                      className="text-gray-400 hover:text-green-500 transition-colors p-1 rounded cursor-pointer"
+                      title="Respuesta útil"
+                      aria-label="Marcar como útil"
+                    >
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M7 10v12"/>
+                        <path d="M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H7"/>
+                      </svg>
+                    </button>
+                    <button
+                      onClick={handleThumbDown}
+                      className="text-gray-400 hover:text-red-500 transition-colors p-1 rounded cursor-pointer"
+                      title="Respuesta no útil"
+                      aria-label="Marcar como no útil"
+                    >
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M17 14V2"/>
+                        <path d="M9 18.12 10 14H4.17a2 2 0 0 1-1.92-2.56l2.33-8A2 2 0 0 1 6.5 2H17"/>
+                      </svg>
+                    </button>
+                  </>
+                ) : feedback === 'up' ? (
+                  <span className="text-green-500 text-xs flex items-center gap-1" title="Marcaste esta respuesta como útil">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M7 10v12h11.5a2 2 0 0 0 1.92-1.44l2.33-8A2 2 0 0 0 20.83 10H15l1-4.12A2.5 2.5 0 0 0 13.58 3L7 10z"/>
+                    </svg>
+                    <span>Gracias</span>
+                  </span>
+                ) : (
+                  <span className="text-red-500 text-xs flex items-center gap-1" title="Marcaste esta respuesta como no útil">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M17 14V2H5.5a2 2 0 0 0-1.92 1.44l-2.33 8A2 2 0 0 0 3.17 14H9l-1 4.12A2.5 2.5 0 0 0 10.42 21L17 14z"/>
+                    </svg>
+                    <span>Anotado</span>
+                  </span>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Mini-form opcional para razón del downvote */}
+        {showReasonInput && (
+          <div className="mt-3 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+            <p className="text-xs text-red-800 dark:text-red-200 font-medium mb-2">
+              ¿Qué falló? (opcional — nos ayuda a mejorar)
+            </p>
+            <textarea
+              value={reasonText}
+              onChange={(e) => setReasonText(e.target.value.slice(0, 500))}
+              placeholder="Ej: dato incorrecto, no respondió, formato confuso..."
+              rows={2}
+              className="w-full text-sm bg-white dark:bg-gray-800 border border-red-200 dark:border-red-800 rounded p-2 text-gray-800 dark:text-gray-100 focus:outline-none focus:border-red-400"
+            />
+            <div className="flex gap-2 mt-2">
+              <button
+                onClick={submitReason}
+                className="text-xs bg-red-500 hover:bg-red-600 text-white px-3 py-1.5 rounded font-medium transition-colors cursor-pointer"
+              >
+                Enviar
+              </button>
+              <button
+                onClick={skipReason}
+                className="text-xs text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 px-3 py-1.5 transition-colors cursor-pointer"
+              >
+                Omitir
+              </button>
+            </div>
           </div>
         )}
       </div>
@@ -287,7 +411,8 @@ export const ChatMessage = memo(ChatMessageImpl, (prev, next) => {
     prev.asesorEmail === next.asesorEmail &&
     prev.asesorDisplayName === next.asesorDisplayName &&
     prev.asesorPhotoUrl === next.asesorPhotoUrl &&
-    prev.showRegenerate === next.showRegenerate
+    prev.showRegenerate === next.showRegenerate &&
+    prev.conversationId === next.conversationId
     // onRegenerate intencionalmente excluido — la prop cambia en cada render
     // del padre pero apunta a la misma lógica. No re-rendereamos por eso.
   );

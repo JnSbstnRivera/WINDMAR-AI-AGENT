@@ -613,6 +613,7 @@ export function ChatApp({ user, onSignOut }: Props) {
               userDisplayName={user.displayName ?? undefined}
               userPhotoUrl={user.photoUrl ?? null}
               onRegenerate={regenerateLastResponse}
+              conversationId={activeId}
             />
             <ChatInput
               onSend={sendMessage}

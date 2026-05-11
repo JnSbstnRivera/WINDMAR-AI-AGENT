@@ -32,3 +32,39 @@ body {
 .dark .mascot-img {
   filter: brightness(1.05) drop-shadow(0 0 10px rgba(255, 255, 255, 0.2));
 }
+
+/* ════════════════════════════════════════
+   Safe areas para mobile (iPhone notch, Android navbar)
+   ════════════════════════════════════════ */
+/* Padding bottom dinámico que respeta la safe area del dispositivo */
+.safe-bottom {
+  padding-bottom: max(1rem, env(safe-area-inset-bottom));
+}
+
+/* En mobile, asegurar que el viewport NO se reduzca cuando aparece el teclado.
+   Usa dvh (dynamic viewport height) en navegadores modernos como fallback de h-screen */
+@supports (height: 100dvh) {
+  .h-mobile-screen {
+    height: 100dvh;
+  }
+}
+@supports not (height: 100dvh) {
+  .h-mobile-screen {
+    height: 100vh;
+  }
+}
+
+/* Animación de entrada para mensajes nuevos */
+@keyframes wmFadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.wm-fade-in {
+  animation: wmFadeInUp 0.3s ease-out;
+}

@@ -39,8 +39,19 @@ export function ChatInput({ onSend, disabled, onTypingChange, isStreaming, onSto
     el.style.height = Math.min(el.scrollHeight, 140) + 'px';
   }
 
+  function handleFocus() {
+    setFocused(true);
+    // En mobile, cuando aparece el teclado el viewport se achica.
+    // Aseguramos que el input quede visible scrolleando hacia él con un pequeño delay.
+    if (typeof window !== 'undefined' && window.innerWidth < 768) {
+      setTimeout(() => {
+        textareaRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }, 300); // ~tiempo de animación del teclado
+    }
+  }
+
   return (
-    <div className="px-4 py-4">
+    <div className="px-4 py-4 safe-bottom">
       <div className="max-w-3xl mx-auto">
         <div
           className="relative rounded-2xl transition-all duration-300"
@@ -74,7 +85,7 @@ export function ChatInput({ onSend, disabled, onTypingChange, isStreaming, onSto
               }}
               onKeyDown={handleKeyDown}
               onInput={handleInput}
-              onFocus={() => setFocused(true)}
+              onFocus={handleFocus}
               onBlur={() => setFocused(false)}
               disabled={disabled}
               placeholder="Pregúntame lo que necesites..."
