@@ -22,15 +22,72 @@ const TOOLS = [
   { id: 'panel-general', name: 'Panel de Herramientas', url: 'https://panel-de-herramientas-call-center.vercel.app/', whenToUse: 'Acceso rápido a todas las herramientas.', triggers: ['panel','herramientas'] },
 ];
 
-function buildToolsContext(message: string): string {
+// ════════════════════════════════════════
+// DETECCIÓN DE TÓPICO de la conversación (para routing contextual)
+// ════════════════════════════════════════
+// Si los últimos N mensajes son sobre Roofing/Water/Solar/etc., damos
+// preferencia al cotizador correcto Y excluimos los que NO aplican.
+// Esto resuelve el bug de "habla de Roofing y le recomienda Cotizador Loan".
+type Topic = 'roofing' | 'water' | 'solar' | 'anker' | 'general';
+
+const TOPIC_KEYWORDS: Record<Exclude<Topic, 'general'>, string[]> = {
+  roofing: ['roofing','techo','sellado','sello','gotera','roof','silver','gold','platinum','sqft','pies cuadrados','reparar techo','reparación de techo'],
+  water:   ['agua','filtro','filtración','purificación','calentador','soltek','cisterna','ecowater','hércules','reverse osmosis','poe','water care'],
+  solar:   ['solar','placa','placas','panel','paneles','kwh','luma','factura','powerwall','batería','baterías','tesla','qcell','itc','lease','loan','enfin','lightreach','sunnova'],
+  anker:   ['anker','solix','f2600','f3800','bp2600','c300','power station','portátil','huracán','apagón','blackout'],
+};
+
+function detectTopic(message: string, history: Array<{ role: string; content: string }>): Topic {
+  // Concatenamos el mensaje actual + últimos 6 turnos para análisis de contexto
+  const recent = history.slice(-6).map(h => h.content).join(' ');
+  const combined = (message + ' ' + recent).toLowerCase();
+
+  const scores: Record<Exclude<Topic, 'general'>, number> = {
+    roofing: 0, water: 0, solar: 0, anker: 0,
+  };
+  for (const [topic, keywords] of Object.entries(TOPIC_KEYWORDS) as Array<[Exclude<Topic, 'general'>, string[]]>) {
+    for (const kw of keywords) {
+      // Conteo simple de menciones — más menciones = más relevante
+      const matches = combined.split(kw).length - 1;
+      scores[topic] += matches;
+    }
+  }
+
+  const max = Math.max(...Object.values(scores));
+  if (max < 2) return 'general'; // muy poca señal → no filtramos
+
+  // Devuelve el topic con score máximo (tiebreak: roofing > water > anker > solar)
+  const order: Array<Exclude<Topic, 'general'>> = ['roofing', 'water', 'anker', 'solar'];
+  return order.find(t => scores[t] === max) ?? 'general';
+}
+
+function buildToolsContext(message: string, history: Array<{ role: string; content: string }>): string {
   const lower = message.toLowerCase();
   const matched = TOOLS.filter(t => t.triggers.some(tr => lower.includes(tr)));
-  if (matched.length >= 2) {
-    const pc = TOOLS.find(t => t.id === 'proyecto-completo');
-    if (pc && !matched.includes(pc)) matched.push(pc);
+
+  // Detección de tópico: si la conversación es claramente sobre Roofing/Water/etc.,
+  // EXCLUIMOS herramientas que no aplican (ej: Cotizador Loan en conversación Roofing).
+  const topic = detectTopic(message, history);
+  let filtered = matched;
+  if (topic === 'roofing') {
+    // Roofing standalone NO usa Cotizador Loan ni Lease (esos son para solar).
+    // Si el mensaje mencionó "financiamiento" sin "solar", igual lo excluimos.
+    filtered = matched.filter(t => t.id !== 'cotizador-loan' && t.id !== 'cotizador-lease');
+    // Y aseguramos que Roofing Pro esté presente
+    const rp = TOOLS.find(t => t.id === 'cotizador-roofing');
+    if (rp && !filtered.includes(rp)) filtered.unshift(rp);
+  } else if (topic === 'water') {
+    // Agua no se financia — solo cash. Excluimos Loan/Lease.
+    filtered = matched.filter(t => t.id !== 'cotizador-loan' && t.id !== 'cotizador-lease');
   }
-  const relevant = matched.length ? matched : [TOOLS.find(t => t.id === 'panel-general')!];
-  return `HERRAMIENTAS RELEVANTES:\n${relevant.map(t => `• ${t.name}: ${t.url}\n  Usar cuando: ${t.whenToUse}`).join('\n\n')}`;
+
+  if (filtered.length >= 2) {
+    const pc = TOOLS.find(t => t.id === 'proyecto-completo');
+    if (pc && !filtered.includes(pc)) filtered.push(pc);
+  }
+  const relevant = filtered.length ? filtered : [TOOLS.find(t => t.id === 'panel-general')!];
+  const topicLabel = topic === 'general' ? '' : `\n[TÓPICO DETECTADO: ${topic.toUpperCase()} — usa SOLO las herramientas listadas abajo]`;
+  return `HERRAMIENTAS RELEVANTES:${topicLabel}\n${relevant.map(t => `• ${t.name}: ${t.url}\n  Usar cuando: ${t.whenToUse}`).join('\n\n')}`;
 }
 
 // Stop words en español para extracción de keywords del knowledge base
@@ -254,7 +311,7 @@ ${rol ? `- Rol: ${rol}` : ''}
 ${useWebSearch ? '- ⚠️ WEB SEARCH ACTIVADO: el asesor usó una palabra clave de búsqueda en internet. Cuando uses información de internet, indícalo claramente con 🌐 al inicio y cita la fuente.' : ''}`;
 
     // 6. Mensajes (history + user message con contexto inyectado)
-    const userContent = `${asesorContext}\n\n---\n\n${buildToolsContext(message)}\n\n---\n\nCONTEXTO KNOWLEDGE BASE:\n${knowledgeContext}\n\n---\n\nPREGUNTA: ${message}`;
+    const userContent = `${asesorContext}\n\n---\n\n${buildToolsContext(message, history)}\n\n---\n\nCONTEXTO KNOWLEDGE BASE:\n${knowledgeContext}\n\n---\n\nPREGUNTA: ${message}`;
 
     const messages: Anthropic.MessageParam[] = [
       ...history.slice(-8).map(h => ({
