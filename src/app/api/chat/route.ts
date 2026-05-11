@@ -229,6 +229,14 @@ ${useWebSearch ? '- ⚠️ WEB SEARCH ACTIVADO: el asesor usó una palabra clave
     });
 
     // 8. Stream text deltas al cliente (formato plano, mismo contrato que tenía Groq)
+    // Métricas de timing para diagnosticar pausas: TTFT, throughput, gaps entre chunks.
+    const requestStart = Date.now();
+    let firstChunkAt = 0;
+    let lastChunkAt = 0;
+    let chunkCount = 0;
+    let totalChars = 0;
+    let maxGap = 0;
+
     const readable = new ReadableStream({
       async start(controller) {
         const encoder = new TextEncoder();
@@ -236,20 +244,39 @@ ${useWebSearch ? '- ⚠️ WEB SEARCH ACTIVADO: el asesor usó una palabra clave
           for await (const event of stream) {
             if (event.type === 'content_block_delta') {
               if (event.delta.type === 'text_delta') {
+                const now = Date.now();
+                if (firstChunkAt === 0) firstChunkAt = now;
+                else {
+                  const gap = now - lastChunkAt;
+                  if (gap > maxGap) maxGap = gap;
+                }
+                lastChunkAt = now;
+                chunkCount++;
+                totalChars += event.delta.text.length;
                 controller.enqueue(encoder.encode(event.delta.text));
               }
             }
           }
 
-          // Log de uso para monitoreo (cache hits, costo)
+          // Log de uso para monitoreo (cache hits, costo) + métricas de timing
           const finalMessage = await stream.finalMessage();
-          console.log('[chat/haiku] usage:', JSON.stringify({
+          const ttftMs = firstChunkAt - requestStart;
+          const totalMs = lastChunkAt - requestStart;
+          const throughputCps = totalMs > 0 ? Math.round((totalChars / totalMs) * 1000) : 0;
+
+          console.log('[chat/haiku] usage+timing:', JSON.stringify({
             input: finalMessage.usage.input_tokens,
             output: finalMessage.usage.output_tokens,
             cache_create: finalMessage.usage.cache_creation_input_tokens,
             cache_read: finalMessage.usage.cache_read_input_tokens,
             web_search: useWebSearch,
             user: email,
+            ttft_ms: ttftMs,       // Time to first token (debe ser <500ms ideal)
+            total_ms: totalMs,     // Tiempo total del stream
+            chunks: chunkCount,    // Número de text_deltas recibidos
+            chars: totalChars,
+            throughput_cps: throughputCps, // Chars/seg (Haiku ideal: ~600-800)
+            max_gap_ms: maxGap,    // Mayor pausa entre chunks (si >300ms hay throttling)
           }));
         } catch (err) {
           const msg = err instanceof Error ? err.message : 'Error interno';

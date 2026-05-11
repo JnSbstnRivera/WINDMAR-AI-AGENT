@@ -3,6 +3,7 @@
 import { memo, useState } from 'react';
 import type { Message } from '@/types';
 import { UserAvatar } from './UserAvatar';
+import { useTypewriter } from '@/hooks/useTypewriter';
 
 interface Props {
   message: Message;
@@ -141,7 +142,13 @@ function ChatMessageImpl({
   }
 
   const isErrorMessage = message.content.includes('[ERROR_TYPE:');
-  const displayContent = message.content.replace(/\n*\[ERROR_TYPE:[^\]]+\]/g, '');
+  const cleanContent = message.content.replace(/\n*\[ERROR_TYPE:[^\]]+\]/g, '');
+
+  // Typewriter effect: durante streaming, mostramos el texto carácter por carácter
+  // a velocidad uniforme adaptativa. Aunque Anthropic mande chunks en bloques
+  // grandes (típico cuando hay throttling de TPM), el usuario percibe flujo CONSTANTE.
+  const typedContent = useTypewriter(cleanContent, !!isStreaming);
+  const displayContent = isStreaming ? typedContent : cleanContent;
 
   return (
     <div className="flex justify-start gap-3 mb-8">
