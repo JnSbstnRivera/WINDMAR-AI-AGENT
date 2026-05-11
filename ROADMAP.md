@@ -1,7 +1,7 @@
 # 🗺️ Roadmap Visual — WINDMAR AI AGENT
 
-> Mapa conceptual del proyecto. **Última actualización: 11 mayo 2026 (v3)**
-> Estado: **🟢 EN PRODUCCIÓN — Uso activo + Panel admin operativo**
+> Mapa conceptual del proyecto. **Última actualización: 11 mayo 2026 (v4)**
+> Estado: **🟢 EN PRODUCCIÓN — Uso activo + Panel admin operativo + 5 admins**
 
 ---
 
@@ -33,10 +33,7 @@ flowchart TD
     Now --> N1[Validación con asesores reales]
     Now --> N2[Recolección feedback en /admin]
 
-    Next --> X1[📸 Vision: factura LUMA]
-    Next --> X2[📊 Gráficos ROI]
-    Next --> X3[🗺️ Maps + direcciones]
-    Next --> X4[🔌 Integración Zoho]
+    Next --> X1[A definir según feedback]
 
     style Root fill:#1B3A5C,color:#fff
     style Done fill:#22c55e,color:#fff
@@ -60,9 +57,6 @@ flowchart TD
     style N1 fill:#fef3c7,color:#92400e
     style N2 fill:#fef3c7,color:#92400e
     style X1 fill:#ede9fe,color:#5b21b6
-    style X2 fill:#ede9fe,color:#5b21b6
-    style X3 fill:#ede9fe,color:#5b21b6
-    style X4 fill:#ede9fe,color:#5b21b6
 ```
 
 ---
@@ -82,9 +76,8 @@ flowchart TD
     J --> K[🟢 BLOQUE K<br/>Onboarding<br/>asesores nuevos<br/>✅]
     K --> L[🟢 BLOQUE L<br/>Polish + Dashboard<br/>11 mayo 2026<br/>✅]
     L --> E{🟡 BLOQUE E<br/>Validación con<br/>feedback real<br/>📍 AQUÍ}
-    E -->|Feedback OK| F[⏳ BLOQUE F<br/>Vision + Gráficos<br/>+ Maps]
+    E -->|Feedback OK| F[⏳ BLOQUE F<br/>Próximas capacidades<br/>a definir]
     F --> V1([🎯 v2.0 PRODUCCIÓN COMPLETA])
-    V1 --> G[🔮 BLOQUE G<br/>Integraciones<br/>Zoho/Smartsheet]
 
     style A fill:#22c55e,color:#fff
     style B fill:#22c55e,color:#fff
@@ -97,7 +90,6 @@ flowchart TD
     style L fill:#22c55e,color:#fff
     style E fill:#fbbf24,color:#000
     style F fill:#a78bfa,color:#fff
-    style G fill:#a78bfa,color:#fff
     style V1 fill:#f97316,color:#fff
     style Start fill:#1B3A5C,color:#fff
 ```
@@ -287,16 +279,10 @@ gantt
 
     section Fase 6 (Próximo)
     Validación con datos :active,  e1, 2026-05-12, 14d
-    Vision facturas LUMA :         f1, 2026-05-15, 1d
-    Gráficos ROI         :         f2, 2026-05-16, 1d
-    Maps + direcciones   :         f3, 2026-05-17, 1d
+    Capacidades a definir:         f1, 2026-05-15, 7d
 
     section Lanzamiento
     🎯 v2.0 Completa     :crit,    v1, 2026-05-23, 1d
-
-    section Fase 7 (Backlog)
-    Zoho integration     :         g1, 2026-06-01, 5d
-    Export PDF + emails  :         g2, 2026-06-08, 5d
 ```
 
 ---
@@ -331,7 +317,7 @@ gantt
 
 | Capacidad | Estado | Notas |
 |---|---|---|
-| 🔒 Allowlist por email | ✅ Live | 4 admins: juan.s, a.rengifo, jesus.castro, d.buitrago |
+| 🔒 Allowlist por email | ✅ Live | 5 admins: juan.s, a.rengifo, jesus.castro, d.buitrago, d.riano |
 | 📊 4 KPIs principales | ✅ Live | Mensajes, Asesores activos, Convs, Satisfacción |
 | 📈 Gráfica uso 7 días | ✅ Live | Line chart Recharts |
 | 🎯 Donut 👍 vs 👎 | ✅ Live | Con porcentaje central |
@@ -349,27 +335,25 @@ gantt
 
 ## 🎯 Próximas Capacidades
 
+> 📌 **Espacio reservado para definir en próximas sesiones.**
+>
+> Las próximas capacidades se irán definiendo con base en:
+> - Feedback real de los asesores recopilado desde `/admin` (👍/👎, comentarios)
+> - Feedback de los admins durante el uso del dashboard
+> - Necesidades operativas que surjan en la semana
+> - Decisiones del Project Manager según prioridades del negocio
+>
+> **Restricción permanente**: cualquier capacidad nueva NO debe estimar
+> precios. El bot solo da información — para números reales, dirige al
+> cotizador correspondiente.
+
 ### 🚀 Para asesores (chat principal)
 
-| # | Capacidad | Esfuerzo | Impacto | Caso de uso |
-|---|---|---|---|---|
-| 1 | 📸 **Vision** — factura LUMA | 1h | ⭐⭐⭐⭐⭐ | Asesor sube foto, bot extrae kWh + monto |
-| 2 | 📊 **Gráficos ROI** | 1h | ⭐⭐⭐⭐ | PNG de proyección 25 años para mandar al cliente |
-| 3 | 🗺️ **Maps/Direcciones** | 30min | ⭐⭐⭐⭐ | Link Google Maps showroom más cercano |
-| 4 | 📄 **PDF processing** | 30min | ⭐⭐⭐ | Subir contrato competencia, comparar |
-| 5 | 🧠 **Memory tool** | 2h | ⭐⭐⭐ | Recuerda datos persistentes del asesor |
-| 6 | 🔌 **Zoho integration** | 3h | ⭐⭐⭐ | Bot consulta CRM directo desde chat |
+_Pendiente de definir._
 
 ### 📊 Para admins (dashboard)
 
-| # | Capacidad | Esfuerzo | Impacto |
-|---|---|---|---|
-| A | 🐛 **Tabla de errores** (429, 500, abortados) | 30min | ⭐⭐⭐⭐ |
-| B | 🖼 **Modo presentación** (fullscreen, oculta filtros) | 30min | ⭐⭐⭐ |
-| C | 📸 **Export dashboard como PNG** | 1h | ⭐⭐⭐ |
-| D | 📑 **Export conversación a PDF** | 1h | ⭐⭐⭐ |
-| E | 🔔 **Email semanal a admins** con resumen | 2h | ⭐⭐⭐ |
-| F | 🏷 **Tags en conversaciones** (ejemplar, revisar) | 1.5h | ⭐⭐ |
+_Pendiente de definir._
 
 ---
 
@@ -457,7 +441,58 @@ Construcción del panel administrativo completo en `/admin`:
 - DB: PostgreSQL 17 con 13 funciones SQL custom y 215 entradas KB
 - Hosting: Vercel — 1 deploy unificado con admin protegido
 
-**Total del día: 17 commits, ~12 archivos nuevos, ~3,500 líneas de código.**
+**Tarde 6 — Ajustes finos del Dashboard + Soft Delete + Bug fix routing:**
+
+Tras compartir el dashboard con los primeros admins reales, se hicieron ajustes
+quirúrgicos basados en feedback directo y se cazaron bugs críticos del bot.
+
+🎨 **Dashboard tuning** (basado en feedback de uso real):
+- Default cambiado de "Hoy" → "Todo" para mostrar panorama histórico al abrir
+- Toolbar de filtros ahora STICKY con backdrop blur — siempre visible al hacer scroll
+- Indicador "live" verde pulsante al lado de la hora de última actualización
+- Removidas dos secciones por preferencia del admin: "Top palabras buscadas" y
+  "Esta semana vs anterior" (archivos y SQL conservados, fácil reactivar)
+- Vista de conversaciones colapsable con chevron animado
+- Buscador con lupa: filtra nombre/email/departamento/título en tiempo real
+- Badge con conteo dinámico "X de Y" cuando hay filtro activo
+- SUN BOT con halo brand en el header del dashboard (era SVG genérico)
+
+👥 **Admins expandidos** (5 totales, antes 1):
+- Refactor de `admin-auth.ts`: HARDCODED_ADMINS array que SE SUMA con env var
+  `ADMIN_EMAILS` (antes era fallback excluyente — más robusto)
+- Lista: juan.s, a.rengifo, jesus.castro, d.buitrago, d.riano
+
+🛡️ **Soft Delete de conversaciones** (problema crítico de auditoría):
+- Antes: si un asesor borraba sus chats, se perdían PERMANENTEMENTE — métricas
+  del dashboard se afectaban, feedback 👍/👎 se borraba, no había auditoría
+- Ahora: `ALTER TABLE conversations ADD COLUMN deleted_at TIMESTAMPTZ`
+- Endpoints DELETE → UPDATE con timestamp (no eliminan físicamente)
+- Chat del asesor filtra `WHERE deleted_at IS NULL` — no nota la diferencia
+- Dashboard admin MUESTRA TODO con badge `🗑 Eliminada` + tooltip con fecha exacta
+- Reversible: `UPDATE conversations SET deleted_at = NULL` restaura
+- `admin_recent_conversations` recreada con campos is_deleted + deleted_at
+
+🐛 **Bug crítico fix — Routing Roofing → Loan:**
+- Caso real detectado: en conversación de Roofing, el bot recomendaba Cotizador
+  Loan cuando el asesor preguntaba por "financiamiento" o "mensualidades"
+- Causa: `buildToolsContext()` solo leía el último mensaje, no el contexto
+- **Fix 1 (código)**: nueva función `detectTopic(message, history)` analiza
+  últimos 6 turnos. Si topic = "roofing" → EXCLUYE Cotizador Loan y Lease
+  automáticamente, prioriza Roofing Pro. Inyecta `[TÓPICO DETECTADO: ROOFING]`
+- **Fix 2 (prompt)**: SYSTEM_PROMPT v3.1 con sección "REGLAS DE ENRUTAMIENTO
+  CRÍTICAS" — 6 reglas explícitas (Loan/Lease = solo Solar)
+- **Fix 3 (KB)**: nueva entrada "Qué cotizador usar para cada producto — Guía
+  CRÍTICA anti-confusión" con mapping producto→cotizador
+
+📚 **Knowledge Base enriquecida** (de 215 → **217 entradas**):
+- "Roofing con placas solares ya instaladas — Retiro + reinstalación SIN COSTO
+  adicional" (entrada #216): aclara que cuando un cliente con placas existentes
+  hace Roofing, todo el proceso está incluido en la cotización
+- "Qué cotizador usar para cada producto — Guía CRÍTICA anti-confusión"
+  (entrada #217): mapping completo producto → cotizador correcto
+
+**Total del día: 21 commits, ~14 archivos nuevos, ~3,800 líneas de código, 13
+funciones SQL custom, 217 entradas KB, 5 admins en producción.**
 
 ---
 
