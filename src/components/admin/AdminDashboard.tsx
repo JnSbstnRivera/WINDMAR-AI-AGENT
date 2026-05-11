@@ -8,9 +8,10 @@ import { TopAsesoresTable } from './TopAsesoresTable';
 import { DownvotesTable } from './DownvotesTable';
 import { ConversationsList } from './ConversationsList';
 import { DepartmentChart } from './DepartmentChart';
-import { TopKeywords } from './TopKeywords';
-import { WeekComparison } from './WeekComparison';
 import { HourlyChart } from './HourlyChart';
+// NOTA: TopKeywords y WeekComparison fueron removidos del dashboard por preferencia
+// del admin. Los componentes y funciones SQL se conservan en el repo por si se
+// quieren reactivar en el futuro — solo hay que volver a importar y montar.
 
 type Period = 'today' | 'week' | 'month' | 'all';
 
@@ -65,23 +66,6 @@ interface DeptRow {
   active_users: number;
 }
 
-interface KeywordRow {
-  word: string;
-  frequency: number;
-}
-
-interface WeekCmp {
-  thisWeekMsgs: number;
-  lastWeekMsgs: number;
-  msgsChangePct: number | null;
-  thisWeekUsers: number;
-  lastWeekUsers: number;
-  usersChangePct: number | null;
-  thisWeekConvs: number;
-  lastWeekConvs: number;
-  convsChangePct: number | null;
-}
-
 interface HourRow {
   hour_pr: number;
   total_messages: number;
@@ -94,8 +78,6 @@ interface InitialData {
   downvotes: DownvoteRow[];
   conversations: ConvRow[];
   departments: DeptRow[];
-  keywords: KeywordRow[];
-  weekComparison: WeekCmp;
   hourly: HourRow[];
 }
 
@@ -264,9 +246,6 @@ export function AdminDashboard({ initialPeriod, initial }: Props) {
         />
       </div>
 
-      {/* Comparativa semana — narrativa de crecimiento para presentaciones */}
-      <WeekComparison data={data.weekComparison} />
-
       {/* Gráficas — uso temporal y calidad */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <UsageChart data={data.usage} />
@@ -278,9 +257,6 @@ export function AdminDashboard({ initialPeriod, initial }: Props) {
         <DepartmentChart data={data.departments} />
         <HourlyChart data={data.hourly} />
       </div>
-
-      {/* Insights de contenido */}
-      <TopKeywords data={data.keywords} />
 
       {/* Tablas: ranking + downvotes */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
