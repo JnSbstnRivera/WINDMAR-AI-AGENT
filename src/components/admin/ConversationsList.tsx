@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 
 interface ConvRow {
   conv_id: string;
@@ -55,6 +55,23 @@ export function ConversationsList({ data }: Props) {
   const [messages, setMessages] = useState<MsgRow[]>([]);
   const [loading, setLoading] = useState(false);
 
+  // Estado de la tabla: colapsada (oculta el contenido) y filtro de búsqueda
+  const [collapsed, setCollapsed] = useState(false);
+  const [searchText, setSearchText] = useState('');
+
+  // Filtrado en memoria — sub-segundo para 30 filas, no necesita debounce
+  const filteredData = useMemo(() => {
+    const q = searchText.trim().toLowerCase();
+    if (!q) return data;
+    return data.filter((row) => {
+      const name = (row.display_name || '').toLowerCase();
+      const email = row.user_email.toLowerCase();
+      const title = (row.title || '').toLowerCase();
+      const dept = (row.departamento || '').toLowerCase();
+      return name.includes(q) || email.includes(q) || title.includes(q) || dept.includes(q);
+    });
+  }, [data, searchText]);
+
   async function openConversation(conv: ConvRow) {
     setSelectedId(conv.conv_id);
     setSelectedConv(conv);
@@ -82,75 +99,155 @@ export function ConversationsList({ data }: Props) {
   return (
     <>
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden">
-        <div className="p-5 border-b border-slate-200 dark:border-slate-800">
-          <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-200">
-            💬 Conversaciones recientes
-          </h3>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-            Últimas {data.length} conversaciones — click para ver mensajes
-          </p>
+        {/* Header con toggle de colapso + buscador */}
+        <div className="border-b border-slate-200 dark:border-slate-800">
+          <button
+            onClick={() => setCollapsed((v) => !v)}
+            className="w-full p-5 flex items-center justify-between gap-3 hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors cursor-pointer"
+            aria-expanded={!collapsed}
+          >
+            <div className="flex-1 text-left">
+              <div className="flex items-center gap-2">
+                <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-200">
+                  💬 Conversaciones recientes
+                </h3>
+                <span className="text-xs px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 tabular-nums">
+                  {searchText ? `${filteredData.length} de ${data.length}` : data.length}
+                </span>
+              </div>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                {collapsed
+                  ? 'Click para mostrar las conversaciones'
+                  : 'Click para ver mensajes de cada una'}
+              </p>
+            </div>
+            {/* Chevron animado: rotación según estado */}
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className={`text-slate-400 transition-transform duration-200 ${collapsed ? 'rotate-0' : 'rotate-180'}`}
+            >
+              <polyline points="6 9 12 15 18 9" />
+            </svg>
+          </button>
+
+          {/* Buscador — solo visible si NO está colapsado */}
+          {!collapsed && (
+            <div className="px-5 pb-4">
+              <div className="relative">
+                <svg
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
+                >
+                  <circle cx="11" cy="11" r="8" />
+                  <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                </svg>
+                <input
+                  type="text"
+                  value={searchText}
+                  onChange={(e) => setSearchText(e.target.value)}
+                  placeholder="Buscar por nombre, email, departamento o título..."
+                  className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-lg pl-9 pr-9 py-2 text-sm text-slate-800 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:border-[#F7941D] focus:bg-white dark:focus:bg-slate-800 transition-colors"
+                />
+                {searchText && (
+                  <button
+                    onClick={() => setSearchText('')}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 cursor-pointer"
+                    aria-label="Limpiar búsqueda"
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                      <line x1="18" y1="6" x2="6" y2="18" />
+                      <line x1="6" y1="6" x2="18" y2="18" />
+                    </svg>
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
         </div>
 
-        {data.length === 0 ? (
-          <div className="p-8 text-center">
-            <p className="text-sm text-slate-400">Sin conversaciones aún</p>
-          </div>
-        ) : (
-          <div className="overflow-x-auto max-h-[500px] overflow-y-auto">
-            <table className="w-full text-sm">
-              <thead className="bg-slate-50 dark:bg-slate-800/50 text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400 sticky top-0 z-10">
-                <tr>
-                  <th className="text-left px-5 py-3 font-medium">Asesor</th>
-                  <th className="text-left px-5 py-3 font-medium hidden md:table-cell">Conversación</th>
-                  <th className="text-right px-5 py-3 font-medium">Msgs</th>
-                  <th className="text-right px-5 py-3 font-medium">Última</th>
-                  <th className="text-right px-5 py-3 font-medium"></th>
-                </tr>
-              </thead>
-              <tbody>
-                {data.map((row) => (
-                  <tr
-                    key={row.conv_id}
-                    className="border-t border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors"
-                  >
-                    <td className="px-5 py-3">
-                      <p className="font-medium text-slate-800 dark:text-slate-100">
-                        {row.display_name || row.user_email.split('@')[0]}
-                      </p>
-                      <p className="text-xs text-slate-400">
-                        {row.departamento || '—'}
-                        {row.rol && ` · ${row.rol}`}
-                      </p>
-                    </td>
-                    <td className="px-5 py-3 hidden md:table-cell max-w-md">
-                      <p className="text-slate-700 dark:text-slate-200 truncate">
-                        {row.title || 'Sin título'}
-                      </p>
-                      {row.first_user_message && (
-                        <p className="text-xs text-slate-400 truncate italic">
-                          &ldquo;{row.first_user_message}&rdquo;
-                        </p>
-                      )}
-                    </td>
-                    <td className="px-5 py-3 text-right tabular-nums font-semibold text-[#1B3A5C] dark:text-blue-300">
-                      {row.total_messages}
-                    </td>
-                    <td className="px-5 py-3 text-right text-xs text-slate-500 tabular-nums whitespace-nowrap">
-                      {formatRelative(row.last_message_at)}
-                    </td>
-                    <td className="px-5 py-3 text-right">
-                      <button
-                        onClick={() => openConversation(row)}
-                        className="text-xs px-3 py-1 border border-[#F7941D]/40 text-[#F7941D] rounded hover:bg-[#F7941D]/10 transition-colors cursor-pointer"
+        {/* Tabla — solo se renderiza si NO está colapsado */}
+        {!collapsed && (
+          <>
+            {filteredData.length === 0 ? (
+              <div className="p-8 text-center">
+                <p className="text-sm text-slate-400">
+                  {searchText
+                    ? `Sin resultados para "${searchText}"`
+                    : 'Sin conversaciones aún'}
+                </p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto max-h-[500px] overflow-y-auto">
+                <table className="w-full text-sm">
+                  <thead className="bg-slate-50 dark:bg-slate-800/50 text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400 sticky top-0 z-10">
+                    <tr>
+                      <th className="text-left px-5 py-3 font-medium">Asesor</th>
+                      <th className="text-left px-5 py-3 font-medium hidden md:table-cell">Conversación</th>
+                      <th className="text-right px-5 py-3 font-medium">Msgs</th>
+                      <th className="text-right px-5 py-3 font-medium">Última</th>
+                      <th className="text-right px-5 py-3 font-medium"></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredData.map((row) => (
+                      <tr
+                        key={row.conv_id}
+                        className="border-t border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors"
                       >
-                        Ver
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                        <td className="px-5 py-3">
+                          <p className="font-medium text-slate-800 dark:text-slate-100">
+                            {row.display_name || row.user_email.split('@')[0]}
+                          </p>
+                          <p className="text-xs text-slate-400">
+                            {row.departamento || '—'}
+                            {row.rol && ` · ${row.rol}`}
+                          </p>
+                        </td>
+                        <td className="px-5 py-3 hidden md:table-cell max-w-md">
+                          <p className="text-slate-700 dark:text-slate-200 truncate">
+                            {row.title || 'Sin título'}
+                          </p>
+                          {row.first_user_message && (
+                            <p className="text-xs text-slate-400 truncate italic">
+                              &ldquo;{row.first_user_message}&rdquo;
+                            </p>
+                          )}
+                        </td>
+                        <td className="px-5 py-3 text-right tabular-nums font-semibold text-[#1B3A5C] dark:text-blue-300">
+                          {row.total_messages}
+                        </td>
+                        <td className="px-5 py-3 text-right text-xs text-slate-500 tabular-nums whitespace-nowrap">
+                          {formatRelative(row.last_message_at)}
+                        </td>
+                        <td className="px-5 py-3 text-right">
+                          <button
+                            onClick={() => openConversation(row)}
+                            className="text-xs px-3 py-1 border border-[#F7941D]/40 text-[#F7941D] rounded hover:bg-[#F7941D]/10 transition-colors cursor-pointer"
+                          >
+                            Ver
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </>
         )}
       </div>
 

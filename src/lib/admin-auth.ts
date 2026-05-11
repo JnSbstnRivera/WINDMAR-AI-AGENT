@@ -5,25 +5,31 @@
  * Aunque un asesor se ponga rol "Project M" desde el ProfileModal,
  * NO podrá entrar a /admin porque la validación va por EMAIL (no rol).
  *
- * Para agregar/quitar admins:
- *   Vercel → Settings → Environment Variables → ADMIN_EMAILS
- *   Formato: emails separados por coma, ej:
- *     ADMIN_EMAILS=juan.s@windmarhome.com,otro@windmarhome.com
+ * ESTRATEGIA: los HARDCODED_ADMINS están SIEMPRE garantizados (defense
+ * in depth). La env var ADMIN_EMAILS SUMA admins adicionales sin reemplazar
+ * los hardcoded — así nunca se pierde acceso si la env var se borra/cambia.
  *
- * Fallback: si la env var no existe (deploy nuevo, error de config),
- * mantiene a juan.s@windmarhome.com como admin para no perder el acceso.
+ * Para agregar más admins SIN tocar código:
+ *   Vercel → Settings → Environment Variables → ADMIN_EMAILS
+ *   Formato: emails separados por coma
  */
 
-const FALLBACK_ADMIN = 'juan.s@windmarhome.com';
+// Admins permanentes — hardcoded para garantía total de acceso.
+// Para QUITAR uno de aquí, hay que modificar este archivo (deploy).
+const HARDCODED_ADMINS = [
+  'juan.s@windmarhome.com',
+  'a.rengifo@windmarhome.com',
+  'jesus.castro@windmarhome.com',
+  'd.buitrago@windmarhome.com',
+];
 
 function getAdminEmails(): Set<string> {
-  const raw = process.env.ADMIN_EMAILS || FALLBACK_ADMIN;
-  return new Set(
-    raw
-      .split(',')
-      .map((e) => e.trim().toLowerCase())
-      .filter(Boolean)
-  );
+  const fromEnv = (process.env.ADMIN_EMAILS || '')
+    .split(',')
+    .map((e) => e.trim().toLowerCase())
+    .filter(Boolean);
+  // Unión: hardcoded + env var (Set elimina duplicados automáticamente)
+  return new Set([...HARDCODED_ADMINS.map((e) => e.toLowerCase()), ...fromEnv]);
 }
 
 /**
