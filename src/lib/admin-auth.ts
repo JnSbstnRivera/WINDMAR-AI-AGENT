@@ -21,6 +21,7 @@ const HARDCODED_ADMINS = [
   'a.rengifo@windmarhome.com',
   'jesus.castro@windmarhome.com',
   'd.buitrago@windmarhome.com',
+  'd.riano@windmarhome.com',
 ];
 
 function getAdminEmails(): Set<string> {
