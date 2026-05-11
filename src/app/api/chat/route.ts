@@ -211,9 +211,12 @@ ${useWebSearch ? '- ⚠️ WEB SEARCH ACTIVADO: el asesor usó una palabra clave
         ]
       : undefined;
 
+    // max_tokens: 1024 es suficiente para 95% de respuestas (~750 palabras).
+    // Si el modelo necesita más, mejor responde corto y completa con un seguimiento —
+    // eso es lo natural para una llamada en vivo, no un manual.
     const stream = anthropic.messages.stream({
       model: 'claude-haiku-4-5',
-      max_tokens: 2048,
+      max_tokens: 1024,
       system: [
         {
           type: 'text',
