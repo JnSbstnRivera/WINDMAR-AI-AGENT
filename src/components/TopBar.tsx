@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 interface Props {
   onLogout: () => void;
@@ -15,16 +15,70 @@ export function TopBar({ onLogout, onOpenProfile, displayName }: Props) {
     return saved === null ? true : saved === 'dark';
   });
   const [spinning, setSpinning] = useState(false);
+  const themeButtonRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', dark);
     try { localStorage.setItem('wh-theme', dark ? 'dark' : 'light'); } catch {}
   }, [dark]);
 
+  /**
+   * Toggle de tema con efecto "circular reveal" desde el icono.
+   * - Captura coordenadas del centro del botón
+   * - Usa View Transitions API + clip-path circular para animar
+   * - Fallback automático a transición instant en navegadores sin soporte
+   */
   function toggleDark() {
     setSpinning(true);
-    setDark(d => !d);
     setTimeout(() => setSpinning(false), 400);
+
+    // Feature detection: View Transitions API solo está en Chrome 111+, Edge, Opera.
+    // En Safari/Firefox no existe → cambio normal sin animación bonita.
+    const startViewTransition = (document as Document & {
+      startViewTransition?: (cb: () => void) => { ready: Promise<void> };
+    }).startViewTransition;
+
+    if (!startViewTransition || !themeButtonRef.current) {
+      setDark(d => !d);
+      return;
+    }
+
+    // Capturar centro del icono click eado
+    const rect = themeButtonRef.current.getBoundingClientRect();
+    const x = rect.left + rect.width / 2;
+    const y = rect.top + rect.height / 2;
+
+    // Distancia desde el icono a la esquina más lejana = radio final del círculo
+    const endRadius = Math.hypot(
+      Math.max(x, window.innerWidth - x),
+      Math.max(y, window.innerHeight - y)
+    );
+
+    // Set CSS vars para que la animación los lea
+    document.documentElement.style.setProperty('--wm-reveal-x', `${x}px`);
+    document.documentElement.style.setProperty('--wm-reveal-y', `${y}px`);
+    document.documentElement.style.setProperty('--wm-reveal-r', `${endRadius}px`);
+
+    const transition = startViewTransition.call(document, () => {
+      setDark(d => !d);
+      // Esperamos un frame para que React aplique el cambio antes de animar
+    });
+
+    transition.ready.then(() => {
+      document.documentElement.animate(
+        {
+          clipPath: [
+            `circle(0px at ${x}px ${y}px)`,
+            `circle(${endRadius}px at ${x}px ${y}px)`,
+          ],
+        },
+        {
+          duration: 450,
+          easing: 'ease-out',
+          pseudoElement: '::view-transition-new(root)',
+        }
+      );
+    });
   }
 
   return (
@@ -44,6 +98,7 @@ export function TopBar({ onLogout, onOpenProfile, displayName }: Props) {
       )}
 
       <button
+        ref={themeButtonRef}
         onClick={toggleDark}
         title={dark ? 'Modo claro' : 'Modo oscuro'}
         className="w-9 h-9 rounded-full flex items-center justify-center bg-white dark:bg-[#1e293b] border border-gray-200 dark:border-gray-600 shadow-sm hover:border-[#F7941D] transition-colors cursor-pointer"

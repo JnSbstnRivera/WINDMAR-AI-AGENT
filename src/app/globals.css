@@ -68,3 +68,21 @@ body {
 .wm-fade-in {
   animation: wmFadeInUp 0.3s ease-out;
 }
+
+/* ════════════════════════════════════════
+   THEME TOGGLE — Circular reveal animation
+   ════════════════════════════════════════ */
+/* Anulamos la animación default del View Transitions API.
+   Nuestra propia animación de clip-path en JS toma el control. */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+/* El "old" snapshot queda visible debajo mientras el "new" hace clip-path reveal */
+::view-transition-old(root) {
+  z-index: 1;
+}
+::view-transition-new(root) {
+  z-index: 2;
+}
