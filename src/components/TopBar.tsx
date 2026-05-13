@@ -30,7 +30,7 @@ export function TopBar({ onLogout, onOpenProfile, displayName }: Props) {
    */
   function toggleDark() {
     setSpinning(true);
-    setTimeout(() => setSpinning(false), 400);
+    setTimeout(() => setSpinning(false), 600);
 
     // Feature detection: View Transitions API solo está en Chrome 111+, Edge, Opera.
     // En Safari/Firefox no existe → cambio normal sin animación bonita.
@@ -73,8 +73,10 @@ export function TopBar({ onLogout, onOpenProfile, displayName }: Props) {
           ],
         },
         {
-          duration: 450,
-          easing: 'ease-out',
+          // 600ms: balance entre rápido (no aburre) y visible (se aprecia el reveal)
+          // cubic-bezier estándar de Material Design — más natural que ease-out simple
+          duration: 600,
+          easing: 'cubic-bezier(0.4, 0, 0.2, 1)',
           pseudoElement: '::view-transition-new(root)',
         }
       );
@@ -106,7 +108,7 @@ export function TopBar({ onLogout, onOpenProfile, displayName }: Props) {
         <span
           style={{
             display: 'inline-block',
-            transition: 'transform 0.4s ease',
+            transition: 'transform 0.6s cubic-bezier(0.4, 0, 0.2, 1)',
             transform: spinning ? 'rotate(180deg)' : 'rotate(0deg)',
           }}
         >
