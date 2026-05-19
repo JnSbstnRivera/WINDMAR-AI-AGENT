@@ -179,11 +179,15 @@ export async function pickRelevantTools(
     });
   }
 
-  // Sugerir Proyecto Completo si hay ≥2 productos comerciales matched
-  const commercialMatches = filtered.filter(t =>
-    ['solar','roofing','water','anker','ev'].includes(t.topic)
+  // Sugerir Proyecto Completo SOLO si hay ≥2 TOPICS DISTINTOS comerciales matched
+  // (ej. solar + roofing). Antes contaba tools comerciales — dos tools del mismo
+  // topic (LUMA + Enseres, ambos 'solar') activaban PC innecesariamente.
+  const distinctCommercialTopics = new Set(
+    filtered
+      .filter(t => ['solar','roofing','water','anker'].includes(t.topic) && t.slug !== 'proyecto-completo')
+      .map(t => t.topic)
   );
-  if (commercialMatches.length >= 2) {
+  if (distinctCommercialTopics.size >= 2) {
     const pc = all.find(t => t.slug === 'proyecto-completo');
     if (pc && !filtered.find(t => t.slug === 'proyecto-completo')) filtered.push(pc);
   }
@@ -202,13 +206,16 @@ export async function pickRelevantTools(
 
 /**
  * Construye el bloque de texto que se inyecta al prompt del LLM.
+ * Las URLs vienen pre-formateadas como markdown link — el LLM tiende a copiar
+ * el formato del contexto, así que esto fuerza que la respuesta SIEMPRE tenga
+ * la herramienta clicable y no solo el nombre en bold.
  */
 export function buildToolsContext(tools: Tool[], topic: ToolTopic): string {
   const topicLabel = topic === 'general'
     ? ''
     : `\n[TÓPICO DETECTADO: ${topic.toUpperCase()} — usa SOLO las herramientas listadas abajo]`;
-  return `HERRAMIENTAS RELEVANTES:${topicLabel}\n${tools.map(t =>
-    `• ${t.name}: ${t.url}\n  Usar cuando: ${t.when_to_use}`
+  return `HERRAMIENTAS RELEVANTES (usa SIEMPRE el formato [Nombre](url) cuando las menciones):${topicLabel}\n${tools.map(t =>
+    `• [${t.name}](${t.url}) — Usar cuando: ${t.when_to_use}`
   ).join('\n\n')}`;
 }
 
