@@ -1,31 +1,11 @@
 /* ══════════════════════════════════════════════
    ADMIN THEME — Executive Dashboard estilo neon
-   Variables, animaciones y utilities específicos al panel /admin.
-   Solo aplican dentro de .admin-root (no afectan al chat).
+   Tokens scoped a .admin-root, responde al class `dark` de <html>
+   (mismo sistema que el chat — wh-theme localStorage compartido).
 ══════════════════════════════════════════════ */
 
-.admin-root[data-theme="dark"] {
-  --bg0: #060810;
-  --bg1: #0b0f1a;
-  --bg2: #111827;
-  --bg3: #1a2235;
-  --border: rgba(255, 255, 255, 0.07);
-  --border-hi: rgba(255, 255, 255, 0.14);
-  --text: #e8edf8;
-  --text2: rgba(232, 237, 248, 0.55);
-  --text3: rgba(232, 237, 248, 0.28);
-  --n1: #7c3aed;
-  --n2: #2563eb;
-  --n3: #06b6d4;
-  --n4: #f59e0b;
-  --n5: #10b981;
-  --n6: #f43f5e;
-  --glass-bg: rgba(255, 255, 255, 0.04);
-  --glass-border: rgba(255, 255, 255, 0.09);
-  --shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
-}
-
-.admin-root[data-theme="light"] {
+/* LIGHT (default) — tokens light */
+.admin-root {
   --bg0: #f0f4ff;
   --bg1: #ffffff;
   --bg2: #f7f9ff;
@@ -46,6 +26,28 @@
   --shadow: 0 8px 32px rgba(15, 23, 42, 0.1);
 }
 
+/* DARK — sigue al class `dark` de <html> (sistema del chat) */
+html.dark .admin-root {
+  --bg0: #060810;
+  --bg1: #0b0f1a;
+  --bg2: #111827;
+  --bg3: #1a2235;
+  --border: rgba(255, 255, 255, 0.07);
+  --border-hi: rgba(255, 255, 255, 0.14);
+  --text: #e8edf8;
+  --text2: rgba(232, 237, 248, 0.55);
+  --text3: rgba(232, 237, 248, 0.28);
+  --n1: #7c3aed;
+  --n2: #2563eb;
+  --n3: #06b6d4;
+  --n4: #f59e0b;
+  --n5: #10b981;
+  --n6: #f43f5e;
+  --glass-bg: rgba(255, 255, 255, 0.04);
+  --glass-border: rgba(255, 255, 255, 0.09);
+  --shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+}
+
 .admin-root {
   font-family: 'Outfit', sans-serif;
   background: var(--bg0);
@@ -57,16 +59,6 @@
 
 .admin-root .ad-mono { font-family: 'JetBrains Mono', monospace; }
 .admin-root .ad-display { font-family: 'Bebas Neue', sans-serif; }
-
-/* ══ RIPPLE OVERLAY del theme toggle ═════════ */
-.admin-root .ad-ripple {
-  position: fixed;
-  inset: 0;
-  z-index: 9999;
-  pointer-events: none;
-  clip-path: circle(0px at 50% 50%);
-  will-change: clip-path;
-}
 
 /* ══ AMBIENT BG (orbs + grid) ════════════════ */
 .admin-root .ad-bg-fx {
@@ -82,14 +74,15 @@
   animation: adDrift ease-in-out infinite;
   filter: blur(72px);
 }
-.admin-root[data-theme="dark"] .ad-o1 { background: radial-gradient(circle, rgba(124, 58, 237, 0.18), transparent 65%); }
-.admin-root[data-theme="dark"] .ad-o2 { background: radial-gradient(circle, rgba(37, 99, 235, 0.14), transparent 65%); }
-.admin-root[data-theme="dark"] .ad-o3 { background: radial-gradient(circle, rgba(6, 182, 212, 0.12), transparent 65%); }
-.admin-root[data-theme="dark"] .ad-o4 { background: radial-gradient(circle, rgba(245, 158, 11, 0.08), transparent 65%); }
-.admin-root[data-theme="light"] .ad-o1 { background: radial-gradient(circle, rgba(109, 40, 217, 0.08), transparent 65%); }
-.admin-root[data-theme="light"] .ad-o2 { background: radial-gradient(circle, rgba(29, 78, 216, 0.06), transparent 65%); }
-.admin-root[data-theme="light"] .ad-o3 { background: radial-gradient(circle, rgba(8, 145, 178, 0.06), transparent 65%); }
-.admin-root[data-theme="light"] .ad-o4 { background: radial-gradient(circle, rgba(217, 119, 6, 0.05), transparent 65%); }
+.admin-root .ad-o1 { background: radial-gradient(circle, rgba(109, 40, 217, 0.08), transparent 65%); }
+.admin-root .ad-o2 { background: radial-gradient(circle, rgba(29, 78, 216, 0.06), transparent 65%); }
+.admin-root .ad-o3 { background: radial-gradient(circle, rgba(8, 145, 178, 0.06), transparent 65%); }
+.admin-root .ad-o4 { background: radial-gradient(circle, rgba(217, 119, 6, 0.05), transparent 65%); }
+html.dark .admin-root .ad-o1 { background: radial-gradient(circle, rgba(124, 58, 237, 0.18), transparent 65%); }
+html.dark .admin-root .ad-o2 { background: radial-gradient(circle, rgba(37, 99, 235, 0.14), transparent 65%); }
+html.dark .admin-root .ad-o3 { background: radial-gradient(circle, rgba(6, 182, 212, 0.12), transparent 65%); }
+html.dark .admin-root .ad-o4 { background: radial-gradient(circle, rgba(245, 158, 11, 0.08), transparent 65%); }
+
 .admin-root .ad-o1 { width: 580px; height: 580px; top: -140px; left: -90px; animation-duration: 22s; }
 .admin-root .ad-o2 { width: 480px; height: 480px; top: 40%; right: -70px; animation-duration: 27s; animation-delay: -9s; }
 .admin-root .ad-o3 { width: 380px; height: 380px; bottom: -90px; left: 28%; animation-duration: 19s; animation-delay: -5s; }
@@ -115,7 +108,7 @@
   opacity: 0.5;
 }
 
-/* ══ BRAND / TOPBAR ══════════════════════════ */
+/* ══ TOPBAR ══════════════════════════════════ */
 .admin-root .ad-topbar {
   display: flex;
   align-items: center;
@@ -128,20 +121,22 @@
   z-index: 200;
   background: var(--bg0);
 }
-.admin-root .ad-brand-icon {
-  width: 42px;
-  height: 42px;
-  border-radius: 12px;
-  background: linear-gradient(135deg, var(--n1), var(--n2));
-  display: flex;
-  align-items: center;
-  justify-content: center;
+
+/* SUN BOT brand — PNG grande sin fondo */
+.admin-root .ad-brand-mascot {
+  width: 64px;
+  height: 64px;
+  object-fit: contain;
+  image-rendering: pixelated;
+  filter: drop-shadow(0 0 14px rgba(247, 148, 29, 0.55))
+          drop-shadow(0 0 28px rgba(247, 148, 29, 0.25));
+  transition: transform 0.3s cubic-bezier(0.34, 1.5, 0.64, 1);
   flex-shrink: 0;
-  box-shadow: 0 0 20px rgba(124, 58, 237, 0.4), 0 0 60px rgba(124, 58, 237, 0.15);
 }
-.admin-root[data-theme="light"] .ad-brand-icon {
-  box-shadow: 0 0 12px rgba(109, 40, 217, 0.25);
+.admin-root .ad-brand-mascot:hover {
+  transform: scale(1.08) rotate(-4deg);
 }
+
 .admin-root .ad-brand-title {
   font-family: 'Bebas Neue', sans-serif;
   font-size: 22px;
@@ -163,23 +158,24 @@
   gap: 6px;
   padding: 6px 12px;
   border-radius: 99px;
-  background: rgba(16, 185, 129, 0.1);
-  border: 1px solid rgba(16, 185, 129, 0.2);
+  background: rgba(5, 150, 105, 0.08);
+  border: 1px solid rgba(5, 150, 105, 0.2);
   font-family: 'JetBrains Mono', monospace;
   font-size: 9px;
   letter-spacing: 0.15em;
-  color: #10b981;
+  color: #059669;
 }
-.admin-root[data-theme="light"] .ad-live {
-  background: rgba(5, 150, 105, 0.08);
-  border-color: rgba(5, 150, 105, 0.2);
+html.dark .admin-root .ad-live {
+  background: rgba(16, 185, 129, 0.1);
+  border-color: rgba(16, 185, 129, 0.2);
+  color: #10b981;
 }
 .admin-root .ad-live-dot {
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: #10b981;
-  box-shadow: 0 0 6px #10b981;
+  background: currentColor;
+  box-shadow: 0 0 6px currentColor;
   animation: adLb 1.5s ease-in-out infinite;
 }
 @keyframes adLb {
@@ -198,37 +194,22 @@
   backdrop-filter: blur(12px);
 }
 
+/* Theme toggle estilo chat — botón circular con icono sol/luna */
 .admin-root .ad-theme-btn {
-  position: relative;
-  width: 40px;
-  height: 40px;
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
-  border: 1px solid var(--glass-border);
-  background: var(--glass-bg);
-  backdrop-filter: blur(12px);
-  cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 18px;
-  transition: border-color 0.3s, box-shadow 0.3s;
+  background: var(--bg1);
+  border: 1px solid var(--border);
+  cursor: pointer;
+  transition: border-color 0.2s, box-shadow 0.2s;
 }
 .admin-root .ad-theme-btn:hover {
-  border-color: rgba(245, 158, 11, 0.5);
-  box-shadow:
-    0 0 12px rgba(245, 158, 11, 0.35),
-    0 0 28px rgba(245, 158, 11, 0.15),
-    inset 0 0 8px rgba(245, 158, 11, 0.08);
-}
-.admin-root[data-theme="light"] .ad-theme-btn:hover {
-  border-color: rgba(29, 78, 216, 0.5);
-  box-shadow: 0 0 12px rgba(29, 78, 216, 0.3), 0 0 28px rgba(29, 78, 216, 0.1);
-}
-.admin-root .ad-theme-icon {
-  display: block;
-  line-height: 1;
-  transition: transform 0.5s cubic-bezier(0.34, 1.5, 0.64, 1);
-  will-change: transform;
+  border-color: #f59e0b;
+  box-shadow: 0 0 10px rgba(245, 158, 11, 0.3);
 }
 
 /* ══ PAGE TITLE ══════════════════════════════ */
@@ -237,15 +218,14 @@
   font-size: 28px;
   letter-spacing: 0.07em;
   color: var(--text);
+  text-shadow: 0 0 10px rgba(109, 40, 217, 0.15);
+}
+html.dark .admin-root .ad-neon-title {
   text-shadow:
     0 0 8px rgba(255, 255, 255, 0.5),
     0 0 20px rgba(124, 58, 237, 0.5),
     0 0 40px rgba(124, 58, 237, 0.2);
   animation: adFlick 7s ease-in-out 2s infinite;
-}
-.admin-root[data-theme="light"] .ad-neon-title {
-  text-shadow: 0 0 10px rgba(109, 40, 217, 0.15);
-  animation: none;
 }
 @keyframes adFlick {
   0%, 89%, 91%, 95%, 97%, 100% { opacity: 1; }
@@ -274,17 +254,25 @@
   left: 15%;
   right: 15%;
   height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+  background: linear-gradient(90deg, transparent, rgba(0, 0, 0, 0.06), transparent);
   pointer-events: none;
 }
-.admin-root[data-theme="light"] .ad-card::after {
-  background: linear-gradient(90deg, transparent, rgba(0, 0, 0, 0.06), transparent);
+html.dark .admin-root .ad-card::after {
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+}
+
+/* Card clicable — agrega cursor pointer + brighten on hover */
+.admin-root .ad-card.ad-clickable {
+  cursor: pointer;
+}
+.admin-root .ad-card.ad-clickable:hover {
+  border-color: var(--n1);
+  transform: translateY(-3px);
 }
 
 /* ══ KPI CARD ════════════════════════════════ */
 .admin-root .ad-kpi {
   padding: 20px 20px 18px;
-  cursor: default;
   animation: adSlideUp 0.6s cubic-bezier(0.34, 1.2, 0.64, 1) both;
 }
 .admin-root .ad-kpi::after { content: none !important; }
@@ -350,6 +338,10 @@
   color: var(--text);
   position: relative;
   z-index: 1;
+  transition: transform 0.25s cubic-bezier(0.34, 1.5, 0.64, 1);
+}
+.admin-root .ad-kpi:hover .ad-kpi-num {
+  transform: scale(1.04);
 }
 .admin-root .ad-kpi-bottom {
   display: flex;
@@ -368,7 +360,7 @@
 .admin-root .ad-up { background: rgba(16, 185, 129, 0.12); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.2); }
 .admin-root .ad-dn { background: rgba(244, 63, 94, 0.1); color: #f43f5e; border: 1px solid rgba(244, 63, 94, 0.2); }
 
-/* ══ SECTION HEADERS dentro de cards ════════ */
+/* ══ SECTION HEADERS ════════════════════════ */
 .admin-root .ad-ph {
   display: flex;
   justify-content: space-between;
@@ -387,12 +379,12 @@
   font-size: 9px;
   padding: 3px 9px;
   border-radius: 6px;
-  background: rgba(255, 255, 255, 0.04);
+  background: rgba(0, 0, 0, 0.03);
   border: 1px solid var(--glass-border);
   color: var(--text3);
 }
-.admin-root[data-theme="light"] .ad-pb {
-  background: rgba(0, 0, 0, 0.03);
+html.dark .admin-root .ad-pb {
+  background: rgba(255, 255, 255, 0.04);
 }
 
 /* ══ TABS / PERIOD PICKER ═══════════════════ */
@@ -419,33 +411,49 @@
 }
 .admin-root .ad-tab:hover {
   color: var(--text);
-  background: rgba(255, 255, 255, 0.04);
-}
-.admin-root[data-theme="light"] .ad-tab:hover {
   background: rgba(0, 0, 0, 0.04);
 }
-.admin-root .ad-tab.ad-on {
-  background: linear-gradient(135deg, rgba(124, 58, 237, 0.3), rgba(37, 99, 235, 0.25));
-  color: var(--text);
-  box-shadow: 0 2px 10px rgba(124, 58, 237, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+html.dark .admin-root .ad-tab:hover {
+  background: rgba(255, 255, 255, 0.04);
 }
-.admin-root[data-theme="light"] .ad-tab.ad-on {
+.admin-root .ad-tab.ad-on {
   background: linear-gradient(135deg, rgba(109, 40, 217, 0.1), rgba(29, 78, 216, 0.08));
+  color: var(--text);
   box-shadow: 0 2px 8px rgba(109, 40, 217, 0.12);
 }
+html.dark .admin-root .ad-tab.ad-on {
+  background: linear-gradient(135deg, rgba(124, 58, 237, 0.3), rgba(37, 99, 235, 0.25));
+  box-shadow: 0 2px 10px rgba(124, 58, 237, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
 
-/* ══ ANIMACIONES ════════════════════════════ */
+/* ══ AGENT ROW (top asesores — clicable) ════ */
+.admin-root .ad-agent-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  transition: all 0.2s;
+  cursor: pointer;
+}
+.admin-root .ad-agent-row:hover {
+  background: rgba(0, 0, 0, 0.03);
+  border-color: var(--glass-border);
+  transform: translateX(2px);
+}
+html.dark .admin-root .ad-agent-row:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+/* ══ ANIMATIONS ═════════════════════════════ */
 @keyframes adSlideUp {
   from { opacity: 0; transform: translateY(18px); }
   to   { opacity: 1; transform: translateY(0); }
-}
-@keyframes adSRight {
-  from { opacity: 0; transform: translateX(-8px); }
-  to   { opacity: 1; transform: translateX(0); }
 }
 
 /* Scrollbar custom dentro del admin */
 .admin-root ::-webkit-scrollbar { width: 4px; }
 .admin-root ::-webkit-scrollbar-track { background: transparent; }
-.admin-root ::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.1); border-radius: 99px; }
-.admin-root[data-theme="light"] ::-webkit-scrollbar-thumb { background: rgba(0, 0, 0, 0.1); }
+.admin-root ::-webkit-scrollbar-thumb { background: rgba(0, 0, 0, 0.1); border-radius: 99px; }
+html.dark .admin-root ::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.1); }

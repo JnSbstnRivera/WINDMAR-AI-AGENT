@@ -45,22 +45,40 @@ export function TopAsesoresTable({ data }: Props) {
               .map(w => w[0]?.toUpperCase() ?? '')
               .slice(0, 2)
               .join('');
+            const maxMessages = Math.max(...data.map(d => d.total_messages), 1);
+            const fillPct = Math.round((row.total_messages / maxMessages) * 100);
+
             return (
               <div
                 key={row.asesor_email}
-                className="flex items-center gap-2.5 p-2.5 rounded-[10px] border border-transparent hover:border-[var(--glass-border)] transition-all"
-                style={{ background: 'transparent' }}
+                className="ad-agent-row relative overflow-hidden"
+                title={`${row.display_name || row.asesor_email}\n${row.total_messages} mensajes · ${row.total_convs} conversaciones`}
               >
-                <span className="ad-mono text-[9px] w-3 flex-shrink-0" style={{ color: 'var(--text3)' }}>
+                {/* Barra de progreso de fondo — proporcional a mensajes */}
+                <div
+                  className="absolute inset-y-0 left-0 pointer-events-none transition-all duration-700"
+                  style={{
+                    width: `${fillPct}%`,
+                    background: `linear-gradient(90deg, ${palette.col}14 0%, transparent 100%)`,
+                    borderRadius: 10,
+                  }}
+                />
+
+                <span className="ad-mono text-[9px] w-3 flex-shrink-0 relative z-10" style={{ color: 'var(--text3)' }}>
                   {i + 1}
                 </span>
                 <div
-                  className="w-8 h-8 rounded-[10px] flex items-center justify-center font-bold text-[11px] flex-shrink-0 border"
-                  style={{ background: palette.bg, color: palette.col, borderColor: 'rgba(255,255,255,0.08)' }}
+                  className="w-8 h-8 rounded-[10px] flex items-center justify-center font-bold text-[11px] flex-shrink-0 border relative z-10"
+                  style={{
+                    background: palette.bg,
+                    color: palette.col,
+                    borderColor: 'rgba(255,255,255,0.08)',
+                    boxShadow: `0 0 8px ${palette.col}33`,
+                  }}
                 >
                   {initials || '—'}
                 </div>
-                <div className="flex-1 min-w-0">
+                <div className="flex-1 min-w-0 relative z-10">
                   <div className="text-[13px] font-semibold truncate" style={{ color: 'var(--text)' }}>
                     {row.display_name || row.asesor_email.split('@')[0]}
                   </div>
@@ -68,7 +86,7 @@ export function TopAsesoresTable({ data }: Props) {
                     {row.departamento || 'sin depto'}{row.rol ? ` · ${row.rol}` : ''}
                   </div>
                 </div>
-                <div className="text-right">
+                <div className="text-right relative z-10">
                   <div className="ad-display text-[22px] leading-none tabular-nums" style={{ color: palette.col }}>
                     {row.total_messages}
                   </div>

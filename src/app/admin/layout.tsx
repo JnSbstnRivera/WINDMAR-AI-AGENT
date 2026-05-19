@@ -42,10 +42,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@300;400;500&display=swap"
       />
 
-      <div className="admin-root" data-theme="dark">
-        {/* Ripple overlay (lo usa AdminThemeToggle) */}
-        <div id="ad-ripple" className="ad-ripple" />
-
+      <div className="admin-root">
         {/* Ambient: orbs flotantes + grid de fondo */}
         <div className="ad-bg-fx">
           <div className="ad-orb ad-o1" />
@@ -58,17 +55,13 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         <div className="relative z-[1] max-w-[1280px] mx-auto px-5 pb-8">
           {/* Topbar */}
           <nav className="ad-topbar">
-            <div className="flex items-center gap-3.5">
-              {/* Brand icon — SUN BOT dentro del cuadro neon para preservar identidad Windmar */}
-              <div className="ad-brand-icon">
-                <img
-                  src="/sunbot-feliz.png"
-                  alt="SUN BOT"
-                  width={28}
-                  height={28}
-                  style={{ imageRendering: 'pixelated' }}
-                />
-              </div>
+            <div className="flex items-center gap-4">
+              {/* SUN BOT grande sin fondo — solo PNG con drop-shadow naranja */}
+              <img
+                src="/sunbot-feliz.png"
+                alt="SUN BOT — Windmar AI"
+                className="ad-brand-mascot"
+              />
               <div>
                 <div className="ad-brand-title">WINDMAR HOME</div>
                 <div className="ad-brand-sub">Executive Dashboard · 2026</div>

@@ -8,6 +8,8 @@ interface Props {
   icon?: React.ReactNode;
   /** Delta % vs período anterior (positivo o negativo). null = sin badge. */
   deltaPct?: number | null;
+  /** Texto tooltip al hacer hover en la card. */
+  tooltip?: string;
 }
 
 /**
@@ -23,7 +25,7 @@ interface Props {
  *
  * `variant` controla el color del neon top line, icon glow y radial glow on-hover.
  */
-export function MetricCard({ label, value, subtitle, variant = 1, icon, deltaPct }: Props) {
+export function MetricCard({ label, value, subtitle, variant = 1, icon, deltaPct, tooltip }: Props) {
   const display = value === null || value === undefined ? '—' : value;
 
   const deltaClass =
@@ -38,7 +40,7 @@ export function MetricCard({ label, value, subtitle, variant = 1, icon, deltaPct
       : `${deltaPct >= 0 ? '↑' : '↓'} ${Math.abs(Math.round(deltaPct))}%`;
 
   return (
-    <div className={`ad-card ad-kpi ad-k${variant}`}>
+    <div className={`ad-card ad-kpi ad-k${variant}`} title={tooltip ?? label}>
       <div className="ad-kpi-glow" />
       {icon && <div className="ad-kpi-icon">{icon}</div>}
       <div className="ad-kpi-lbl">{label}</div>

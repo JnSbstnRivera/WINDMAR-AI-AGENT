@@ -182,7 +182,7 @@ export function AdminDashboard({ initialPeriod, initial }: Props) {
         </div>
       </div>
 
-      {/* KPI grid neón */}
+      {/* KPI grid neón — tooltips informativos al hover */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3">
         <MetricCard
           label="Mensajes"
@@ -190,6 +190,7 @@ export function AdminDashboard({ initialPeriod, initial }: Props) {
           subtitle={periodLabel}
           variant={1}
           icon="💬"
+          tooltip={`Total de mensajes enviados al chat en el periodo: ${periodLabel}`}
         />
         <MetricCard
           label="Asesores activos"
@@ -197,6 +198,7 @@ export function AdminDashboard({ initialPeriod, initial }: Props) {
           subtitle="únicos"
           variant={2}
           icon="👥"
+          tooltip={`Asesores únicos que enviaron al menos 1 mensaje en ${periodLabel}`}
         />
         <MetricCard
           label="Conversaciones"
@@ -204,6 +206,7 @@ export function AdminDashboard({ initialPeriod, initial }: Props) {
           subtitle="iniciadas"
           variant={3}
           icon="⚡"
+          tooltip={`Conversaciones iniciadas en ${periodLabel}`}
         />
         <MetricCard
           label="Satisfacción"
@@ -211,6 +214,7 @@ export function AdminDashboard({ initialPeriod, initial }: Props) {
           subtitle={data.kpis.thumbsUp + data.kpis.thumbsDown > 0 ? `${data.kpis.thumbsUp + data.kpis.thumbsDown} votos` : 'sin votos'}
           variant={4}
           icon="⭐"
+          tooltip={`👍 ${data.kpis.thumbsUp} útiles · 👎 ${data.kpis.thumbsDown} no útiles · Total ${data.kpis.thumbsUp + data.kpis.thumbsDown}`}
         />
       </div>
 

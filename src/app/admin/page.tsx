@@ -19,7 +19,7 @@ async function loadMetrics(period: Period) {
   ] = await Promise.all([
     supabase.rpc('admin_metrics_kpis', { period }),
     supabase.rpc('admin_usage_by_day'),
-    supabase.rpc('admin_top_asesores', { period, max_rows: 10 }),
+    supabase.rpc('admin_top_asesores', { period, max_rows: 7 }),
     supabase.rpc('admin_recent_downvotes', { max_rows: 20 }),
     supabase.rpc('admin_recent_conversations', { max_rows: 30 }),
     supabase.rpc('admin_messages_by_dept', { period }),

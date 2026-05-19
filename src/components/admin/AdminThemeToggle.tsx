@@ -3,94 +3,119 @@
 import { useEffect, useRef, useState } from 'react';
 
 /**
- * Theme toggle del panel admin con efecto ripple (técnica "shrink-into-button").
- * Funciona dentro de .admin-root mediante atributo data-theme.
+ * Theme toggle del admin — usa el MISMO sistema del chat:
+ *  - localStorage key `wh-theme` (compartido)
+ *  - class `dark` en <html> (Tailwind dark mode strategy)
+ *  - View Transitions API + circular reveal desde el botón
  *
- * Técnica:
- *  1. Lee la posición del botón
- *  2. Pinta el overlay con el color del tema ACTUAL (full-screen, instantáneo)
- *  3. Cambia data-theme inmediatamente → la página se actualiza por debajo
- *  4. Anima el overlay contrayéndose hacia el botón → revela el nuevo tema
- *
- * Persiste la preferencia en localStorage (`wh-admin-theme`).
+ * Al cambiar el tema en /admin también afecta al chat (un solo tema unificado).
  */
 export function AdminThemeToggle() {
-  // El estado inicial debe matchear lo que pintó el server (dark por defecto).
-  // El useEffect inferior actualiza al valor real de localStorage tras mount.
-  const [isDark, setIsDark] = useState(true);
-  const busy = useRef(false);
+  const [dark, setDark] = useState<boolean>(true);
+  const [spinning, setSpinning] = useState(false);
   const btnRef = useRef<HTMLButtonElement>(null);
 
-  // Al montar, leer preferencia previa
+  // Al montar, leer preferencia previa (compartida con el chat)
   useEffect(() => {
     try {
-      const saved = localStorage.getItem('wh-admin-theme');
-      if (saved === 'light') {
-        setIsDark(false);
-        const root = document.querySelector('.admin-root');
-        root?.setAttribute('data-theme', 'light');
-      }
+      const saved = localStorage.getItem('wh-theme');
+      const initial = saved === null ? true : saved === 'dark';
+      setDark(initial);
+      document.documentElement.classList.toggle('dark', initial);
     } catch {
-      /* localStorage bloqueado — usar default dark */
+      /* localStorage bloqueado — default dark */
     }
   }, []);
 
-  function toggle() {
-    if (busy.current) return;
-    busy.current = true;
-
-    const btn = btnRef.current;
-    const ripple = document.getElementById('ad-ripple');
-    const root = document.querySelector<HTMLElement>('.admin-root');
-    if (!btn || !ripple || !root) {
-      busy.current = false;
-      return;
-    }
-
-    const rect = btn.getBoundingClientRect();
-    const cx = Math.round(rect.left + rect.width / 2);
-    const cy = Math.round(rect.top + rect.height / 2);
-
-    // 1. Color del tema ACTUAL (el que vamos a "dejar atrás")
-    const oldBg = isDark ? '#060810' : '#f0f4ff';
-
-    // 2. Pintar overlay full-screen sin transición
-    ripple.style.transition = 'none';
-    ripple.style.background = oldBg;
-    ripple.style.clipPath = `circle(160vmax at ${cx}px ${cy}px)`;
-
-    // 3. Cambiar tema bajo el overlay
-    const next = !isDark;
-    setIsDark(next);
-    root.setAttribute('data-theme', next ? 'dark' : 'light');
+  // Aplica al <html> y persiste cada vez que cambia
+  useEffect(() => {
+    document.documentElement.classList.toggle('dark', dark);
     try {
-      localStorage.setItem('wh-admin-theme', next ? 'dark' : 'light');
+      localStorage.setItem('wh-theme', dark ? 'dark' : 'light');
     } catch {
       /* ignore */
     }
+  }, [dark]);
 
-    // 4. Próximo frame: animar contracción
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        ripple.style.transition = 'clip-path 0.6s cubic-bezier(0.4, 0, 0.2, 1)';
-        ripple.style.clipPath = `circle(0px at ${cx}px ${cy}px)`;
-        setTimeout(() => {
-          busy.current = false;
-        }, 650);
-      });
+  function toggleDark() {
+    setSpinning(true);
+    setTimeout(() => setSpinning(false), 600);
+
+    // Feature detection: View Transitions API (Chrome 111+, Edge, Opera)
+    const startViewTransition = (document as Document & {
+      startViewTransition?: (cb: () => void) => { ready: Promise<void> };
+    }).startViewTransition;
+
+    if (!startViewTransition || !btnRef.current) {
+      setDark((d) => !d);
+      return;
+    }
+
+    const rect = btnRef.current.getBoundingClientRect();
+    const x = rect.left + rect.width / 2;
+    const y = rect.top + rect.height / 2;
+    const endRadius = Math.hypot(
+      Math.max(x, window.innerWidth - x),
+      Math.max(y, window.innerHeight - y)
+    );
+
+    document.documentElement.style.setProperty('--wm-reveal-x', `${x}px`);
+    document.documentElement.style.setProperty('--wm-reveal-y', `${y}px`);
+    document.documentElement.style.setProperty('--wm-reveal-r', `${endRadius}px`);
+
+    const transition = startViewTransition.call(document, () => {
+      setDark((d) => !d);
+    });
+
+    transition.ready.then(() => {
+      document.documentElement.animate(
+        {
+          clipPath: [
+            `circle(0px at ${x}px ${y}px)`,
+            `circle(${endRadius}px at ${x}px ${y}px)`,
+          ],
+        },
+        {
+          duration: 600,
+          easing: 'cubic-bezier(0.4, 0, 0.2, 1)',
+          pseudoElement: '::view-transition-new(root)',
+        }
+      );
     });
   }
 
   return (
     <button
       ref={btnRef}
-      onClick={toggle}
+      onClick={toggleDark}
       className="ad-theme-btn"
-      aria-label="Cambiar tema"
-      title="Cambiar tema (claro/oscuro)"
+      aria-label={dark ? 'Activar modo claro' : 'Activar modo oscuro'}
+      title={dark ? 'Modo claro' : 'Modo oscuro'}
     >
-      <span className="ad-theme-icon" key={isDark ? 'd' : 'l'}>
-        {isDark ? '🌙' : '☀️'}
+      <span
+        style={{
+          display: 'inline-block',
+          transition: 'transform 0.6s cubic-bezier(0.4, 0, 0.2, 1)',
+          transform: spinning ? 'rotate(180deg)' : 'rotate(0deg)',
+        }}
+      >
+        {dark ? (
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#F7941D" strokeWidth="2" strokeLinecap="round">
+            <circle cx="12" cy="12" r="5" />
+            <line x1="12" y1="1" x2="12" y2="3" />
+            <line x1="12" y1="21" x2="12" y2="23" />
+            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" />
+            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
+            <line x1="1" y1="12" x2="3" y2="12" />
+            <line x1="21" y1="12" x2="23" y2="12" />
+            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" />
+            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
+          </svg>
+        ) : (
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#1B3A5C" strokeWidth="2" strokeLinecap="round">
+            <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z" />
+          </svg>
+        )}
       </span>
     </button>
   );
