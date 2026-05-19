@@ -182,39 +182,62 @@ export function AdminDashboard({ initialPeriod, initial }: Props) {
         </div>
       </div>
 
-      {/* KPI grid neón — tooltips informativos al hover */}
+      {/* KPI grid neón — iconos SVG en color del slot, tooltips al hover */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3">
         <MetricCard
           label="Mensajes"
           value={data.kpis.totalMessages}
           subtitle={periodLabel}
           variant={1}
-          icon="💬"
           tooltip={`Total de mensajes enviados al chat en el periodo: ${periodLabel}`}
+          icon={
+            // message-square (Lucide)
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+            </svg>
+          }
         />
         <MetricCard
           label="Asesores activos"
           value={data.kpis.activeUsers}
           subtitle="únicos"
           variant={2}
-          icon="👥"
           tooltip={`Asesores únicos que enviaron al menos 1 mensaje en ${periodLabel}`}
+          icon={
+            // users (Lucide)
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+              <circle cx="9" cy="7" r="4" />
+              <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+              <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+            </svg>
+          }
         />
         <MetricCard
           label="Conversaciones"
           value={data.kpis.totalConvs}
           subtitle="iniciadas"
           variant={3}
-          icon="⚡"
           tooltip={`Conversaciones iniciadas en ${periodLabel}`}
+          icon={
+            // activity (Lucide) — pulso de actividad
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
+            </svg>
+          }
         />
         <MetricCard
           label="Satisfacción"
           value={data.kpis.satisfactionPct !== null ? `${data.kpis.satisfactionPct}%` : '—'}
           subtitle={data.kpis.thumbsUp + data.kpis.thumbsDown > 0 ? `${data.kpis.thumbsUp + data.kpis.thumbsDown} votos` : 'sin votos'}
           variant={4}
-          icon="⭐"
           tooltip={`👍 ${data.kpis.thumbsUp} útiles · 👎 ${data.kpis.thumbsDown} no útiles · Total ${data.kpis.thumbsUp + data.kpis.thumbsDown}`}
+          icon={
+            // sparkles / award (Lucide) — calidad
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round">
+              <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+            </svg>
+          }
         />
       </div>
 

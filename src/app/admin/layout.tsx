@@ -64,7 +64,9 @@ export default async function AdminLayout({ children }: { children: React.ReactN
               />
               <div>
                 <div className="ad-brand-title">WINDMAR HOME</div>
-                <div className="ad-brand-sub">Executive Dashboard · 2026</div>
+                <div className="ad-brand-sub">
+                  Resumen Ejecutivo · Admin {capName}
+                </div>
               </div>
             </div>
 
@@ -94,14 +96,6 @@ export default async function AdminLayout({ children }: { children: React.ReactN
               </form>
             </div>
           </nav>
-
-          {/* Page title */}
-          <div className="flex items-baseline gap-4 flex-wrap mb-5">
-            <h1 className="ad-neon-title">RESUMEN EJECUTIVO</h1>
-            <span className="ad-mono text-[10px] tracking-[0.12em]" style={{ color: 'var(--text3)' }}>
-              Admin · {capName.toUpperCase()}
-            </span>
-          </div>
 
           {children}
 
