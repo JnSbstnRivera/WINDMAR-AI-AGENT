@@ -2,41 +2,58 @@ interface Props {
   label: string;
   value: string | number | null;
   subtitle?: string;
-  /** Color del número grande. Default: navy brand */
-  accent?: 'navy' | 'orange' | 'green' | 'red';
-  /** Icono SVG inline (opcional) */
+  /** Variante de neón de la línea superior + glow. k1=violeta, k2=cyan, k3=verde, k4=rojo */
+  variant?: 1 | 2 | 3 | 4;
+  /** Emoji o glyph mostrado en el cuadro de icono. */
   icon?: React.ReactNode;
+  /** Delta % vs período anterior (positivo o negativo). null = sin badge. */
+  deltaPct?: number | null;
 }
 
-const accentColors = {
-  navy:   { text: 'text-[#1B3A5C] dark:text-blue-300', ring: 'ring-blue-200/50 dark:ring-blue-800/50' },
-  orange: { text: 'text-[#F7941D] dark:text-orange-300', ring: 'ring-orange-200/50 dark:ring-orange-800/50' },
-  green:  { text: 'text-emerald-600 dark:text-emerald-400', ring: 'ring-emerald-200/50 dark:ring-emerald-800/50' },
-  red:    { text: 'text-red-600 dark:text-red-400', ring: 'ring-red-200/50 dark:ring-red-800/50' },
-};
-
 /**
- * Card de métrica grande. Estilo "ejecutivo" — número grande arriba, label abajo.
- * Sin gradientes ni sombras llamativas — apropiado para presentaciones.
+ * KPI card estilo Executive Dashboard.
+ *
+ * Estructura visual:
+ *   ┌──────────────────────┐ ← línea neón superior (variant)
+ *   │ [icon]               │
+ *   │ LABEL                │
+ *   │ NÚMERO grande        │
+ *   │ ↑ delta%             │
+ *   └──────────────────────┘
+ *
+ * `variant` controla el color del neon top line, icon glow y radial glow on-hover.
  */
-export function MetricCard({ label, value, subtitle, accent = 'navy', icon }: Props) {
-  const colors = accentColors[accent];
-  const displayValue = value === null || value === undefined ? '—' : value;
+export function MetricCard({ label, value, subtitle, variant = 1, icon, deltaPct }: Props) {
+  const display = value === null || value === undefined ? '—' : value;
+
+  const deltaClass =
+    deltaPct === null || deltaPct === undefined
+      ? null
+      : deltaPct >= 0
+        ? 'ad-up'
+        : 'ad-dn';
+  const deltaText =
+    deltaPct === null || deltaPct === undefined
+      ? null
+      : `${deltaPct >= 0 ? '↑' : '↓'} ${Math.abs(Math.round(deltaPct))}%`;
 
   return (
-    <div className={`bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5 ring-1 ${colors.ring}`}>
-      <div className="flex items-start justify-between mb-3">
-        <p className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wide">
-          {label}
-        </p>
-        {icon && <div className={colors.text}>{icon}</div>}
+    <div className={`ad-card ad-kpi ad-k${variant}`}>
+      <div className="ad-kpi-glow" />
+      {icon && <div className="ad-kpi-icon">{icon}</div>}
+      <div className="ad-kpi-lbl">{label}</div>
+      <div className="ad-kpi-num tabular-nums">{display}</div>
+      <div className="ad-kpi-bottom">
+        {deltaText ? (
+          <span className={`ad-kpi-delta ${deltaClass}`}>{deltaText}</span>
+        ) : subtitle ? (
+          <span className="ad-mono text-[9px] tracking-[0.12em]" style={{ color: 'var(--text3)' }}>
+            {subtitle.toUpperCase()}
+          </span>
+        ) : (
+          <span />
+        )}
       </div>
-      <p className={`text-3xl sm:text-4xl font-bold tabular-nums ${colors.text}`}>
-        {displayValue}
-      </p>
-      {subtitle && (
-        <p className="text-xs text-slate-400 dark:text-slate-500 mt-2">{subtitle}</p>
-      )}
     </div>
   );
 }

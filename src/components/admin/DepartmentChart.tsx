@@ -10,8 +10,8 @@ interface Props {
   }>;
 }
 
-// Paleta brand: navy → naranja, dependiendo del orden de uso
-const COLORS = ['#1B3A5C', '#F7941D', '#2a5a8c', '#e8830d', '#94a3b8'];
+// Paleta neon executive — violet/cyan/green/amber/rose
+const COLORS = ['#7c3aed', '#06b6d4', '#10b981', '#f59e0b', '#f43f5e'];
 
 /**
  * Bar chart de mensajes por departamento.
@@ -19,46 +19,34 @@ const COLORS = ['#1B3A5C', '#F7941D', '#2a5a8c', '#e8830d', '#94a3b8'];
  */
 export function DepartmentChart({ data }: Props) {
   return (
-    <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5">
-      <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-200 mb-1">
-        🏢 Uso por departamento
-      </h3>
-      <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">
-        Mensajes y asesores activos por área
-      </p>
+    <div className="ad-card" style={{ padding: 22 }}>
+      <div className="ad-ph">
+        <span className="ad-pt">Uso por departamento</span>
+        <span className="ad-pb">ÁREAS</span>
+      </div>
 
       {data.length === 0 ? (
         <div className="flex items-center justify-center h-[240px]">
-          <p className="text-sm text-slate-400">Sin datos en este periodo</p>
+          <p className="text-sm" style={{ color: 'var(--text3)' }}>Sin datos en este periodo</p>
         </div>
       ) : (
         <div style={{ width: '100%', height: 240 }}>
           <ResponsiveContainer>
             <BarChart data={data} margin={{ top: 10, right: 20, left: -10, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="rgba(148, 163, 184, 0.2)" />
-              <XAxis
-                dataKey="departamento"
-                stroke="#94a3b8"
-                fontSize={11}
-                tickLine={false}
-                axisLine={false}
-              />
-              <YAxis
-                stroke="#94a3b8"
-                fontSize={11}
-                tickLine={false}
-                axisLine={false}
-                allowDecimals={false}
-              />
+              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+              <XAxis dataKey="departamento" stroke="rgba(232,237,248,0.4)" fontSize={10} tickLine={false} axisLine={false} />
+              <YAxis stroke="rgba(232,237,248,0.4)" fontSize={10} tickLine={false} axisLine={false} allowDecimals={false} />
               <Tooltip
                 contentStyle={{
-                  backgroundColor: '#0f1c2e',
-                  border: '1px solid #334155',
+                  backgroundColor: '#111827',
+                  border: '1px solid rgba(255,255,255,0.09)',
                   borderRadius: '8px',
-                  color: '#fff',
-                  fontSize: '12px',
+                  color: '#e8edf8',
+                  fontSize: '11px',
+                  fontFamily: 'JetBrains Mono, monospace',
                 }}
-                labelStyle={{ color: '#F7941D', fontWeight: 'bold' }}
+                labelStyle={{ color: '#7c3aed', fontWeight: 'bold' }}
+                cursor={{ fill: 'rgba(255,255,255,0.03)' }}
                 formatter={(value, name) => {
                   if (name === 'total_messages') return [`${value} mensajes`, 'Mensajes'];
                   if (name === 'active_users') return [`${value} asesores`, 'Asesores activos'];
@@ -67,7 +55,7 @@ export function DepartmentChart({ data }: Props) {
               />
               <Bar dataKey="total_messages" radius={[6, 6, 0, 0]}>
                 {data.map((_, i) => (
-                  <Cell key={i} fill={COLORS[i % COLORS.length]} />
+                  <Cell key={i} fill={COLORS[i % COLORS.length]} style={{ filter: `drop-shadow(0 0 8px ${COLORS[i % COLORS.length]})` }} />
                 ))}
               </Bar>
             </BarChart>
@@ -75,18 +63,17 @@ export function DepartmentChart({ data }: Props) {
         </div>
       )}
 
-      {/* Mini-leyenda con números exactos */}
       {data.length > 0 && (
         <div className="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-2">
           {data.map((d, i) => (
             <div key={d.departamento} className="flex items-center gap-2 text-xs">
               <span
                 className="w-2.5 h-2.5 rounded-sm flex-shrink-0"
-                style={{ backgroundColor: COLORS[i % COLORS.length] }}
+                style={{ backgroundColor: COLORS[i % COLORS.length], boxShadow: `0 0 6px ${COLORS[i % COLORS.length]}` }}
               />
               <div className="min-w-0 flex-1">
-                <p className="font-medium text-slate-700 dark:text-slate-200 truncate">{d.departamento}</p>
-                <p className="text-slate-400 tabular-nums">
+                <p className="text-[11px] font-medium truncate" style={{ color: 'var(--text)' }}>{d.departamento}</p>
+                <p className="ad-mono text-[9px] tabular-nums" style={{ color: 'var(--text3)' }}>
                   {d.total_messages} · {d.active_users} asesores
                 </p>
               </div>

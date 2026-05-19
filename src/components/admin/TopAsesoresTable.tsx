@@ -16,68 +16,69 @@ interface Props {
  * Diseño limpio, sin gradientes — apropiado para presentaciones.
  */
 export function TopAsesoresTable({ data }: Props) {
+  // Paleta de avatares estilo executive — rota por posición
+  const avatarColors = [
+    { col: '#7c3aed', bg: 'rgba(124,58,237,0.12)' },
+    { col: '#06b6d4', bg: 'rgba(6,182,212,0.1)' },
+    { col: '#10b981', bg: 'rgba(16,185,129,0.1)' },
+    { col: '#f59e0b', bg: 'rgba(245,158,11,0.1)' },
+    { col: '#f43f5e', bg: 'rgba(244,63,94,0.08)' },
+  ];
+
   return (
-    <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden">
-      <div className="p-5 border-b border-slate-200 dark:border-slate-800">
-        <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-200">
-          🏆 Top asesores más activos
-        </h3>
-        <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Por cantidad de mensajes</p>
+    <div className="ad-card" style={{ padding: 22 }}>
+      <div className="ad-ph">
+        <span className="ad-pt">Top asesores más activos</span>
+        <span className="ad-pb">RANKING</span>
       </div>
 
       {data.length === 0 ? (
-        <div className="p-8 text-center">
-          <p className="text-sm text-slate-400">Sin datos en este periodo</p>
+        <div className="p-6 text-center">
+          <p className="text-sm" style={{ color: 'var(--text3)' }}>Sin datos en este periodo</p>
         </div>
       ) : (
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="bg-slate-50 dark:bg-slate-800/50 text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">
-              <tr>
-                <th className="text-left px-5 py-3 font-medium">#</th>
-                <th className="text-left px-5 py-3 font-medium">Asesor</th>
-                <th className="text-left px-5 py-3 font-medium hidden sm:table-cell">Depto / Rol</th>
-                <th className="text-right px-5 py-3 font-medium">Msgs</th>
-                <th className="text-right px-5 py-3 font-medium hidden sm:table-cell">Convs</th>
-              </tr>
-            </thead>
-            <tbody>
-              {data.map((row, i) => (
-                <tr
-                  key={row.asesor_email}
-                  className="border-t border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors"
+        <div className="flex flex-col gap-1.5">
+          {data.map((row, i) => {
+            const palette = avatarColors[i % avatarColors.length];
+            const initials = (row.display_name || row.asesor_email.split('@')[0])
+              .split(/[.\s]/)
+              .map(w => w[0]?.toUpperCase() ?? '')
+              .slice(0, 2)
+              .join('');
+            return (
+              <div
+                key={row.asesor_email}
+                className="flex items-center gap-2.5 p-2.5 rounded-[10px] border border-transparent hover:border-[var(--glass-border)] transition-all"
+                style={{ background: 'transparent' }}
+              >
+                <span className="ad-mono text-[9px] w-3 flex-shrink-0" style={{ color: 'var(--text3)' }}>
+                  {i + 1}
+                </span>
+                <div
+                  className="w-8 h-8 rounded-[10px] flex items-center justify-center font-bold text-[11px] flex-shrink-0 border"
+                  style={{ background: palette.bg, color: palette.col, borderColor: 'rgba(255,255,255,0.08)' }}
                 >
-                  <td className="px-5 py-3 text-slate-400 tabular-nums">{i + 1}</td>
-                  <td className="px-5 py-3">
-                    <p className="font-medium text-slate-800 dark:text-slate-100">
-                      {row.display_name || row.asesor_email.split('@')[0]}
-                    </p>
-                    <p className="text-xs text-slate-400">{row.asesor_email}</p>
-                  </td>
-                  <td className="px-5 py-3 text-slate-600 dark:text-slate-300 hidden sm:table-cell">
-                    {row.departamento ? (
-                      <>
-                        <span>{row.departamento}</span>
-                        {row.rol && (
-                          <span className="ml-2 inline-block text-[10px] px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400">
-                            {row.rol}
-                          </span>
-                        )}
-                      </>
-                    ) : (
-                      <span className="text-slate-400">—</span>
-                    )}
-                  </td>
-                  <td className="px-5 py-3 text-right font-semibold tabular-nums text-[#1B3A5C] dark:text-blue-300">
+                  {initials || '—'}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="text-[13px] font-semibold truncate" style={{ color: 'var(--text)' }}>
+                    {row.display_name || row.asesor_email.split('@')[0]}
+                  </div>
+                  <div className="ad-mono text-[8px] uppercase tracking-[0.1em]" style={{ color: 'var(--text3)' }}>
+                    {row.departamento || 'sin depto'}{row.rol ? ` · ${row.rol}` : ''}
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className="ad-display text-[22px] leading-none tabular-nums" style={{ color: palette.col }}>
                     {row.total_messages}
-                  </td>
-                  <td className="px-5 py-3 text-right tabular-nums text-slate-500 hidden sm:table-cell">
-                    {row.total_convs}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                  </div>
+                  <div className="ad-mono text-[8px] mt-0.5" style={{ color: 'var(--text3)' }}>
+                    {row.total_convs} convs
+                  </div>
+                </div>
+              </div>
+            );
+          })}
         </div>
       )}
     </div>

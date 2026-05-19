@@ -33,20 +33,15 @@ export function HourlyChart({ data }: Props) {
   );
 
   return (
-    <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5">
-      <div className="flex items-baseline justify-between mb-1">
-        <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-200">
-          🕐 Uso por hora del día
-        </h3>
-        {peakEntry.total_messages > 0 && (
-          <span className="text-xs text-slate-500">
-            Pico: <strong className="text-[#F7941D]">{formatHour(peakEntry.hour_pr)}</strong>
-          </span>
+    <div className="ad-card" style={{ padding: 22 }}>
+      <div className="ad-ph">
+        <span className="ad-pt">Uso por hora del día</span>
+        {peakEntry.total_messages > 0 ? (
+          <span className="ad-pb">PICO · {formatHour(peakEntry.hour_pr).toUpperCase()}</span>
+        ) : (
+          <span className="ad-pb">24H</span>
         )}
       </div>
-      <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">
-        Hora local Puerto Rico · todo el periodo disponible
-      </p>
 
       <div style={{ width: '100%', height: 220 }}>
         <ResponsiveContainer>
@@ -54,40 +49,41 @@ export function HourlyChart({ data }: Props) {
             data={data.map((d) => ({ ...d, hour_label: formatHour(d.hour_pr) }))}
             margin={{ top: 10, right: 10, left: -15, bottom: 0 }}
           >
-            <CartesianGrid strokeDasharray="3 3" stroke="rgba(148, 163, 184, 0.2)" />
+            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
             <XAxis
               dataKey="hour_label"
-              stroke="#94a3b8"
-              fontSize={10}
+              stroke="rgba(232,237,248,0.4)"
+              fontSize={9}
               tickLine={false}
               axisLine={false}
-              interval={2} // mostrar cada 3 horas para evitar overlap
+              interval={2}
             />
-            <YAxis
-              stroke="#94a3b8"
-              fontSize={11}
-              tickLine={false}
-              axisLine={false}
-              allowDecimals={false}
-            />
+            <YAxis stroke="rgba(232,237,248,0.4)" fontSize={10} tickLine={false} axisLine={false} allowDecimals={false} />
             <Tooltip
               contentStyle={{
-                backgroundColor: '#0f1c2e',
-                border: '1px solid #334155',
+                backgroundColor: '#111827',
+                border: '1px solid rgba(255,255,255,0.09)',
                 borderRadius: '8px',
-                color: '#fff',
-                fontSize: '12px',
+                color: '#e8edf8',
+                fontSize: '11px',
+                fontFamily: 'JetBrains Mono, monospace',
               }}
-              labelStyle={{ color: '#F7941D', fontWeight: 'bold' }}
+              labelStyle={{ color: '#f59e0b', fontWeight: 'bold' }}
+              cursor={{ fill: 'rgba(255,255,255,0.03)' }}
               formatter={(value) => [`${value} mensajes`, '']}
             />
             <Bar dataKey="total_messages" radius={[4, 4, 0, 0]}>
-              {data.map((d) => (
-                <Cell
-                  key={d.hour_pr}
-                  fill={d.total_messages >= peakThreshold ? '#F7941D' : '#94a3b8'}
-                />
-              ))}
+              {data.map((d) => {
+                const isPeak = d.total_messages >= peakThreshold;
+                const fill = isPeak ? '#f59e0b' : 'rgba(124, 58, 237, 0.4)';
+                return (
+                  <Cell
+                    key={d.hour_pr}
+                    fill={fill}
+                    style={isPeak ? { filter: 'drop-shadow(0 0 8px #f59e0b)' } : undefined}
+                  />
+                );
+              })}
             </Bar>
           </BarChart>
         </ResponsiveContainer>

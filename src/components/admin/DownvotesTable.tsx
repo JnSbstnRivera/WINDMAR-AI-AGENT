@@ -29,49 +29,56 @@ function formatRelative(iso: string): string {
  */
 export function DownvotesTable({ data }: Props) {
   return (
-    <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden">
-      <div className="p-5 border-b border-slate-200 dark:border-slate-800">
-        <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-200">
-          ⚠️ Downvotes a revisar
-        </h3>
-        <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-          Respuestas marcadas como no útiles — útiles para mejorar el prompt
-        </p>
+    <div className="ad-card" style={{ padding: 22 }}>
+      <div className="ad-ph">
+        <span className="ad-pt">Downvotes a revisar</span>
+        <span className="ad-pb">👎 RECIENTES</span>
       </div>
 
       {data.length === 0 ? (
-        <div className="p-8 text-center">
+        <div className="p-6 text-center">
           <span className="text-3xl mb-2 block">🎉</span>
-          <p className="text-sm text-slate-500">Sin downvotes — el bot está respondiendo bien</p>
+          <p className="text-sm" style={{ color: 'var(--text2)' }}>Sin downvotes — el bot está respondiendo bien</p>
         </div>
       ) : (
-        <div className="divide-y divide-slate-100 dark:divide-slate-800 max-h-[400px] overflow-y-auto">
+        <div className="max-h-[400px] overflow-y-auto -mr-2 pr-2 flex flex-col">
           {data.map((row) => (
-            <div key={row.feedback_id} className="p-5 hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors">
+            <div
+              key={row.feedback_id}
+              className="py-3 px-2 hover:bg-white/[0.03] transition-colors rounded-lg border-b last:border-b-0"
+              style={{ borderColor: 'rgba(255,255,255,0.04)' }}
+            >
               <div className="flex items-start justify-between gap-3 mb-2">
                 <div className="flex items-center gap-2">
-                  <span className="text-xs font-medium text-slate-700 dark:text-slate-300">
+                  <span className="text-[12px] font-semibold" style={{ color: 'var(--text)' }}>
                     {row.display_name || row.user_email.split('@')[0]}
                   </span>
-                  <span className="text-xs text-slate-400">·</span>
-                  <span className="text-xs text-slate-400">{formatRelative(row.created_at)}</span>
+                  <span className="ad-mono text-[9px]" style={{ color: 'var(--text3)' }}>
+                    · {formatRelative(row.created_at)}
+                  </span>
                 </div>
-                <span className="text-[10px] font-medium text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 px-2 py-0.5 rounded">
+                <span
+                  className="ad-mono text-[9px] px-2 py-0.5 rounded"
+                  style={{ background: 'rgba(244,63,94,0.12)', color: '#f43f5e', border: '1px solid rgba(244,63,94,0.2)' }}
+                >
                   👎
                 </span>
               </div>
 
               {row.reason && (
-                <div className="mb-2 p-2 bg-red-50 dark:bg-red-900/10 border-l-2 border-red-300 dark:border-red-700 rounded">
-                  <p className="text-xs text-red-800 dark:text-red-200 italic">
+                <div
+                  className="mb-2 p-2 rounded border-l-2"
+                  style={{ background: 'rgba(244,63,94,0.08)', borderColor: '#f43f5e' }}
+                >
+                  <p className="text-[11px] italic" style={{ color: '#fda4af' }}>
                     &ldquo;{row.reason}&rdquo;
                   </p>
                 </div>
               )}
 
-              <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed line-clamp-3">
-                <strong className="text-slate-700 dark:text-slate-300">Respuesta del bot:</strong> {row.message_excerpt}
-                {row.message_excerpt.length >= 200 && '...'}
+              <p className="text-[11px] leading-relaxed line-clamp-3" style={{ color: 'var(--text2)' }}>
+                <strong style={{ color: 'var(--text)' }}>Respuesta:</strong> {row.message_excerpt}
+                {row.message_excerpt.length >= 200 && '…'}
               </p>
             </div>
           ))}

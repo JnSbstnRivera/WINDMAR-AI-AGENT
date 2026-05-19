@@ -16,20 +16,18 @@ export function QualityDonut({ thumbsUp, thumbsDown }: Props) {
   const pct = total > 0 ? Math.round((thumbsUp / total) * 100) : null;
 
   return (
-    <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5">
-      <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-200 mb-1">
-        🎯 Calidad de respuestas
-      </h3>
-      <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">
-        Feedback de asesores
-      </p>
+    <div className="ad-card" style={{ padding: 22 }}>
+      <div className="ad-ph">
+        <span className="ad-pt">Calidad de respuestas</span>
+        <span className="ad-pb">👍 / 👎</span>
+      </div>
 
       {total === 0 ? (
         <div className="flex flex-col items-center justify-center h-[220px] text-center">
           <span className="text-4xl mb-2">📭</span>
-          <p className="text-sm text-slate-400">Sin feedback aún</p>
-          <p className="text-xs text-slate-400 mt-1">
-            Los asesores pueden calificar 👍/👎 cada respuesta
+          <p className="text-sm" style={{ color: 'var(--text2)' }}>Sin feedback aún</p>
+          <p className="text-xs mt-1" style={{ color: 'var(--text3)' }}>
+            Los asesores pueden calificar 👍/👎
           </p>
         </div>
       ) : (
@@ -39,8 +37,8 @@ export function QualityDonut({ thumbsUp, thumbsDown }: Props) {
               <PieChart>
                 <Pie
                   data={[
-                    { name: 'Útil', value: thumbsUp, color: '#22c55e' },
-                    { name: 'No útil', value: thumbsDown, color: '#ef4444' },
+                    { name: 'Útil', value: thumbsUp },
+                    { name: 'No útil', value: thumbsDown },
                   ]}
                   cx="50%"
                   cy="50%"
@@ -48,43 +46,46 @@ export function QualityDonut({ thumbsUp, thumbsDown }: Props) {
                   outerRadius={60}
                   paddingAngle={2}
                   dataKey="value"
+                  stroke="none"
                 >
-                  <Cell fill="#22c55e" />
-                  <Cell fill="#ef4444" />
+                  <Cell fill="#10b981" style={{ filter: 'drop-shadow(0 0 6px #10b981)' }} />
+                  <Cell fill="#f43f5e" style={{ filter: 'drop-shadow(0 0 6px #f43f5e)' }} />
                 </Pie>
                 <Tooltip
                   contentStyle={{
-                    backgroundColor: '#0f1c2e',
-                    border: '1px solid #334155',
+                    backgroundColor: '#111827',
+                    border: '1px solid rgba(255,255,255,0.09)',
                     borderRadius: '8px',
-                    color: '#fff',
-                    fontSize: '12px',
+                    color: '#e8edf8',
+                    fontSize: '11px',
+                    fontFamily: 'JetBrains Mono, monospace',
                   }}
                 />
               </PieChart>
             </ResponsiveContainer>
-            {/* Número central */}
             <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-              <span className="text-2xl font-bold text-slate-800 dark:text-slate-100">{pct}%</span>
-              <span className="text-[10px] text-slate-500">útil</span>
+              <span className="ad-display" style={{ fontSize: 30, lineHeight: 1, color: 'var(--text)' }}>{pct}%</span>
+              <span className="ad-mono" style={{ fontSize: 9, color: 'var(--text3)', letterSpacing: '0.15em', textTransform: 'uppercase', marginTop: 2 }}>útil</span>
             </div>
           </div>
 
           <div className="flex-1 space-y-3">
             <div className="flex items-center gap-2">
-              <span className="w-3 h-3 rounded bg-emerald-500"></span>
-              <span className="text-sm text-slate-700 dark:text-slate-300">
-                <strong>{thumbsUp}</strong> útiles
+              <span className="w-2.5 h-2.5 rounded-sm" style={{ background: '#10b981', boxShadow: '0 0 6px #10b981' }} />
+              <span className="text-sm" style={{ color: 'var(--text2)' }}>
+                <strong style={{ color: 'var(--text)' }}>{thumbsUp}</strong> útiles
               </span>
             </div>
             <div className="flex items-center gap-2">
-              <span className="w-3 h-3 rounded bg-red-500"></span>
-              <span className="text-sm text-slate-700 dark:text-slate-300">
-                <strong>{thumbsDown}</strong> no útiles
+              <span className="w-2.5 h-2.5 rounded-sm" style={{ background: '#f43f5e', boxShadow: '0 0 6px #f43f5e' }} />
+              <span className="text-sm" style={{ color: 'var(--text2)' }}>
+                <strong style={{ color: 'var(--text)' }}>{thumbsDown}</strong> no útiles
               </span>
             </div>
-            <div className="pt-2 border-t border-slate-200 dark:border-slate-700">
-              <p className="text-xs text-slate-500">Total: <strong>{total}</strong> votos</p>
+            <div className="pt-2 border-t" style={{ borderColor: 'var(--glass-border)' }}>
+              <p className="ad-mono" style={{ fontSize: 10, color: 'var(--text3)', letterSpacing: '0.1em' }}>
+                TOTAL · <strong style={{ color: 'var(--text)' }}>{total}</strong> votos
+              </p>
             </div>
           </div>
         </div>
