@@ -1,6 +1,7 @@
 'use client';
 
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
+import { useAdminThemeColors } from '@/hooks/useAdminThemeColors';
 
 interface Props {
   thumbsUp: number;
@@ -12,6 +13,7 @@ interface Props {
  * Si no hay feedback aún, muestra empty state.
  */
 export function QualityDonut({ thumbsUp, thumbsDown }: Props) {
+  const c = useAdminThemeColors();
   const total = thumbsUp + thumbsDown;
   const pct = total > 0 ? Math.round((thumbsUp / total) * 100) : null;
 
@@ -53,10 +55,10 @@ export function QualityDonut({ thumbsUp, thumbsDown }: Props) {
                 </Pie>
                 <Tooltip
                   contentStyle={{
-                    backgroundColor: '#111827',
-                    border: '1px solid rgba(255,255,255,0.09)',
+                    backgroundColor: c.tooltipBg,
+                    border: `1px solid ${c.tooltipBorder}`,
                     borderRadius: '8px',
-                    color: '#e8edf8',
+                    color: c.tooltipText,
                     fontSize: '11px',
                     fontFamily: 'JetBrains Mono, monospace',
                   }}

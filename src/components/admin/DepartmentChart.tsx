@@ -1,6 +1,7 @@
 'use client';
 
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Cell } from 'recharts';
+import { useAdminThemeColors } from '@/hooks/useAdminThemeColors';
 
 interface Props {
   data: Array<{
@@ -18,6 +19,7 @@ const COLORS = ['#7c3aed', '#06b6d4', '#10b981', '#f59e0b', '#f43f5e'];
  * Muestra qué área usa más el bot — útil para presentar a dirección.
  */
 export function DepartmentChart({ data }: Props) {
+  const c = useAdminThemeColors();
   return (
     <div className="ad-card" style={{ padding: 22 }}>
       <div className="ad-ph">
@@ -33,20 +35,20 @@ export function DepartmentChart({ data }: Props) {
         <div style={{ width: '100%', height: 240 }}>
           <ResponsiveContainer>
             <BarChart data={data} margin={{ top: 10, right: 20, left: -10, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
-              <XAxis dataKey="departamento" stroke="rgba(232,237,248,0.4)" fontSize={10} tickLine={false} axisLine={false} />
-              <YAxis stroke="rgba(232,237,248,0.4)" fontSize={10} tickLine={false} axisLine={false} allowDecimals={false} />
+              <CartesianGrid strokeDasharray="3 3" stroke={c.grid} />
+              <XAxis dataKey="departamento" stroke={c.axis} fontSize={10} tickLine={false} axisLine={false} />
+              <YAxis stroke={c.axis} fontSize={10} tickLine={false} axisLine={false} allowDecimals={false} />
               <Tooltip
                 contentStyle={{
-                  backgroundColor: '#111827',
-                  border: '1px solid rgba(255,255,255,0.09)',
+                  backgroundColor: c.tooltipBg,
+                  border: `1px solid ${c.tooltipBorder}`,
                   borderRadius: '8px',
-                  color: '#e8edf8',
+                  color: c.tooltipText,
                   fontSize: '11px',
                   fontFamily: 'JetBrains Mono, monospace',
                 }}
                 labelStyle={{ color: '#7c3aed', fontWeight: 'bold' }}
-                cursor={{ fill: 'rgba(255,255,255,0.03)' }}
+                cursor={{ fill: c.grid }}
                 formatter={(value, name) => {
                   if (name === 'total_messages') return [`${value} mensajes`, 'Mensajes'];
                   if (name === 'active_users') return [`${value} asesores`, 'Asesores activos'];

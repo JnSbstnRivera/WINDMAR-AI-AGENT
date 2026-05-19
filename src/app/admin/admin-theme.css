@@ -4,26 +4,30 @@
    (mismo sistema que el chat — wh-theme localStorage compartido).
 ══════════════════════════════════════════════ */
 
-/* LIGHT (default) — tokens light */
+/* LIGHT (default) — tokens light con buen contraste */
 .admin-root {
-  --bg0: #f0f4ff;
+  --bg0: #e6ecf7;             /* fondo más saturado para que las cards blancas resalten */
   --bg1: #ffffff;
   --bg2: #f7f9ff;
   --bg3: #edf2ff;
-  --border: rgba(0, 0, 0, 0.07);
-  --border-hi: rgba(0, 0, 0, 0.14);
+  --border: rgba(15, 23, 42, 0.12);
+  --border-hi: rgba(15, 23, 42, 0.22);
   --text: #0f172a;
-  --text2: rgba(15, 23, 42, 0.55);
-  --text3: rgba(15, 23, 42, 0.28);
+  --text2: rgba(15, 23, 42, 0.7);   /* antes 0.55, más legible */
+  --text3: rgba(15, 23, 42, 0.55);  /* antes 0.28, casi invisible — ahora sí se lee */
   --n1: #6d28d9;
   --n2: #1d4ed8;
   --n3: #0891b2;
   --n4: #d97706;
   --n5: #059669;
   --n6: #e11d48;
-  --glass-bg: rgba(255, 255, 255, 0.8);
-  --glass-border: rgba(0, 0, 0, 0.07);
-  --shadow: 0 8px 32px rgba(15, 23, 42, 0.1);
+  --glass-bg: rgba(255, 255, 255, 0.92);  /* card casi sólida — máximo contraste con bg0 */
+  --glass-border: rgba(15, 23, 42, 0.1);
+  --shadow: 0 4px 16px rgba(15, 23, 42, 0.08), 0 12px 36px rgba(15, 23, 42, 0.06);
+
+  /* Tokens auxiliares para charts (recharts no admite CSS vars en props) */
+  --chart-grid: rgba(15, 23, 42, 0.1);
+  --chart-axis: rgba(15, 23, 42, 0.55);
 }
 
 /* DARK — sigue al class `dark` de <html> (sistema del chat) */
@@ -46,6 +50,8 @@ html.dark .admin-root {
   --glass-bg: rgba(255, 255, 255, 0.04);
   --glass-border: rgba(255, 255, 255, 0.09);
   --shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+  --chart-grid: rgba(255, 255, 255, 0.05);
+  --chart-axis: rgba(232, 237, 248, 0.4);
 }
 
 .admin-root {

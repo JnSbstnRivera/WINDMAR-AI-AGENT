@@ -1,6 +1,7 @@
 'use client';
 
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
+import { useAdminThemeColors } from '@/hooks/useAdminThemeColors';
 
 interface Props {
   data: Array<{ day_label: string; messages_count: number }>;
@@ -11,6 +12,7 @@ interface Props {
  * Cliente component porque Recharts necesita DOM (window/SVG).
  */
 export function UsageChart({ data }: Props) {
+  const c = useAdminThemeColors();
   return (
     <div className="ad-card" style={{ padding: 22 }}>
       <div className="ad-ph">
@@ -27,15 +29,15 @@ export function UsageChart({ data }: Props) {
                 <stop offset="100%" stopColor="#2563eb" stopOpacity={0.4} />
               </linearGradient>
             </defs>
-            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255, 255, 255, 0.05)" />
-            <XAxis dataKey="day_label" stroke="rgba(232,237,248,0.4)" fontSize={10} tickLine={false} axisLine={false} />
-            <YAxis stroke="rgba(232,237,248,0.4)" fontSize={10} tickLine={false} axisLine={false} allowDecimals={false} />
+            <CartesianGrid strokeDasharray="3 3" stroke={c.grid} />
+            <XAxis dataKey="day_label" stroke={c.axis} fontSize={10} tickLine={false} axisLine={false} />
+            <YAxis stroke={c.axis} fontSize={10} tickLine={false} axisLine={false} allowDecimals={false} />
             <Tooltip
               contentStyle={{
-                backgroundColor: '#111827',
-                border: '1px solid rgba(255,255,255,0.09)',
+                backgroundColor: c.tooltipBg,
+                border: `1px solid ${c.tooltipBorder}`,
                 borderRadius: '8px',
-                color: '#e8edf8',
+                color: c.tooltipText,
                 fontSize: '11px',
                 fontFamily: 'JetBrains Mono, monospace',
               }}

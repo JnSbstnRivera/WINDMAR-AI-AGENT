@@ -1,6 +1,7 @@
 'use client';
 
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Cell } from 'recharts';
+import { useAdminThemeColors } from '@/hooks/useAdminThemeColors';
 
 interface Props {
   data: Array<{
@@ -24,6 +25,7 @@ function formatHour(h: number): string {
  * Las horas pico se destacan en naranja brand; las demás en gris.
  */
 export function HourlyChart({ data }: Props) {
+  const c = useAdminThemeColors();
   const maxCount = Math.max(...data.map((d) => d.total_messages), 1);
   const peakThreshold = maxCount * 0.6; // top 40% = naranja, resto gris
 
@@ -49,27 +51,27 @@ export function HourlyChart({ data }: Props) {
             data={data.map((d) => ({ ...d, hour_label: formatHour(d.hour_pr) }))}
             margin={{ top: 10, right: 10, left: -15, bottom: 0 }}
           >
-            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+            <CartesianGrid strokeDasharray="3 3" stroke={c.grid} />
             <XAxis
               dataKey="hour_label"
-              stroke="rgba(232,237,248,0.4)"
+              stroke={c.axis}
               fontSize={9}
               tickLine={false}
               axisLine={false}
               interval={2}
             />
-            <YAxis stroke="rgba(232,237,248,0.4)" fontSize={10} tickLine={false} axisLine={false} allowDecimals={false} />
+            <YAxis stroke={c.axis} fontSize={10} tickLine={false} axisLine={false} allowDecimals={false} />
             <Tooltip
               contentStyle={{
-                backgroundColor: '#111827',
-                border: '1px solid rgba(255,255,255,0.09)',
+                backgroundColor: c.tooltipBg,
+                border: `1px solid ${c.tooltipBorder}`,
                 borderRadius: '8px',
-                color: '#e8edf8',
+                color: c.tooltipText,
                 fontSize: '11px',
                 fontFamily: 'JetBrains Mono, monospace',
               }}
               labelStyle={{ color: '#f59e0b', fontWeight: 'bold' }}
-              cursor={{ fill: 'rgba(255,255,255,0.03)' }}
+              cursor={{ fill: c.grid }}
               formatter={(value) => [`${value} mensajes`, '']}
             />
             <Bar dataKey="total_messages" radius={[4, 4, 0, 0]}>
