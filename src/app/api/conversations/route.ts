@@ -1,5 +1,6 @@
 import { auth } from '@/auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
+import { getToolsBySlugs } from '@/lib/tools';
 
 export const runtime = 'nodejs';
 
@@ -31,15 +32,27 @@ export async function GET() {
     return Response.json({ conversations: [] });
   }
 
-  // Cargar mensajes de cada conversación
+  // Cargar mensajes de cada conversación (incluye tool_refs para hidratar cards)
   const ids = convs.map(c => c.id);
   const { data: msgs } = await supabase
     .from('messages')
-    .select('id, conversation_id, role, content, created_at')
+    .select('id, conversation_id, role, content, created_at, tool_refs')
     .in('conversation_id', ids)
     .order('created_at', { ascending: true });
 
-  const msgsByConv = new Map<string, Array<{ id: string; role: string; content: string; created_at: string }>>();
+  // Recolectar todos los slugs únicos de toda la historia y resolverlos en una sola query
+  const allSlugs = new Set<string>();
+  for (const m of msgs ?? []) {
+    const refs = m.tool_refs as string[] | null;
+    if (Array.isArray(refs)) refs.forEach(s => allSlugs.add(s));
+  }
+  const toolsBySlug = new Map<string, Awaited<ReturnType<typeof getToolsBySlugs>>[number]>();
+  if (allSlugs.size > 0) {
+    const cards = await getToolsBySlugs(Array.from(allSlugs));
+    for (const c of cards) toolsBySlug.set(c.slug, c);
+  }
+
+  const msgsByConv = new Map<string, Array<{ id: string; role: string; content: string; created_at: string; tool_refs: string[] | null }>>();
   for (const m of msgs ?? []) {
     const arr = msgsByConv.get(m.conversation_id as string) ?? [];
     arr.push({
@@ -47,6 +60,7 @@ export async function GET() {
       role: m.role as string,
       content: m.content as string,
       created_at: m.created_at as string,
+      tool_refs: (m.tool_refs as string[] | null) ?? null,
     });
     msgsByConv.set(m.conversation_id as string, arr);
   }
@@ -61,6 +75,9 @@ export async function GET() {
       role: m.role,
       content: m.content,
       timestamp: m.created_at,
+      tools: m.tool_refs
+        ? m.tool_refs.map(slug => toolsBySlug.get(slug)).filter(Boolean)
+        : undefined,
     })),
   }));
 

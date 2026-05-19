@@ -1,8 +1,20 @@
+export interface ToolRef {
+  slug: string;
+  name: string;
+  url: string;
+  description: string | null;
+  category: string;
+  icon: string | null;
+  is_official: boolean;
+}
+
 export interface Message {
   id: string;
   role: 'user' | 'assistant';
   content: string;
   timestamp: Date;
+  /** Herramientas recomendadas para esta respuesta (solo en mensajes del asistente). */
+  tools?: ToolRef[];
 }
 
 export interface Conversation {

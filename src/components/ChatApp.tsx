@@ -9,7 +9,7 @@ import { MascotPanel, type MascotState } from './MascotPanel';
 import { TopBar } from './TopBar';
 import { ProfileModal } from './ProfileModal';
 import { useInactivityLogout } from '@/hooks/useInactivityLogout';
-import type { Message, Conversation } from '@/types';
+import type { Message, Conversation, ToolRef } from '@/types';
 
 function generateId() {
   return Math.random().toString(36).slice(2) + Date.now().toString(36);
@@ -321,6 +321,16 @@ export function ChatApp({ user, onSignOut }: Props) {
 
       if (!response.body) throw new Error('Sin cuerpo de respuesta');
 
+      // Extraer header con herramientas recomendadas (lo pone /api/chat).
+      // Se aplica al mensaje cuando termine el stream, no durante (evita parpadeo).
+      let recommendedTools: ToolRef[] = [];
+      try {
+        const raw = response.headers.get('X-Recommended-Tools');
+        if (raw) recommendedTools = JSON.parse(decodeURIComponent(raw)) as ToolRef[];
+      } catch (err) {
+        console.warn('[chat] No se pudo parsear X-Recommended-Tools:', err);
+      }
+
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
       let fullText = '';
@@ -366,11 +376,34 @@ export function ChatApp({ user, onSignOut }: Props) {
       pendingText = fullText;
       flushUpdate();
 
-      // Guardar respuesta del asistente
+      // Adjuntar las herramientas recomendadas al mensaje del asistente.
+      // Se hace acá (post-stream) para que las cards aparezcan junto con el
+      // texto final, no parpadeando durante la generación.
+      if (recommendedTools.length > 0) {
+        setConversations((prev) =>
+          prev.map((c) =>
+            c.id === convId
+              ? {
+                  ...c,
+                  messages: c.messages.map((m) =>
+                    m.id === assistantMsgId ? { ...m, tools: recommendedTools } : m
+                  ),
+                }
+              : c
+          )
+        );
+      }
+
+      // Guardar respuesta del asistente + slugs de herramientas (para re-render al recargar)
       await fetch('/api/messages', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ conversation_id: convId, role: 'assistant', content: fullText }),
+        body: JSON.stringify({
+          conversation_id: convId,
+          role: 'assistant',
+          content: fullText,
+          tool_refs: recommendedTools.map((t) => t.slug),
+        }),
       });
     } catch (err) {
       // Si el usuario presionó "detener", NO mostramos error rojo — solo añadimos

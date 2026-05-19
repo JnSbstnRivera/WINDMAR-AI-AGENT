@@ -11,10 +11,12 @@ export async function POST(req: Request) {
   }
   const email = session.user.email.toLowerCase();
 
-  const { conversation_id, role, content } = await req.json() as {
+  const { conversation_id, role, content, tool_refs } = await req.json() as {
     conversation_id: string;
     role: 'user' | 'assistant';
     content: string;
+    /** Solo aplica a role='assistant': slugs de las herramientas recomendadas. */
+    tool_refs?: string[];
   };
 
   if (!conversation_id || !role || !content) {
@@ -38,9 +40,15 @@ export async function POST(req: Request) {
     return Response.json({ error: 'Conversación no encontrada' }, { status: 404 });
   }
 
+  // tool_refs solo se persiste para mensajes del asistente y si viene array no-vacío
+  const normalizedToolRefs =
+    role === 'assistant' && Array.isArray(tool_refs) && tool_refs.length > 0
+      ? tool_refs.slice(0, 10) // cap defensivo
+      : null;
+
   const { error: insertError } = await supabase
     .from('messages')
-    .insert({ conversation_id, role, content });
+    .insert({ conversation_id, role, content, tool_refs: normalizedToolRefs });
 
   if (insertError) {
     console.error('[api/messages POST]', insertError);

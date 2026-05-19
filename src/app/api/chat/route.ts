@@ -1,94 +1,11 @@
 import { auth } from '@/auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { SYSTEM_PROMPT } from '@/lib/prompts';
+import { pickRelevantTools, buildToolsContext, toClientCards } from '@/lib/tools';
 import Anthropic from '@anthropic-ai/sdk';
 
 export const runtime = 'nodejs';
 export const maxDuration = 30;
-
-// ════════════════════════════════════════
-// HERRAMIENTAS DEL CALL CENTER (lista cerrada — REGLA #0 anti-alucinación)
-// ════════════════════════════════════════
-const TOOLS = [
-  { id: 'luma-scanner', name: 'LUMA Scanner', url: 'https://luma-scanner-two.vercel.app/', whenToUse: 'Primer paso del proceso de venta solar. Cuando el cliente menciona su factura de LUMA, cuánto paga de luz, o quiere saber cuánto ahorra con solar.', triggers: ['luma','factura','bill','luz','paga','consumo','kwh','electricidad','recibo','$200','$150','$300','mensual'] },
-  { id: 'cotizador-loan', name: 'Cotizador Loan', url: 'https://cotizador-loan.vercel.app/', whenToUse: 'Cliente quiere ser dueño del sistema solar, buen crédito, aprovechar crédito federal 30%. Oriental Bank, planes 10/15/20/25 años.', triggers: ['loan','préstamo','dueño','oriental bank','crédito federal','30%','comprar','mensualidad','plazo','10 años','15 años','20 años','25 años','correr crédito','financiamiento'] },
-  { id: 'cotizador-lease', name: 'Cotizador Lease / PPA', url: 'https://cotizador-lease-ppa.vercel.app/', whenToUse: '$0 inicial, sin deuda, alternativa cuando el Loan no aprueba. LightReach es el dueño. Ideal para crédito limitado.', triggers: ['lease','ppa','lightreach','$0','cero inicial','no quiere préstamo','no aprobó','crédito malo','alternativa','sin inversión'] },
-  { id: 'cotizador-roofing', name: 'Cotizador Roofing Pro', url: 'https://cotizador-roofing-pro.vercel.app/', whenToUse: 'Cliente pregunta por techo, goteras, sellado antes de solar. Planes Silver, Gold, Platinum.', triggers: ['roofing','techo','sellado','sello','gotera','roof','silver','gold','platinum','sqft','pies cuadrados','reparar techo'] },
-  { id: 'cotizador-agua', name: 'Cotizador Agua', url: 'https://cotizador-agua.vercel.app/', whenToUse: 'Cliente pregunta por sistemas de agua, filtros o calidad del agua.', triggers: ['agua','water','filtro','filtración','purificación','prasa','acueducto','calidad del agua','sistema de agua'] },
-  { id: 'calculadora-anker', name: 'Calculadora Anker', url: 'https://calculador-anker.vercel.app/', whenToUse: 'Cliente pregunta por baterías Anker, backup portátil o solución de emergencia.', triggers: ['anker','batería','baterías','battery','backup','portátil','emergencia','huracán','apagón','blackout','power station'] },
-  { id: 'calculadora-placas-ac', name: 'Calculadora Placas x Aires', url: 'https://calculadora-placas-aires-acondicion.vercel.app/', whenToUse: 'Cliente quiere saber cuántos paneles necesita según sus aires acondicionados.', triggers: ['aires','aire acondicionado','ac','split','mini split','cuántas placas','cuántos paneles','dimensionar'] },
-  { id: 'calculadora-ev', name: 'Calculadora Solar EV', url: 'https://calculadora-solar-ev.vercel.app/', whenToUse: 'Cliente tiene carro eléctrico y quiere cargarlo con energía solar.', triggers: ['carro eléctrico','vehículo eléctrico','ev','tesla','cargar el carro','nissan leaf','chevy bolt','kia','ford mach'] },
-  { id: 'proyecto-completo', name: 'Cotizador Proyecto Completo (MAYOR AHORRO)', url: 'https://proyecto-completo-three.vercel.app/', whenToUse: 'SIEMPRE que el cliente muestre interés en más de un producto. Roofing + Solar + Batería con los mayores descuentos.', triggers: ['proyecto completo','todo junto','paquete','los tres','techo y solar','solar y batería','todo en uno','descuento','combo'] },
-  { id: 'panel-general', name: 'Panel de Herramientas', url: 'https://panel-de-herramientas-call-center.vercel.app/', whenToUse: 'Acceso rápido a todas las herramientas.', triggers: ['panel','herramientas'] },
-];
-
-// ════════════════════════════════════════
-// DETECCIÓN DE TÓPICO de la conversación (para routing contextual)
-// ════════════════════════════════════════
-// Si los últimos N mensajes son sobre Roofing/Water/Solar/etc., damos
-// preferencia al cotizador correcto Y excluimos los que NO aplican.
-// Esto resuelve el bug de "habla de Roofing y le recomienda Cotizador Loan".
-type Topic = 'roofing' | 'water' | 'solar' | 'anker' | 'general';
-
-const TOPIC_KEYWORDS: Record<Exclude<Topic, 'general'>, string[]> = {
-  roofing: ['roofing','techo','sellado','sello','gotera','roof','silver','gold','platinum','sqft','pies cuadrados','reparar techo','reparación de techo'],
-  water:   ['agua','filtro','filtración','purificación','calentador','soltek','cisterna','ecowater','hércules','reverse osmosis','poe','water care'],
-  solar:   ['solar','placa','placas','panel','paneles','kwh','luma','factura','powerwall','batería','baterías','tesla','qcell','itc','lease','loan','enfin','lightreach','sunnova'],
-  anker:   ['anker','solix','f2600','f3800','bp2600','c300','power station','portátil','huracán','apagón','blackout'],
-};
-
-function detectTopic(message: string, history: Array<{ role: string; content: string }>): Topic {
-  // Concatenamos el mensaje actual + últimos 6 turnos para análisis de contexto
-  const recent = history.slice(-6).map(h => h.content).join(' ');
-  const combined = (message + ' ' + recent).toLowerCase();
-
-  const scores: Record<Exclude<Topic, 'general'>, number> = {
-    roofing: 0, water: 0, solar: 0, anker: 0,
-  };
-  for (const [topic, keywords] of Object.entries(TOPIC_KEYWORDS) as Array<[Exclude<Topic, 'general'>, string[]]>) {
-    for (const kw of keywords) {
-      // Conteo simple de menciones — más menciones = más relevante
-      const matches = combined.split(kw).length - 1;
-      scores[topic] += matches;
-    }
-  }
-
-  const max = Math.max(...Object.values(scores));
-  if (max < 2) return 'general'; // muy poca señal → no filtramos
-
-  // Devuelve el topic con score máximo (tiebreak: roofing > water > anker > solar)
-  const order: Array<Exclude<Topic, 'general'>> = ['roofing', 'water', 'anker', 'solar'];
-  return order.find(t => scores[t] === max) ?? 'general';
-}
-
-function buildToolsContext(message: string, history: Array<{ role: string; content: string }>): string {
-  const lower = message.toLowerCase();
-  const matched = TOOLS.filter(t => t.triggers.some(tr => lower.includes(tr)));
-
-  // Detección de tópico: si la conversación es claramente sobre Roofing/Water/etc.,
-  // EXCLUIMOS herramientas que no aplican (ej: Cotizador Loan en conversación Roofing).
-  const topic = detectTopic(message, history);
-  let filtered = matched;
-  if (topic === 'roofing') {
-    // Roofing standalone NO usa Cotizador Loan ni Lease (esos son para solar).
-    // Si el mensaje mencionó "financiamiento" sin "solar", igual lo excluimos.
-    filtered = matched.filter(t => t.id !== 'cotizador-loan' && t.id !== 'cotizador-lease');
-    // Y aseguramos que Roofing Pro esté presente
-    const rp = TOOLS.find(t => t.id === 'cotizador-roofing');
-    if (rp && !filtered.includes(rp)) filtered.unshift(rp);
-  } else if (topic === 'water') {
-    // Agua no se financia — solo cash. Excluimos Loan/Lease.
-    filtered = matched.filter(t => t.id !== 'cotizador-loan' && t.id !== 'cotizador-lease');
-  }
-
-  if (filtered.length >= 2) {
-    const pc = TOOLS.find(t => t.id === 'proyecto-completo');
-    if (pc && !filtered.includes(pc)) filtered.push(pc);
-  }
-  const relevant = filtered.length ? filtered : [TOOLS.find(t => t.id === 'panel-general')!];
-  const topicLabel = topic === 'general' ? '' : `\n[TÓPICO DETECTADO: ${topic.toUpperCase()} — usa SOLO las herramientas listadas abajo]`;
-  return `HERRAMIENTAS RELEVANTES:${topicLabel}\n${relevant.map(t => `• ${t.name}: ${t.url}\n  Usar cuando: ${t.whenToUse}`).join('\n\n')}`;
-}
 
 // Stop words en español para extracción de keywords del knowledge base
 const STOP_WORDS = new Set([
@@ -311,7 +228,12 @@ ${rol ? `- Rol: ${rol}` : ''}
 ${useWebSearch ? '- ⚠️ WEB SEARCH ACTIVADO: el asesor usó una palabra clave de búsqueda en internet. Cuando uses información de internet, indícalo claramente con 🌐 al inicio y cita la fuente.' : ''}`;
 
     // 6. Mensajes (history + user message con contexto inyectado)
-    const userContent = `${asesorContext}\n\n---\n\n${buildToolsContext(message, history)}\n\n---\n\nCONTEXTO KNOWLEDGE BASE:\n${knowledgeContext}\n\n---\n\nPREGUNTA: ${message}`;
+    // Las herramientas vienen de Supabase (tabla `tools`) — administrables sin redeploy.
+    const { tools: recommendedTools, topic: detectedTopic } = await pickRelevantTools(message, history);
+    const toolsContext = buildToolsContext(recommendedTools, detectedTopic);
+    const toolCards = toClientCards(recommendedTools);
+
+    const userContent = `${asesorContext}\n\n---\n\n${toolsContext}\n\n---\n\nCONTEXTO KNOWLEDGE BASE:\n${knowledgeContext}\n\n---\n\nPREGUNTA: ${message}`;
 
     const messages: Anthropic.MessageParam[] = [
       ...history.slice(-8).map(h => ({
@@ -411,10 +333,11 @@ ${useWebSearch ? '- ⚠️ WEB SEARCH ACTIVADO: el asesor usó una palabra clave
       },
     });
 
-    // Headers críticos para que el streaming NO sea bufferreado por Vercel/CDN/navegador.
-    // - X-Accel-Buffering: no  → desactiva buffering de Nginx (Vercel lo respeta)
-    // - Cache-Control: no-transform → prevent que algún proxy comprima/junte chunks
-    // - Connection: keep-alive → mantiene la conexión abierta para chunks pequeños
+    // Headers críticos para que el streaming NO sea bufferreado por Vercel/CDN/navegador,
+    // + X-Recommended-Tools (URL-encoded JSON con las cards) que el cliente lee
+    // para renderizar los botones bajo la respuesta.
+    const toolsHeader = encodeURIComponent(JSON.stringify(toolCards));
+
     return new Response(readable, {
       headers: {
         'Content-Type': 'text/plain; charset=utf-8',
@@ -422,6 +345,8 @@ ${useWebSearch ? '- ⚠️ WEB SEARCH ACTIVADO: el asesor usó una palabra clave
         'Connection': 'keep-alive',
         'X-Accel-Buffering': 'no',
         'Transfer-Encoding': 'chunked',
+        'X-Recommended-Tools': toolsHeader,
+        'Access-Control-Expose-Headers': 'X-Recommended-Tools',
       },
     });
   } catch (error: unknown) {

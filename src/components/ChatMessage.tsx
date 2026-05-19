@@ -5,6 +5,7 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import type { Message } from '@/types';
 import { UserAvatar } from './UserAvatar';
+import { ToolCards } from './ToolCards';
 import { useTypewriter } from '@/hooks/useTypewriter';
 
 interface Props {
@@ -290,6 +291,12 @@ function ChatMessageImpl({
           )}
         </div>
 
+        {/* Cards de herramientas recomendadas — solo cuando ya terminó el streaming
+            (evita que aparezcan/desaparezcan durante la generación). */}
+        {!isStreaming && message.tools && message.tools.length > 0 && (
+          <ToolCards tools={message.tools} />
+        )}
+
         {!isStreaming && message.content && (
           <div className="mt-3 flex items-center gap-4 flex-wrap">
             <button
@@ -404,9 +411,18 @@ function ChatMessageImpl({
  * "pausado" en conversaciones largas.
  */
 export const ChatMessage = memo(ChatMessageImpl, (prev, next) => {
+  // Comparación por longitud + primer slug de tools — suficiente, ya que las
+  // cards se asignan UNA vez al terminar el stream y no mutan después.
+  const prevToolsLen = prev.message.tools?.length ?? 0;
+  const nextToolsLen = next.message.tools?.length ?? 0;
+  const toolsEqual =
+    prevToolsLen === nextToolsLen &&
+    (prevToolsLen === 0 || prev.message.tools?.[0]?.slug === next.message.tools?.[0]?.slug);
+
   return (
     prev.message.id === next.message.id &&
     prev.message.content === next.message.content &&
+    toolsEqual &&
     prev.isStreaming === next.isStreaming &&
     prev.asesorEmail === next.asesorEmail &&
     prev.asesorDisplayName === next.asesorDisplayName &&
