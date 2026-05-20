@@ -15,6 +15,25 @@ function generateId() {
   return Math.random().toString(36).slice(2) + Date.now().toString(36);
 }
 
+/**
+ * Extrae el bloque <quick_replies>...</quick_replies> del texto del LLM.
+ * Devuelve { cleanText, replies }. Si no hay bloque, replies = [].
+ * Tolera variantes: con/sin guiones, con bullets, líneas vacías.
+ */
+function extractQuickReplies(text: string): { cleanText: string; replies: string[] } {
+  const re = /<quick_replies>\s*([\s\S]*?)\s*<\/quick_replies>/i;
+  const match = text.match(re);
+  if (!match) return { cleanText: text, replies: [] };
+  const inner = match[1];
+  const replies = inner
+    .split('\n')
+    .map((l) => l.replace(/^[\s\-*•]+/, '').trim())
+    .filter((l) => l.length > 0 && l.length < 100)
+    .slice(0, 3);
+  const cleanText = text.replace(re, '').trim();
+  return { cleanText, replies };
+}
+
 interface UserData {
   email: string;
   displayName: string | null;
@@ -385,38 +404,42 @@ export function ChatApp({ user, onSignOut }: Props) {
       pendingText = fullText;
       flushUpdate();
 
-      // Adjuntar las herramientas + quality card al mensaje del asistente.
+      // Extraer Quick Replies del texto y limpiarlo
+      const { cleanText, replies: quickReplies } = extractQuickReplies(fullText);
+
+      // Adjuntar tools + quality + quick replies al mensaje del asistente.
       // Se hace acá (post-stream) para que aparezcan junto con el texto final,
       // no parpadeando durante la generación.
-      if (recommendedTools.length > 0 || qualityMeta) {
-        setConversations((prev) =>
-          prev.map((c) =>
-            c.id === convId
-              ? {
-                  ...c,
-                  messages: c.messages.map((m) =>
-                    m.id === assistantMsgId
-                      ? {
-                          ...m,
-                          ...(recommendedTools.length > 0 ? { tools: recommendedTools } : {}),
-                          ...(qualityMeta ? { quality: qualityMeta } : {}),
-                        }
-                      : m
-                  ),
-                }
-              : c
-          )
-        );
-      }
+      setConversations((prev) =>
+        prev.map((c) =>
+          c.id === convId
+            ? {
+                ...c,
+                messages: c.messages.map((m) =>
+                  m.id === assistantMsgId
+                    ? {
+                        ...m,
+                        content: cleanText, // texto sin el bloque <quick_replies>
+                        ...(recommendedTools.length > 0 ? { tools: recommendedTools } : {}),
+                        ...(qualityMeta ? { quality: qualityMeta } : {}),
+                        ...(quickReplies.length > 0 ? { quickReplies } : {}),
+                      }
+                    : m
+                ),
+              }
+            : c
+        )
+      );
 
-      // Guardar respuesta del asistente + slugs de herramientas (para re-render al recargar)
+      // Guardar respuesta del asistente (cleanText, sin el bloque de quick replies)
+      // + slugs de herramientas (para re-render al recargar)
       await fetch('/api/messages', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           conversation_id: convId,
           role: 'assistant',
-          content: fullText,
+          content: cleanText,
           tool_refs: recommendedTools.map((t) => t.slug),
         }),
       });
@@ -662,6 +685,7 @@ export function ChatApp({ user, onSignOut }: Props) {
               userPhotoUrl={user.photoUrl ?? null}
               onRegenerate={regenerateLastResponse}
               conversationId={activeId}
+              onQuickReply={(text) => sendMessage(text)}
             />
             <ChatInput
               onSend={sendMessage}

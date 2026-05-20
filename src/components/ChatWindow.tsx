@@ -12,6 +12,8 @@ interface Props {
   userPhotoUrl?: string | null;
   onRegenerate?: () => void;
   conversationId?: string | null;
+  /** Handler para chips Quick Replies — al click manda esa pregunta al chat */
+  onQuickReply?: (text: string) => void;
 }
 
 export function ChatWindow({
@@ -22,6 +24,7 @@ export function ChatWindow({
   userPhotoUrl,
   onRegenerate,
   conversationId,
+  onQuickReply,
 }: Props) {
   const bottomRef = useRef<HTMLDivElement>(null);
   const lastScrollRef = useRef<number>(0);
@@ -67,6 +70,7 @@ export function ChatWindow({
               showRegenerate={isLastAssistant}
               onRegenerate={isLastAssistant ? onRegenerate : undefined}
               conversationId={conversationId}
+              onQuickReply={isLastAssistant ? onQuickReply : undefined}
             />
           );
         })}

@@ -28,6 +28,8 @@ export interface Message {
   tools?: ToolRef[];
   /** Card de calidad a renderizar (matriz/críticos/tiempos). */
   quality?: QualityMeta;
+  /** Preguntas de seguimiento sugeridas — se muestran como chips clicables. */
+  quickReplies?: string[];
 }
 
 export interface Conversation {

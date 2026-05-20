@@ -7,6 +7,7 @@ import type { Message } from '@/types';
 import { UserAvatar } from './UserAvatar';
 import { ToolCards } from './ToolCards';
 import { QualityCard } from './QualityCard';
+import { QuickReplies } from './QuickReplies';
 import { useTypewriter } from '@/hooks/useTypewriter';
 
 interface Props {
@@ -20,6 +21,8 @@ interface Props {
   onRegenerate?: () => void;
   /** ID de la conversación (necesario para guardar feedback) */
   conversationId?: string | null;
+  /** Handler para chips Quick Replies — al click manda esa pregunta */
+  onQuickReply?: (text: string) => void;
 }
 
 function stripForCopy(text: string): string {
@@ -172,6 +175,7 @@ function ChatMessageImpl({
   showRegenerate,
   onRegenerate,
   conversationId,
+  onQuickReply,
 }: Props) {
   const [copied, setCopied] = useState(false);
   // Feedback state: null = no votado, 'up'/'down' = ya votó.
@@ -302,6 +306,11 @@ function ChatMessageImpl({
             (evita que aparezcan/desaparezcan durante la generación). */}
         {!isStreaming && message.tools && message.tools.length > 0 && (
           <ToolCards tools={message.tools} />
+        )}
+
+        {/* Quick Replies — chips clicables con preguntas de seguimiento sugeridas */}
+        {!isStreaming && message.quickReplies && message.quickReplies.length > 0 && onQuickReply && (
+          <QuickReplies replies={message.quickReplies} onSelect={onQuickReply} />
         )}
 
         {!isStreaming && message.content && (
