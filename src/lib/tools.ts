@@ -35,6 +35,8 @@ export interface ToolCard {
   category: string;
   icon: string | null;
   is_official: boolean;
+  /** Para tintar el SVG del icono según dominio en el cliente. */
+  topic: ToolTopic;
 }
 
 // ════════════════════════════════════════
@@ -231,6 +233,7 @@ export function toClientCards(tools: Tool[]): ToolCard[] {
     category: t.category,
     icon: t.icon,
     is_official: t.is_official,
+    topic: t.topic,
   }));
 }
 
@@ -251,5 +254,6 @@ export async function getToolsBySlugs(slugs: string[]): Promise<ToolCard[]> {
       category: t.category,
       icon: t.icon,
       is_official: t.is_official,
+      topic: t.topic,
     }));
 }

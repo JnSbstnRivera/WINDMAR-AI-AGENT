@@ -6,6 +6,8 @@ export interface ToolRef {
   category: string;
   icon: string | null;
   is_official: boolean;
+  /** Tópico para determinar el color del icono SVG (solar=naranja, roofing=violeta...). */
+  topic?: string;
 }
 
 export interface Message {
