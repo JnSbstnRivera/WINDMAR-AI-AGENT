@@ -36,6 +36,7 @@ export async function POST(req: Request) {
   }
   const file = formData.get('file');
   const conversationId = formData.get('conversation_id') as string | null;
+  const additionalMessage = (formData.get('additional_message') as string | null)?.trim() || null;
 
   if (!file || typeof file === 'string') {
     return Response.json({ error: 'Falta archivo' }, { status: 400 });
@@ -79,17 +80,19 @@ export async function POST(req: Request) {
         },
       };
 
-  const prompt = `Estás analizando una factura de LUMA Energy (proveedor eléctrico de Puerto Rico) que un asesor de Windmar Home te acaba de pasar.
+  const prompt = `Estás analizando una factura de LUMA Energy (proveedor eléctrico de Puerto Rico) que un asesor de Windmar Home te acaba de pasar${additionalMessage ? '. El asesor también escribió: "' + additionalMessage + '"' : ''}.
 
 INSTRUCCIONES CRÍTICAS:
-1. Mira SOLO los datos de consumo. No analices nada más.
-2. Devuelve EXACTAMENTE este formato (no agregues nada más):
+1. Mira el bill y EXTRAE estos 4 datos exactos. Si alguno no se ve claramente en el documento, di "no visible".
+2. Para la SUMA ANUAL de barras: las facturas de LUMA tienen un gráfico de barras con el consumo de los últimos 12 meses. Lee cada barra (en kWh) y suma todos los meses visibles. Si solo hay algunos meses visibles, suma los que SÍ se ven.
+3. Devuelve EXACTAMENTE este formato:
 
 📄 **Factura LUMA detectada**
 
-- **Consumo mensual**: <kWh exactos del bill, o "no visible" si no se ve>
-- **Monto pagado**: $<dólares exactos, o "no visible">
-- **Período**: <mes/año del bill si aparece, o "no visible">
+- **Cuenta LUMA**: <número de cuenta del cliente, o "no visible">
+- **Dirección**: <dirección del servicio que aparece en el bill, o "no visible">
+- **Cobro de este mes**: $<monto total a pagar de este bill, o "no visible">
+- **Consumo anual estimado**: <suma de todas las barras mensuales en kWh + nota de cuántos meses sumaste, o "no visible">
 
 **Recomendación**:
 
@@ -98,9 +101,10 @@ Como el cliente SÍ tiene factura, usa [LUMA Scanner](https://luma-scanner-two.v
 Si quiere paquete completo (Roofing + Solar + Batería), tira el [Cotizador Proyecto Completo](https://proyecto-completo-three.vercel.app/) — tiene el mayor descuento.
 
 REGLAS:
-- Si el documento NO es una factura LUMA, responde: "Este documento no parece una factura LUMA. Si tienes la factura del cliente en otro formato, intenta una foto nítida del monto y kWh."
+- Si el documento NO es una factura LUMA, responde: "Este documento no parece una factura LUMA. Necesito el bill del cliente para extraer cuenta, dirección, cobro del mes y consumo histórico."
 - NO inventes valores. Si no se ve, di "no visible".
-- NO calcules ahorros ni proyectes precios — solo extrae lo que está en el documento.
+- NO calcules ahorros, payback ni proyectes precios — solo extrae lo que está en el documento.
+- Si el asesor escribió un mensaje adicional (arriba), responde su pregunta específica DESPUÉS de extraer los 4 datos.
 - Termina con un bloque <quick_replies> con 3 preguntas de seguimiento útiles para el asesor.`;
 
   try {

@@ -232,11 +232,12 @@ export function ChatApp({ user, onSignOut }: Props) {
 
   /**
    * Handler para upload de foto/PDF de factura LUMA.
-   * 1. Inserta un mensaje "USER" tipo "📎 Adjuntó factura: nombre.pdf"
+   * Acepta texto adicional opcional (estilo GPT: archivo + mensaje juntos).
+   * 1. Inserta un mensaje "USER" con el archivo (+ texto si hay)
    * 2. Llama POST /api/upload-luma con FormData
    * 3. Inserta la respuesta del asistente con el análisis y tools
    */
-  async function uploadLumaBill(file: File) {
+  async function uploadLumaBill(file: File, userMessage?: string) {
     if (isStreaming) return;
 
     let convId = activeId;
@@ -260,11 +261,14 @@ export function ChatApp({ user, onSignOut }: Props) {
       setActiveId(convId);
     }
 
-    // Mensaje del usuario representando el archivo
+    // Mensaje del usuario representando el archivo + texto opcional
+    const userContent = userMessage
+      ? `📎 **${file.name}** (${Math.round(file.size / 1024)} KB)\n\n${userMessage}`
+      : `📎 Adjunté: **${file.name}** (${Math.round(file.size / 1024)} KB) — analizar consumo`;
     const userMsg: Message = {
       id: generateId(),
       role: 'user',
-      content: `📎 Adjunté: **${file.name}** (${Math.round(file.size / 1024)} KB) — analizar consumo`,
+      content: userContent,
       timestamp: new Date(),
     };
     setConversations((prev) =>
@@ -293,6 +297,7 @@ export function ChatApp({ user, onSignOut }: Props) {
       const formData = new FormData();
       formData.append('file', file);
       if (convId) formData.append('conversation_id', convId);
+      if (userMessage) formData.append('additional_message', userMessage);
 
       const res = await fetch('/api/upload-luma', { method: 'POST', body: formData });
       const data = await res.json() as { text?: string; error?: string };
