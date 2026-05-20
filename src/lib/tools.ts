@@ -194,11 +194,11 @@ export async function pickRelevantTools(
     if (pc && !filtered.find(t => t.slug === 'proyecto-completo')) filtered.push(pc);
   }
 
-  // Fallback: panel general si no hubo match
-  if (filtered.length === 0) {
-    const panel = all.find(t => t.slug === 'panel-general');
-    if (panel) filtered = [panel];
-  }
+  // NOTA: antes había un fallback a "panel-general" cuando no había match —
+  // se removió porque generaba ruido visual en respuestas conceptuales
+  // (coaching, calidad, objeciones, definiciones). Si el asesor pregunta
+  // explícitamente por "panel" o "herramientas", el trigger del panel-general
+  // ya lo captura naturalmente — no necesitamos forzarlo.
 
   // Cap a 6 herramientas máximas (UX + token budget)
   filtered = filtered.slice(0, 6);
