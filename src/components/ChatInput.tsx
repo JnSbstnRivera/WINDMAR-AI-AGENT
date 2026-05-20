@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 
 interface Props {
   onSend: (text: string) => void;
@@ -12,53 +12,12 @@ interface Props {
   onAttach?: (file: File, message?: string) => void;
 }
 
-// ════════════════════════════════════════
-// SPEECH RECOGNITION — Web Speech API
-// ════════════════════════════════════════
-type SpeechRecognitionLike = EventTarget & {
-  continuous: boolean;
-  interimResults: boolean;
-  lang: string;
-  start(): void;
-  stop(): void;
-  abort(): void;
-  onresult: ((e: { results: { isFinal: boolean; 0: { transcript: string } }[]; resultIndex: number }) => void) | null;
-  onend: (() => void) | null;
-  onerror: ((e: { error: string }) => void) | null;
-  onstart: (() => void) | null;
-};
-
-function getSpeechRecognition(): { new (): SpeechRecognitionLike } | null {
-  if (typeof window === 'undefined') return null;
-  const w = window as typeof window & {
-    SpeechRecognition?: { new (): SpeechRecognitionLike };
-    webkitSpeechRecognition?: { new (): SpeechRecognitionLike };
-  };
-  return w.SpeechRecognition || w.webkitSpeechRecognition || null;
-}
-
 export function ChatInput({ onSend, disabled, onTypingChange, isStreaming, onStop, onAttach }: Props) {
   const [text, setText] = useState('');
   const [focused, setFocused] = useState(false);
-  const [listening, setListening] = useState(false);
-  const [speechSupported, setSpeechSupported] = useState(false);
-  const [speechError, setSpeechError] = useState<string | null>(null);
   const [attachedFile, setAttachedFile] = useState<File | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
-  const dictateBaseTextRef = useRef<string>('');
-
-  useEffect(() => {
-    setSpeechSupported(getSpeechRecognition() !== null);
-  }, []);
-
-  // Auto-clear del error de dictado tras 5 segundos
-  useEffect(() => {
-    if (!speechError) return;
-    const t = setTimeout(() => setSpeechError(null), 5000);
-    return () => clearTimeout(t);
-  }, [speechError]);
 
   function handleSend() {
     if (disabled) return;
@@ -70,7 +29,6 @@ export function ChatInput({ onSend, disabled, onTypingChange, isStreaming, onSto
       setText('');
       onTypingChange?.(false);
       if (textareaRef.current) textareaRef.current.style.height = 'auto';
-      if (listening) stopDictation();
       return;
     }
 
@@ -80,7 +38,6 @@ export function ChatInput({ onSend, disabled, onTypingChange, isStreaming, onSto
     setText('');
     onTypingChange?.(false);
     if (textareaRef.current) textareaRef.current.style.height = 'auto';
-    if (listening) stopDictation();
   }
 
   function handleKeyDown(e: React.KeyboardEvent) {
@@ -107,98 +64,6 @@ export function ChatInput({ onSend, disabled, onTypingChange, isStreaming, onSto
   }
 
   // ════════════════════════════════════════
-  // DICTADO POR VOZ — con error handling visible
-  // ════════════════════════════════════════
-  function startDictation() {
-    setSpeechError(null);
-    const Ctor = getSpeechRecognition();
-    if (!Ctor) {
-      setSpeechError('Tu navegador no soporta dictado por voz. Usa Chrome o Edge.');
-      return;
-    }
-    // Si ya hay sesión activa, abortar primero
-    if (recognitionRef.current) {
-      try { recognitionRef.current.abort(); } catch { /* ignore */ }
-      recognitionRef.current = null;
-    }
-
-    const rec = new Ctor();
-    rec.continuous = true;
-    rec.interimResults = true;
-    // es-419 = español Latam universal — funciona mejor que es-PR en Chrome
-    rec.lang = 'es-419';
-    dictateBaseTextRef.current = text;
-
-    rec.onstart = () => {
-      setListening(true);
-      setSpeechError(null);
-    };
-
-    rec.onresult = (e) => {
-      let interim = '';
-      let finalAccum = '';
-      for (let i = e.resultIndex; i < e.results.length; i++) {
-        const transcript = e.results[i][0].transcript;
-        if (e.results[i].isFinal) finalAccum += transcript;
-        else interim += transcript;
-      }
-      if (finalAccum) {
-        dictateBaseTextRef.current = (dictateBaseTextRef.current + ' ' + finalAccum).trim();
-        setText(dictateBaseTextRef.current);
-        onTypingChange?.(dictateBaseTextRef.current.length > 0);
-      } else if (interim) {
-        const next = (dictateBaseTextRef.current + ' ' + interim).trim();
-        setText(next);
-        onTypingChange?.(next.length > 0);
-      }
-      requestAnimationFrame(handleInput);
-    };
-
-    rec.onend = () => {
-      setListening(false);
-      recognitionRef.current = null;
-    };
-
-    rec.onerror = (e) => {
-      setListening(false);
-      recognitionRef.current = null;
-      // Mapear errores comunes a mensajes claros
-      const errorMessages: Record<string, string> = {
-        'not-allowed': '🎙 Permite el micrófono en Chrome (candado arriba a la izquierda).',
-        'audio-capture': '🎙 No detecto micrófono conectado.',
-        'no-speech': '🎙 No escuché nada — intenta de nuevo.',
-        'network': '🎙 Problema de red — verifica internet.',
-        'aborted': '',
-        'language-not-supported': '🎙 Tu navegador no soporta español. Cambia a Chrome.',
-      };
-      const msg = errorMessages[e.error] ?? `🎙 Error: ${e.error}`;
-      if (msg) setSpeechError(msg);
-    };
-
-    try {
-      rec.start();
-      recognitionRef.current = rec;
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : 'no se pudo iniciar';
-      setSpeechError(`🎙 ${msg}. Intenta de nuevo.`);
-      setListening(false);
-    }
-  }
-
-  function stopDictation() {
-    if (recognitionRef.current) {
-      try { recognitionRef.current.stop(); } catch { /* ignore */ }
-      recognitionRef.current = null;
-    }
-    setListening(false);
-  }
-
-  function toggleDictation() {
-    if (listening) stopDictation();
-    else startDictation();
-  }
-
-  // ════════════════════════════════════════
   // ATTACH — el archivo NO se envía hasta que el user dé enviar/Enter
   // ════════════════════════════════════════
   function handleAttachClick() {
@@ -218,13 +83,6 @@ export function ChatInput({ onSend, disabled, onTypingChange, isStreaming, onSto
   return (
     <div className="px-4 py-4 safe-bottom">
       <div className="max-w-3xl mx-auto">
-        {/* Mensaje de error del dictado (visible si aplica) */}
-        {speechError && (
-          <div className="max-w-3xl mx-auto mb-2 px-3 py-2 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-xs text-red-800 dark:text-red-200">
-            {speechError}
-          </div>
-        )}
-
         <div
           className="relative rounded-2xl transition-all duration-300"
           style={{
@@ -311,35 +169,6 @@ export function ChatInput({ onSend, disabled, onTypingChange, isStreaming, onSto
                 </>
               )}
 
-              {/* Botón mic (dictado por voz) */}
-              {speechSupported && (
-                <button
-                  type="button"
-                  onClick={toggleDictation}
-                  disabled={disabled || isStreaming}
-                  className={`disabled:opacity-40 disabled:cursor-not-allowed transition-colors w-10 h-10 flex items-center justify-center rounded-lg cursor-pointer flex-shrink-0 ${
-                    listening
-                      ? 'text-white bg-red-500 hover:bg-red-600 animate-pulse'
-                      : 'text-gray-500 hover:text-[#F7941D] hover:bg-[#F7941D]/10'
-                  }`}
-                  aria-label={listening ? 'Detener dictado' : 'Dictar por voz'}
-                  title={listening ? 'Detener dictado' : 'Dictar por voz — habla al micrófono'}
-                >
-                  {listening ? (
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
-                      <rect x="6" y="6" width="12" height="12" rx="2"/>
-                    </svg>
-                  ) : (
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
-                      <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
-                      <line x1="12" y1="19" x2="12" y2="23"/>
-                      <line x1="8" y1="23" x2="16" y2="23"/>
-                    </svg>
-                  )}
-                </button>
-              )}
-
               <textarea
                 ref={textareaRef}
                 value={text}
@@ -353,11 +182,9 @@ export function ChatInput({ onSend, disabled, onTypingChange, isStreaming, onSto
                 onBlur={() => setFocused(false)}
                 disabled={disabled}
                 placeholder={
-                  listening
-                    ? '🎙 Escuchando... habla normal'
-                    : attachedFile
-                      ? 'Agrega un mensaje opcional o presiona enviar...'
-                      : 'Pregúntame lo que necesites...'
+                  attachedFile
+                    ? 'Agrega un mensaje opcional o presiona enviar...'
+                    : 'Pregúntame lo que necesites...'
                 }
                 rows={1}
                 className="flex-1 resize-none bg-transparent text-[15px] text-gray-800 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed py-2"
@@ -394,11 +221,9 @@ export function ChatInput({ onSend, disabled, onTypingChange, isStreaming, onSto
         </div>
 
         <p className="text-[10px] text-gray-400 dark:text-gray-500 text-center mt-2">
-          {listening
-            ? '🔴 Dictando — click el botón rojo para parar'
-            : attachedFile
-              ? 'Archivo adjunto — escribe un mensaje opcional o presiona enviar'
-              : 'Enter para enviar · Shift+Enter para nueva línea'}
+          {attachedFile
+            ? 'Archivo adjunto — escribe un mensaje opcional o presiona enviar'
+            : 'Enter para enviar · Shift+Enter para nueva línea'}
         </p>
       </div>
     </div>
