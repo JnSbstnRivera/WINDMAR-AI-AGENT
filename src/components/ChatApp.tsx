@@ -230,6 +230,134 @@ export function ChatApp({ user, onSignOut }: Props) {
     setActiveId(null);
   }
 
+  /**
+   * Handler para upload de foto/PDF de factura LUMA.
+   * 1. Inserta un mensaje "USER" tipo "📎 Adjuntó factura: nombre.pdf"
+   * 2. Llama POST /api/upload-luma con FormData
+   * 3. Inserta la respuesta del asistente con el análisis y tools
+   */
+  async function uploadLumaBill(file: File) {
+    if (isStreaming) return;
+
+    let convId = activeId;
+    // Crear conversación si no hay una activa
+    if (!convId) {
+      const res = await fetch('/api/conversations', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: 'Factura LUMA · ' + file.name.slice(0, 40) }),
+      });
+      if (!res.ok) return;
+      const { conversation } = await res.json() as { conversation: Conversation };
+      convId = conversation.id;
+      const newConv: Conversation = {
+        ...conversation,
+        createdAt: new Date(conversation.createdAt),
+        updatedAt: new Date(conversation.updatedAt),
+        messages: [],
+      };
+      setConversations((prev) => [newConv, ...prev]);
+      setActiveId(convId);
+    }
+
+    // Mensaje del usuario representando el archivo
+    const userMsg: Message = {
+      id: generateId(),
+      role: 'user',
+      content: `📎 Adjunté: **${file.name}** (${Math.round(file.size / 1024)} KB) — analizar consumo`,
+      timestamp: new Date(),
+    };
+    setConversations((prev) =>
+      prev.map((c) => (c.id === convId ? { ...c, messages: [...c.messages, userMsg] } : c))
+    );
+    await fetch('/api/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ conversation_id: convId, role: 'user', content: userMsg.content }),
+    });
+
+    // Placeholder del asistente mientras procesa
+    const assistantMsgId = generateId();
+    const assistantMsg: Message = {
+      id: assistantMsgId,
+      role: 'assistant',
+      content: '',
+      timestamp: new Date(),
+    };
+    setConversations((prev) =>
+      prev.map((c) => (c.id === convId ? { ...c, messages: [...c.messages, assistantMsg] } : c))
+    );
+    setIsStreaming(true);
+
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      if (convId) formData.append('conversation_id', convId);
+
+      const res = await fetch('/api/upload-luma', { method: 'POST', body: formData });
+      const data = await res.json() as { text?: string; error?: string };
+
+      if (!res.ok || !data.text) {
+        const errMsg = data.error || 'No se pudo procesar el archivo';
+        setConversations((prev) =>
+          prev.map((c) =>
+            c.id === convId
+              ? {
+                  ...c,
+                  messages: c.messages.map((m) =>
+                    m.id === assistantMsgId
+                      ? { ...m, content: `🤖 ¡Ay, perdona! ${errMsg}` }
+                      : m
+                  ),
+                }
+              : c
+          )
+        );
+        return;
+      }
+
+      // Extraer quick replies del texto
+      const { cleanText, replies: quickReplies } = extractQuickReplies(data.text);
+
+      setConversations((prev) =>
+        prev.map((c) =>
+          c.id === convId
+            ? {
+                ...c,
+                messages: c.messages.map((m) =>
+                  m.id === assistantMsgId
+                    ? {
+                        ...m,
+                        content: cleanText,
+                        ...(quickReplies.length > 0 ? { quickReplies } : {}),
+                      }
+                    : m
+                ),
+              }
+            : c
+        )
+      );
+    } catch (err) {
+      console.error('[uploadLumaBill]', err);
+      setConversations((prev) =>
+        prev.map((c) =>
+          c.id === convId
+            ? {
+                ...c,
+                messages: c.messages.map((m) =>
+                  m.id === assistantMsgId
+                    ? { ...m, content: '🤖 Error de conexión al procesar el archivo.' }
+                    : m
+                ),
+              }
+            : c
+        )
+      );
+    } finally {
+      setIsStreaming(false);
+    }
+  }
+
   async function sendMessage(text: string) {
     if (!text.trim() || isStreaming) return;
 
@@ -692,6 +820,7 @@ export function ChatApp({ user, onSignOut }: Props) {
               disabled={isStreaming}
               isStreaming={isStreaming}
               onStop={stopStreaming}
+              onAttach={uploadLumaBill}
               onTypingChange={(typing) => {
                 if (!isStreaming) setMascotState(typing ? 'typing' : 'idle');
               }}
@@ -701,6 +830,7 @@ export function ChatApp({ user, onSignOut }: Props) {
           <WelcomeScreen
             onSend={sendMessage}
             disabled={isStreaming}
+            onAttach={uploadLumaBill}
             onTypingChange={(typing) => {
               if (!isStreaming) setMascotState(typing ? 'typing' : 'idle');
             }}

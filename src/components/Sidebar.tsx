@@ -36,9 +36,20 @@ const SALES_TIPS = [
   '🎯 Cliente VIP instalado: $1,000 descuento adicional en Roofing.',
 ];
 
+interface SearchResult {
+  conversationId: string;
+  title: string;
+  preview: string;
+  updatedAt: string;
+  matchedRole?: string;
+}
+
 export function Sidebar({ conversations, activeId, onSelect, onNew, onDelete, onDeleteAll, userEmail, displayName, departamento, rol, photoUrl, isOpen, onClose }: Props) {
   const [confirmClearAll, setConfirmClearAll] = useState(false);
   const [tipIndex, setTipIndex] = useState(() => Math.floor(Math.random() * SALES_TIPS.length));
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
+  const [searching, setSearching] = useState(false);
   const username = displayName || userEmail.split('@')[0];
   const subtitle = [departamento, rol].filter(Boolean).join(' · ');
 
@@ -48,6 +59,36 @@ export function Sidebar({ conversations, activeId, onSelect, onNew, onDelete, on
     }, 25000);
     return () => clearInterval(interval);
   }, []);
+
+  // Búsqueda con debounce 300ms
+  useEffect(() => {
+    if (searchQuery.trim().length < 2) {
+      setSearchResults([]);
+      setSearching(false);
+      return;
+    }
+    setSearching(true);
+    const controller = new AbortController();
+    const t = setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/conversations/search?q=${encodeURIComponent(searchQuery.trim())}`, {
+          signal: controller.signal,
+        });
+        if (res.ok) {
+          const data = await res.json() as { results: SearchResult[] };
+          setSearchResults(data.results);
+        }
+      } catch {
+        /* abortado o error red */
+      } finally {
+        setSearching(false);
+      }
+    }, 300);
+    return () => {
+      clearTimeout(t);
+      controller.abort();
+    };
+  }, [searchQuery]);
 
   function handleClearAll() {
     if (confirmClearAll) {
@@ -142,6 +183,67 @@ export function Sidebar({ conversations, activeId, onSelect, onNew, onDelete, on
           </div>
         </div>
       </div>
+
+      {/* Buscador de conversaciones */}
+      <div className="px-3 py-2 border-b border-[#b8cfe8] dark:border-white/[0.08] flex-shrink-0">
+        <div className="relative">
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Buscar en mis chats..."
+            className="w-full text-xs pl-8 pr-7 py-2 rounded-lg bg-white/60 dark:bg-white/5 border border-[#b8cfe8] dark:border-white/10 focus:outline-none focus:border-[#F7941D] text-[#1B3A5C] dark:text-gray-200 placeholder-gray-400"
+          />
+          <svg
+            className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400"
+            width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
+          >
+            <circle cx="11" cy="11" r="8"/>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+          </svg>
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery('')}
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-[#F7941D] cursor-pointer"
+              aria-label="Limpiar"
+            >
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                <line x1="18" y1="6" x2="6" y2="18"/>
+                <line x1="6" y1="6" x2="18" y2="18"/>
+              </svg>
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Resultados de búsqueda (cuando hay query activo) */}
+      {searchQuery.trim().length >= 2 && (
+        <div className="overflow-y-auto p-2 max-h-[40%] flex-shrink-0 border-b border-[#b8cfe8] dark:border-white/[0.08]">
+          {searching && (
+            <p className="text-xs text-gray-400 text-center py-2">Buscando…</p>
+          )}
+          {!searching && searchResults.length === 0 && (
+            <p className="text-xs text-gray-400 text-center py-2">Sin resultados</p>
+          )}
+          {searchResults.map((r) => (
+            <button
+              key={r.conversationId}
+              onClick={() => {
+                onSelect(r.conversationId);
+                setSearchQuery('');
+              }}
+              className="w-full text-left rounded-lg p-2 mb-1 hover:bg-white/60 dark:hover:bg-white/5 transition-colors cursor-pointer border border-transparent hover:border-[#F7941D]/30"
+            >
+              <p className="text-[11px] font-semibold text-[#1B3A5C] dark:text-gray-100 truncate">
+                {r.title}
+              </p>
+              <p className="text-[10px] text-gray-500 dark:text-gray-400 line-clamp-2 mt-0.5">
+                {r.matchedRole === 'assistant' ? '🤖 ' : '👤 '}{r.preview}
+              </p>
+            </button>
+          ))}
+        </div>
+      )}
 
       <div className="overflow-y-auto p-2 max-h-[35%] flex-shrink-0">
         {conversations.length === 0 ? (
