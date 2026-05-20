@@ -65,6 +65,49 @@ function shouldUseWebSearch(message: string): boolean {
 }
 
 // ════════════════════════════════════════
+// DETECCIÓN DE INTENT DE CALIDAD
+// ════════════════════════════════════════
+// Si el asesor pregunta sobre la matriz de calidad, el cliente puede renderizar
+// una card visual rica bajo la respuesta. 3 variantes según el subtipo:
+//   - 'times'     → card grande con el tiempo de espera según área del asesor
+//   - 'criticals' → grid de los 8 items críticos
+//   - 'matrix'    → mini-dashboard 3 columnas (INICIO 30% · ACTITUD 50% · SEG 20%)
+function detectQualityIntent(message: string): 'matrix' | 'criticals' | 'times' | null {
+  const lower = message.toLowerCase();
+  // Tiempos — más específico, va primero
+  if (
+    (lower.includes('tiempo') || lower.includes('cuanto') || lower.includes('cuánto')) &&
+    (lower.includes('espera') || lower.includes('hold') || lower.includes('hold'))
+  ) {
+    return 'times';
+  }
+  if (lower.includes('en hold') || lower.includes('en espera')) {
+    return 'times';
+  }
+  // Críticos
+  if (lower.includes('crítico') || lower.includes('critico') || lower.includes('criticos') || lower.includes('críticos')) {
+    return 'criticals';
+  }
+  // Matriz / calidad general
+  if (
+    lower.includes('matriz de calidad') ||
+    lower.includes('calidad de llamada') ||
+    lower.includes('me califican') ||
+    lower.includes('auditor') ||
+    lower.includes('items de calidad') ||
+    lower.includes('parametros de calidad') ||
+    lower.includes('parámetros de calidad') ||
+    lower.includes('mejorar mis llamadas') ||
+    lower.includes('sacar 100') ||
+    lower.includes('sacarme 100') ||
+    /\bcalidad\b/.test(lower)
+  ) {
+    return 'matrix';
+  }
+  return null;
+}
+
+// ════════════════════════════════════════
 // CLIENTE ANTHROPIC (singleton)
 // ════════════════════════════════════════
 let anthropicClient: Anthropic | null = null;
@@ -338,6 +381,16 @@ ${useWebSearch ? '- ⚠️ WEB SEARCH ACTIVADO: el asesor usó una palabra clave
     // para renderizar los botones bajo la respuesta.
     const toolsHeader = encodeURIComponent(JSON.stringify(toolCards));
 
+    // X-Quality-Highlight: indica al cliente que renderice una card visual de
+    // calidad bajo la respuesta. El área del asesor permite personalizar tiempos.
+    const qualityIntent = detectQualityIntent(message);
+    const qualityHeader = qualityIntent
+      ? encodeURIComponent(JSON.stringify({
+          highlight: qualityIntent,
+          area: ['Telemercadeo', 'Ventas', 'Vass'].includes(departamento ?? '') ? departamento : null,
+        }))
+      : '';
+
     return new Response(readable, {
       headers: {
         'Content-Type': 'text/plain; charset=utf-8',
@@ -346,7 +399,8 @@ ${useWebSearch ? '- ⚠️ WEB SEARCH ACTIVADO: el asesor usó una palabra clave
         'X-Accel-Buffering': 'no',
         'Transfer-Encoding': 'chunked',
         'X-Recommended-Tools': toolsHeader,
-        'Access-Control-Expose-Headers': 'X-Recommended-Tools',
+        'X-Quality-Highlight': qualityHeader,
+        'Access-Control-Expose-Headers': 'X-Recommended-Tools, X-Quality-Highlight',
       },
     });
   } catch (error: unknown) {

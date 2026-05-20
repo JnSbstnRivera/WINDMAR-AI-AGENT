@@ -9,7 +9,7 @@ import { MascotPanel, type MascotState } from './MascotPanel';
 import { TopBar } from './TopBar';
 import { ProfileModal } from './ProfileModal';
 import { useInactivityLogout } from '@/hooks/useInactivityLogout';
-import type { Message, Conversation, ToolRef } from '@/types';
+import type { Message, Conversation, ToolRef, QualityMeta } from '@/types';
 
 function generateId() {
   return Math.random().toString(36).slice(2) + Date.now().toString(36);
@@ -331,6 +331,15 @@ export function ChatApp({ user, onSignOut }: Props) {
         console.warn('[chat] No se pudo parsear X-Recommended-Tools:', err);
       }
 
+      // Quality highlight — card visual para preguntas de calidad de llamada
+      let qualityMeta: QualityMeta | undefined;
+      try {
+        const raw = response.headers.get('X-Quality-Highlight');
+        if (raw) qualityMeta = JSON.parse(decodeURIComponent(raw)) as QualityMeta;
+      } catch (err) {
+        console.warn('[chat] No se pudo parsear X-Quality-Highlight:', err);
+      }
+
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
       let fullText = '';
@@ -376,17 +385,23 @@ export function ChatApp({ user, onSignOut }: Props) {
       pendingText = fullText;
       flushUpdate();
 
-      // Adjuntar las herramientas recomendadas al mensaje del asistente.
-      // Se hace acá (post-stream) para que las cards aparezcan junto con el
-      // texto final, no parpadeando durante la generación.
-      if (recommendedTools.length > 0) {
+      // Adjuntar las herramientas + quality card al mensaje del asistente.
+      // Se hace acá (post-stream) para que aparezcan junto con el texto final,
+      // no parpadeando durante la generación.
+      if (recommendedTools.length > 0 || qualityMeta) {
         setConversations((prev) =>
           prev.map((c) =>
             c.id === convId
               ? {
                   ...c,
                   messages: c.messages.map((m) =>
-                    m.id === assistantMsgId ? { ...m, tools: recommendedTools } : m
+                    m.id === assistantMsgId
+                      ? {
+                          ...m,
+                          ...(recommendedTools.length > 0 ? { tools: recommendedTools } : {}),
+                          ...(qualityMeta ? { quality: qualityMeta } : {}),
+                        }
+                      : m
                   ),
                 }
               : c

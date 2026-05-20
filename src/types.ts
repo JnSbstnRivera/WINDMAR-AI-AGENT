@@ -10,6 +10,15 @@ export interface ToolRef {
   topic?: string;
 }
 
+/** Tipo de tarjeta visual de calidad que el cliente debe renderizar. */
+export type QualityHighlight = 'matrix' | 'criticals' | 'times' | null;
+
+export interface QualityMeta {
+  highlight: Exclude<QualityHighlight, null>;
+  /** Área del asesor — para personalizar tiempos. */
+  area?: 'Telemercadeo' | 'Ventas' | 'Vass' | null;
+}
+
 export interface Message {
   id: string;
   role: 'user' | 'assistant';
@@ -17,6 +26,8 @@ export interface Message {
   timestamp: Date;
   /** Herramientas recomendadas para esta respuesta (solo en mensajes del asistente). */
   tools?: ToolRef[];
+  /** Card de calidad a renderizar (matriz/críticos/tiempos). */
+  quality?: QualityMeta;
 }
 
 export interface Conversation {

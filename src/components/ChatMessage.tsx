@@ -6,6 +6,7 @@ import remarkGfm from 'remark-gfm';
 import type { Message } from '@/types';
 import { UserAvatar } from './UserAvatar';
 import { ToolCards } from './ToolCards';
+import { QualityCard } from './QualityCard';
 import { useTypewriter } from '@/hooks/useTypewriter';
 
 interface Props {
@@ -291,6 +292,12 @@ function ChatMessageImpl({
           )}
         </div>
 
+        {/* Quality card — visualización rica para preguntas de calidad de llamada.
+            Aparece SOLO cuando termina el stream. */}
+        {!isStreaming && message.quality && (
+          <QualityCard meta={message.quality} />
+        )}
+
         {/* Cards de herramientas recomendadas — solo cuando ya terminó el streaming
             (evita que aparezcan/desaparezcan durante la generación). */}
         {!isStreaming && message.tools && message.tools.length > 0 && (
@@ -419,17 +426,21 @@ export const ChatMessage = memo(ChatMessageImpl, (prev, next) => {
     prevToolsLen === nextToolsLen &&
     (prevToolsLen === 0 || prev.message.tools?.[0]?.slug === next.message.tools?.[0]?.slug);
 
+  const qualityEqual =
+    (!prev.message.quality && !next.message.quality) ||
+    (prev.message.quality?.highlight === next.message.quality?.highlight &&
+      prev.message.quality?.area === next.message.quality?.area);
+
   return (
     prev.message.id === next.message.id &&
     prev.message.content === next.message.content &&
     toolsEqual &&
+    qualityEqual &&
     prev.isStreaming === next.isStreaming &&
     prev.asesorEmail === next.asesorEmail &&
     prev.asesorDisplayName === next.asesorDisplayName &&
     prev.asesorPhotoUrl === next.asesorPhotoUrl &&
     prev.showRegenerate === next.showRegenerate &&
     prev.conversationId === next.conversationId
-    // onRegenerate intencionalmente excluido — la prop cambia en cada render
-    // del padre pero apunta a la misma lógica. No re-rendereamos por eso.
   );
 });
