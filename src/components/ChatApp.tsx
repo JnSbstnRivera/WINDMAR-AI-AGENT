@@ -34,6 +34,27 @@ function extractQuickReplies(text: string): { cleanText: string; replies: string
   return { cleanText, replies };
 }
 
+/**
+ * Filtra las herramientas recomendadas por el server para quedarnos SOLO con
+ * las que el LLM realmente mencionó en su respuesta (como link markdown
+ * o por URL exacta). Esto elimina falsos positivos del trigger matching
+ * — si el bot no nombra la herramienta, no aparece como card.
+ *
+ * Bonus: refuerza la regla del prompt "cuando menciones una herramienta usa
+ * [Nombre](url)". Si el LLM olvida el link, no se muestra card → incentivo
+ * a respetar el formato.
+ */
+function filterToolsMentionedInText(tools: ToolRef[], text: string): ToolRef[] {
+  if (!text || tools.length === 0) return [];
+  return tools.filter((t) => {
+    // Match por URL completa o por nombre exacto entre corchetes [Nombre]
+    if (text.includes(t.url)) return true;
+    // Match alternativo: el nombre del tool en formato markdown link [Name](
+    if (text.includes(`[${t.name}](`)) return true;
+    return false;
+  });
+}
+
 interface UserData {
   email: string;
   displayName: string | null;
@@ -540,6 +561,12 @@ export function ChatApp({ user, onSignOut }: Props) {
       // Extraer Quick Replies del texto y limpiarlo
       const { cleanText, replies: quickReplies } = extractQuickReplies(fullText);
 
+      // FILTRO CRÍTICO: solo se renderizan cards de herramientas que el LLM
+      // mencionó REALMENTE en el texto (por URL o por [Nombre]). Esto elimina
+      // falsos positivos del trigger matching del backend — si el bot no
+      // nombra la herramienta, no aparece como card.
+      const mentionedTools = filterToolsMentionedInText(recommendedTools, cleanText);
+
       // Adjuntar tools + quality + quick replies al mensaje del asistente.
       // Se hace acá (post-stream) para que aparezcan junto con el texto final,
       // no parpadeando durante la generación.
@@ -553,7 +580,7 @@ export function ChatApp({ user, onSignOut }: Props) {
                     ? {
                         ...m,
                         content: cleanText, // texto sin el bloque <quick_replies>
-                        ...(recommendedTools.length > 0 ? { tools: recommendedTools } : {}),
+                        ...(mentionedTools.length > 0 ? { tools: mentionedTools } : {}),
                         ...(qualityMeta ? { quality: qualityMeta } : {}),
                         ...(quickReplies.length > 0 ? { quickReplies } : {}),
                       }
@@ -565,7 +592,7 @@ export function ChatApp({ user, onSignOut }: Props) {
       );
 
       // Guardar respuesta del asistente (cleanText, sin el bloque de quick replies)
-      // + slugs de herramientas (para re-render al recargar)
+      // + slugs de herramientas MENCIONADAS (para re-render al recargar)
       await fetch('/api/messages', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -573,7 +600,7 @@ export function ChatApp({ user, onSignOut }: Props) {
           conversation_id: convId,
           role: 'assistant',
           content: cleanText,
-          tool_refs: recommendedTools.map((t) => t.slug),
+          tool_refs: mentionedTools.map((t) => t.slug),
         }),
       });
     } catch (err) {
