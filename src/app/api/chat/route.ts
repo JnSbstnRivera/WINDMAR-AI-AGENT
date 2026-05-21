@@ -262,13 +262,26 @@ export async function POST(req: Request) {
       : 'No se encontró información específica para esta consulta.';
 
     // 5. Contexto del asesor (volátil — se inyecta en cada turno, NO va en el cache)
+    // Fecha actual en español PR — crucial para validar vigencia de promociones
+    // y dar tono apropiado al día/mes (campañas estacionales, feriados, etc.)
+    const fechaActualPR = new Date().toLocaleDateString('es-PR', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      timeZone: 'America/Puerto_Rico',
+    });
+
     const asesorContext = `DATOS DEL ASESOR ACTUAL Y CONTEXTO:
 - Nombre del asesor: ${asesorName}
 ${departamento ? `- Departamento: ${departamento}` : ''}
 ${rol ? `- Rol: ${rol}` : ''}
+- Fecha actual en PR: ${fechaActualPR}
 - Saludo según hora actual en PR: "${greeting}"
 - ¿Es el primer mensaje de la conversación? ${isFirstMessage ? 'SÍ — saluda al asesor con: "¡' + greeting + ', ' + asesorName + '! 👋"' : 'NO — NO saludes de nuevo. Mantén el HILO temático.'}
-${useWebSearch ? '- ⚠️ WEB SEARCH ACTIVADO: el asesor usó una palabra clave de búsqueda en internet. Cuando uses información de internet, indícalo claramente con 🌐 al inicio y cita la fuente.' : ''}`;
+${useWebSearch ? '- ⚠️ WEB SEARCH ACTIVADO: el asesor usó una palabra clave de búsqueda en internet. Cuando uses información de internet, indícalo claramente con 🌐 al inicio y cita la fuente.' : ''}
+
+REGLA DE VIGENCIA: usa la fecha actual de arriba para validar promociones, feriados, campañas estacionales. Si una promoción del knowledge base venció antes de hoy, NO la ofrezcas — dile al asesor que ya venció y que valide con su Office Manager.`;
 
     // 6. Mensajes (history + user message con contexto inyectado)
     // Las herramientas vienen de Supabase (tabla `tools`) — administrables sin redeploy.
