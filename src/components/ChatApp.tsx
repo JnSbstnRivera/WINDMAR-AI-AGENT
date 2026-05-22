@@ -788,8 +788,6 @@ export function ChatApp({ user, onSignOut }: Props) {
         displayName={user.displayName ?? undefined}
       />
 
-      {invadersOpen && <WindmarInvaders onClose={() => setInvadersOpen(false)} />}
-
       {profileOpen && (
         <ProfileModal
           user={{
@@ -862,6 +860,8 @@ export function ChatApp({ user, onSignOut }: Props) {
               conversationId={activeId}
               onQuickReply={(text) => sendMessage(text)}
             />
+            {/* Easter egg — Windmar Invaders inline encima del input */}
+            {invadersOpen && <WindmarInvaders onClose={() => setInvadersOpen(false)} />}
             <ChatInput
               onSend={sendMessage}
               disabled={isStreaming}
@@ -874,14 +874,17 @@ export function ChatApp({ user, onSignOut }: Props) {
             />
           </>
         ) : (
-          <WelcomeScreen
-            onSend={sendMessage}
-            disabled={isStreaming}
-            onAttach={uploadLumaBill}
-            onTypingChange={(typing) => {
-              if (!isStreaming) setMascotState(typing ? 'typing' : 'idle');
-            }}
-          />
+          <>
+            {invadersOpen && <WindmarInvaders onClose={() => setInvadersOpen(false)} />}
+            <WelcomeScreen
+              onSend={sendMessage}
+              disabled={isStreaming}
+              onAttach={uploadLumaBill}
+              onTypingChange={(typing) => {
+                if (!isStreaming) setMascotState(typing ? 'typing' : 'idle');
+              }}
+            />
+          </>
         )}
       </main>
     </div>

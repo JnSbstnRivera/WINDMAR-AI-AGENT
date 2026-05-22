@@ -7,101 +7,90 @@ interface Props {
 }
 
 // ════════════════════════════════════════
-// WINDMAR INVADERS — Easter egg / mini-juego
+// WINDMAR INVADERS ASCII — inline en el chat
 // ════════════════════════════════════════
-// Space Invaders clásico con tema Windmar:
-// - Tanque (SUN BOT) abajo, disparando hacia arriba
-// - Aliens = placas solares en fila que bajan
-// - Disparos = rayos naranja brand
-// - Cuando los aliens llegan abajo o te toca uno → game over
-// - Si destruyes a todos → level up (más rápidos)
+// Mini-juego ASCII puro tipo Space Invaders. Se renderiza inline
+// encima del input del chat (no overlay full-screen).
+// Compacto (~520x320px), responsive, captura teclado solo cuando activo.
 //
-// Controles: ← / → mover · ESPACIO disparar · ESC salir
+// Controles: ← → mover · ESPACIO disparar · ESC cerrar · R reintentar
 
-const CW = 640;
-const CH = 720;
-const PLAYER_W = 56;
-const PLAYER_H = 40;
-const PLAYER_SPEED = 6;
-const ALIEN_W = 44;
-const ALIEN_H = 32;
-const ALIEN_GAP_X = 18;
-const ALIEN_GAP_Y = 18;
+const COLS = 32;
+const ROWS = 14;
 const ALIEN_ROWS = 4;
 const ALIEN_COLS = 8;
-const ALIEN_TOP = 80;
-const BULLET_W = 4;
-const BULLET_H = 14;
-const BULLET_SPEED = 9;
-const ALIEN_BULLET_SPEED = 4;
+const ALIEN_START_X = 3;
+const ALIEN_START_Y = 1;
+const PLAYER_Y = ROWS - 1;
+const TICK_MS = 80; // velocidad del loop (12.5 fps — adecuado para ASCII)
 
-type Alien = { x: number; y: number; alive: boolean };
-type Bullet = { x: number; y: number; alive: boolean };
+type Cell = { c: string; cls: string };
+type Pos = { x: number; y: number };
 
 export function WindmarInvaders({ onClose }: Props) {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const animationRef = useRef<number>(0);
-  const playerRef = useRef({ x: CW / 2 - PLAYER_W / 2, y: CH - PLAYER_H - 20 });
-  const aliensRef = useRef<Alien[]>([]);
-  const playerBulletsRef = useRef<Bullet[]>([]);
-  const alienBulletsRef = useRef<Bullet[]>([]);
-  const alienDirRef = useRef(1); // 1 = derecha, -1 = izquierda
-  const alienSpeedRef = useRef(0.6);
-  const keysRef = useRef({ left: false, right: false });
-  const lastShotRef = useRef(0);
-  const starsRef = useRef<{ x: number; y: number; s: number }[]>([]);
-
   const [score, setScore] = useState(0);
   const [lives, setLives] = useState(3);
   const [level, setLevel] = useState(1);
-  const [gameState, setGameState] = useState<'playing' | 'gameover' | 'won'>('playing');
+  const [gameState, setGameState] = useState<'playing' | 'gameover'>('playing');
+  const [grid, setGrid] = useState<Cell[][]>(() => emptyGrid());
+
+  const playerRef = useRef<number>(Math.floor(COLS / 2));
+  const aliensRef = useRef<Pos[]>([]);
+  const playerBulletsRef = useRef<Pos[]>([]);
+  const alienBulletsRef = useRef<Pos[]>([]);
+  const alienDirRef = useRef<1 | -1>(1);
+  const alienMoveCounterRef = useRef(0);
+  const alienMoveEveryRef = useRef(8); // mueve aliens cada N ticks
+  const keysRef = useRef({ left: false, right: false });
+  const lastShotRef = useRef(0);
+  const starsRef = useRef<Pos[]>([]);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   // ════════════════════════════════════════
-  // INIT — crear aliens en grid y estrellas de fondo
+  // INIT
   // ════════════════════════════════════════
   const initLevel = useCallback((lvl: number) => {
-    const aliens: Alien[] = [];
-    const startX = (CW - ALIEN_COLS * (ALIEN_W + ALIEN_GAP_X)) / 2;
+    const aliens: Pos[] = [];
     for (let r = 0; r < ALIEN_ROWS; r++) {
       for (let c = 0; c < ALIEN_COLS; c++) {
-        aliens.push({
-          x: startX + c * (ALIEN_W + ALIEN_GAP_X),
-          y: ALIEN_TOP + r * (ALIEN_H + ALIEN_GAP_Y),
-          alive: true,
-        });
+        aliens.push({ x: ALIEN_START_X + c * 3, y: ALIEN_START_Y + r });
       }
     }
     aliensRef.current = aliens;
     playerBulletsRef.current = [];
     alienBulletsRef.current = [];
     alienDirRef.current = 1;
-    alienSpeedRef.current = 0.6 + (lvl - 1) * 0.25;
-    playerRef.current = { x: CW / 2 - PLAYER_W / 2, y: CH - PLAYER_H - 20 };
+    alienMoveEveryRef.current = Math.max(2, 8 - (lvl - 1));
+    alienMoveCounterRef.current = 0;
+    playerRef.current = Math.floor(COLS / 2);
   }, []);
 
   useEffect(() => {
-    // Estrellas de fondo
-    starsRef.current = Array.from({ length: 80 }, () => ({
-      x: Math.random() * CW,
-      y: Math.random() * CH,
-      s: Math.random() * 1.5 + 0.3,
+    starsRef.current = Array.from({ length: 12 }, () => ({
+      x: Math.floor(Math.random() * COLS),
+      y: Math.floor(Math.random() * (ROWS - 2)) + 1,
     }));
     initLevel(1);
+    containerRef.current?.focus();
   }, [initLevel]);
 
   // ════════════════════════════════════════
-  // CONTROLES — teclado
+  // CONTROLES (solo cuando el componente está montado)
   // ════════════════════════════════════════
   useEffect(() => {
     function down(e: KeyboardEvent) {
-      if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') keysRef.current.left = true;
-      if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') keysRef.current.right = true;
-      if (e.key === ' ' || e.key === 'ArrowUp') {
+      if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') {
+        e.preventDefault();
+        keysRef.current.left = true;
+      } else if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') {
+        e.preventDefault();
+        keysRef.current.right = true;
+      } else if (e.key === ' ' || e.key === 'ArrowUp') {
         e.preventDefault();
         shoot();
-      }
-      if (e.key === 'Escape') onClose();
-      if ((e.key === 'r' || e.key === 'R') && gameState !== 'playing') {
+      } else if (e.key === 'Escape') {
+        onClose();
+      } else if ((e.key === 'r' || e.key === 'R') && gameState === 'gameover') {
         setScore(0);
         setLives(3);
         setLevel(1);
@@ -125,288 +114,226 @@ export function WindmarInvaders({ onClose }: Props) {
   function shoot() {
     if (gameState !== 'playing') return;
     const now = Date.now();
-    if (now - lastShotRef.current < 280) return;
+    if (now - lastShotRef.current < 220) return;
     lastShotRef.current = now;
-    playerBulletsRef.current.push({
-      x: playerRef.current.x + PLAYER_W / 2 - BULLET_W / 2,
-      y: playerRef.current.y - 4,
-      alive: true,
-    });
+    playerBulletsRef.current.push({ x: playerRef.current, y: PLAYER_Y - 1 });
   }
 
   // ════════════════════════════════════════
   // GAME LOOP
   // ════════════════════════════════════════
   useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
+    const id = setInterval(() => {
+      if (gameState !== 'playing') {
+        setGrid(renderFrame());
+        return;
+      }
 
-    function loop() {
-      if (!ctx || !canvas) return;
-      // ─── UPDATE ────────────────────
-      if (gameState === 'playing') {
-        // Player movement
-        const p = playerRef.current;
-        if (keysRef.current.left && p.x > 8) p.x -= PLAYER_SPEED;
-        if (keysRef.current.right && p.x < CW - PLAYER_W - 8) p.x += PLAYER_SPEED;
+      // Player move
+      if (keysRef.current.left && playerRef.current > 1) playerRef.current -= 1;
+      if (keysRef.current.right && playerRef.current < COLS - 2) playerRef.current += 1;
 
-        // Player bullets
-        playerBulletsRef.current.forEach((b) => { b.y -= BULLET_SPEED; if (b.y < 0) b.alive = false; });
+      // Player bullets up
+      playerBulletsRef.current.forEach((b) => (b.y -= 1));
+      playerBulletsRef.current = playerBulletsRef.current.filter((b) => b.y >= 0);
 
-        // Alien bullets
-        alienBulletsRef.current.forEach((b) => { b.y += ALIEN_BULLET_SPEED; if (b.y > CH) b.alive = false; });
+      // Alien bullets down
+      alienBulletsRef.current.forEach((b) => (b.y += 1));
+      alienBulletsRef.current = alienBulletsRef.current.filter((b) => b.y < ROWS);
 
-        // Alien movement
-        const aliens = aliensRef.current.filter((a) => a.alive);
+      // Alien movement (cada N ticks)
+      alienMoveCounterRef.current += 1;
+      if (alienMoveCounterRef.current >= alienMoveEveryRef.current) {
+        alienMoveCounterRef.current = 0;
+        const aliens = aliensRef.current;
         let hitEdge = false;
         for (const a of aliens) {
-          a.x += alienSpeedRef.current * alienDirRef.current;
-          if (a.x < 8 || a.x + ALIEN_W > CW - 8) hitEdge = true;
+          const nx = a.x + alienDirRef.current;
+          if (nx < 1 || nx > COLS - 2) { hitEdge = true; break; }
         }
         if (hitEdge) {
-          alienDirRef.current *= -1;
-          for (const a of aliens) a.y += 22;
+          alienDirRef.current = (alienDirRef.current === 1 ? -1 : 1) as 1 | -1;
+          for (const a of aliens) a.y += 1;
+        } else {
+          for (const a of aliens) a.x += alienDirRef.current;
         }
 
-        // Aliens shoot al azar
-        if (Math.random() < 0.012 + (level - 1) * 0.005 && aliens.length > 0) {
+        // Alien shoot al azar (uno solo)
+        if (aliens.length > 0 && Math.random() < 0.35) {
           const shooter = aliens[Math.floor(Math.random() * aliens.length)];
-          alienBulletsRef.current.push({
-            x: shooter.x + ALIEN_W / 2 - BULLET_W / 2,
-            y: shooter.y + ALIEN_H,
-            alive: true,
-          });
+          alienBulletsRef.current.push({ x: shooter.x, y: shooter.y + 1 });
         }
 
-        // Colisiones bullet → alien
-        for (const b of playerBulletsRef.current) {
-          if (!b.alive) continue;
-          for (const a of aliensRef.current) {
-            if (!a.alive) continue;
-            if (b.x < a.x + ALIEN_W && b.x + BULLET_W > a.x && b.y < a.y + ALIEN_H && b.y + BULLET_H > a.y) {
-              a.alive = false;
-              b.alive = false;
-              setScore((s) => s + 10);
-            }
-          }
-        }
-
-        // Colisiones bullet → player
-        for (const b of alienBulletsRef.current) {
-          if (!b.alive) continue;
-          if (b.x < p.x + PLAYER_W && b.x + BULLET_W > p.x && b.y < p.y + PLAYER_H && b.y + BULLET_H > p.y) {
-            b.alive = false;
-            setLives((l) => {
-              const newL = l - 1;
-              if (newL <= 0) setGameState('gameover');
-              return newL;
-            });
-          }
-        }
-
-        // Aliens llegan abajo
-        for (const a of aliensRef.current) {
-          if (a.alive && a.y + ALIEN_H >= p.y) {
+        // Aliens llegan a la fila del player
+        for (const a of aliens) {
+          if (a.y >= PLAYER_Y - 1) {
             setGameState('gameover');
             break;
           }
         }
+      }
 
-        // Limpiar bullets muertos
-        playerBulletsRef.current = playerBulletsRef.current.filter((b) => b.alive);
-        alienBulletsRef.current = alienBulletsRef.current.filter((b) => b.alive);
+      // Colisión bullet → alien
+      for (const b of playerBulletsRef.current) {
+        const hit = aliensRef.current.findIndex((a) => a.x === b.x && a.y === b.y);
+        if (hit !== -1) {
+          aliensRef.current.splice(hit, 1);
+          b.y = -1; // marca para limpiar
+          setScore((s) => s + 10);
+        }
+      }
+      playerBulletsRef.current = playerBulletsRef.current.filter((b) => b.y >= 0);
 
-        // Si no quedan aliens → level up
-        if (aliens.length === 0) {
-          setLevel((lv) => {
-            const next = lv + 1;
-            initLevel(next);
-            return next;
+      // Colisión bullet enemigo → player
+      for (const b of alienBulletsRef.current) {
+        if (b.y === PLAYER_Y && b.x === playerRef.current) {
+          b.y = -1;
+          setLives((l) => {
+            const nl = l - 1;
+            if (nl <= 0) setGameState('gameover');
+            return nl;
           });
         }
       }
+      alienBulletsRef.current = alienBulletsRef.current.filter((b) => b.y >= 0);
 
-      // ─── RENDER ────────────────────
-      // Fondo gradient navy
-      const grad = ctx.createLinearGradient(0, 0, 0, CH);
-      grad.addColorStop(0, '#060810');
-      grad.addColorStop(0.5, '#0a1628');
-      grad.addColorStop(1, '#1B3A5C');
-      ctx.fillStyle = grad;
-      ctx.fillRect(0, 0, CW, CH);
-
-      // Estrellas
-      for (const star of starsRef.current) {
-        ctx.fillStyle = `rgba(255, 255, 255, ${0.3 + star.s * 0.4})`;
-        ctx.fillRect(star.x, star.y, star.s, star.s);
+      // Win → siguiente nivel
+      if (aliensRef.current.length === 0) {
+        setLevel((lv) => {
+          const next = lv + 1;
+          initLevel(next);
+          return next;
+        });
       }
 
-      // Aliens (placas solares estilizadas)
-      for (const a of aliensRef.current) {
-        if (!a.alive) continue;
-        drawSolarPanel(ctx, a.x, a.y);
-      }
+      setGrid(renderFrame());
+    }, TICK_MS);
+    return () => clearInterval(id);
+  }, [gameState, initLevel]);
 
-      // Player (tanque con SUN BOT)
-      drawTank(ctx, playerRef.current.x, playerRef.current.y);
-
-      // Player bullets (rayos naranja)
-      ctx.fillStyle = '#F7941D';
-      ctx.shadowColor = '#F7941D';
-      ctx.shadowBlur = 8;
-      for (const b of playerBulletsRef.current) {
-        ctx.fillRect(b.x, b.y, BULLET_W, BULLET_H);
-      }
-      ctx.shadowBlur = 0;
-
-      // Alien bullets (rayos rojos)
-      ctx.fillStyle = '#f43f5e';
-      ctx.shadowColor = '#f43f5e';
-      ctx.shadowBlur = 6;
-      for (const b of alienBulletsRef.current) {
-        ctx.fillRect(b.x, b.y, BULLET_W, BULLET_H);
-      }
-      ctx.shadowBlur = 0;
-
-      // Game over / Won overlay
-      if (gameState === 'gameover') {
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.75)';
-        ctx.fillRect(0, 0, CW, CH);
-        ctx.font = 'bold 56px sans-serif';
-        ctx.textAlign = 'center';
-        ctx.fillStyle = '#f43f5e';
-        ctx.shadowColor = '#f43f5e';
-        ctx.shadowBlur = 20;
-        ctx.fillText('GAME OVER', CW / 2, CH / 2 - 20);
-        ctx.shadowBlur = 0;
-        ctx.font = '18px sans-serif';
-        ctx.fillStyle = '#e8edf8';
-        ctx.fillText(`Score final: ${score}`, CW / 2, CH / 2 + 20);
-        ctx.fillStyle = '#F7941D';
-        ctx.font = '14px sans-serif';
-        ctx.fillText('Presiona R para reintentar · ESC para salir', CW / 2, CH / 2 + 56);
-      }
-
-      animationRef.current = requestAnimationFrame(loop);
+  function renderFrame(): Cell[][] {
+    const g: Cell[][] = emptyGrid();
+    // Estrellas
+    for (const s of starsRef.current) {
+      if (g[s.y]) g[s.y][s.x] = { c: '·', cls: 'text-white/20' };
     }
-    animationRef.current = requestAnimationFrame(loop);
-    return () => cancelAnimationFrame(animationRef.current);
-  }, [gameState, initLevel, level, score]);
+    // Aliens (placas solares)
+    for (const a of aliensRef.current) {
+      if (g[a.y] && a.x < COLS) g[a.y][a.x] = { c: '▓', cls: 'text-cyan-400' };
+    }
+    // Bullets player
+    for (const b of playerBulletsRef.current) {
+      if (b.y >= 0 && b.y < ROWS && b.x < COLS) g[b.y][b.x] = { c: '│', cls: 'text-orange-400' };
+    }
+    // Bullets enemigos
+    for (const b of alienBulletsRef.current) {
+      if (b.y >= 0 && b.y < ROWS && b.x < COLS) g[b.y][b.x] = { c: '!', cls: 'text-rose-400' };
+    }
+    // Player tank
+    if (g[PLAYER_Y]) g[PLAYER_Y][playerRef.current] = { c: '▲', cls: 'text-orange-500' };
+    return g;
+  }
 
   return (
     <div
-      className="fixed inset-0 z-[1000] flex items-center justify-center p-4"
-      style={{ background: 'rgba(6, 8, 16, 0.92)', backdropFilter: 'blur(8px)' }}
+      ref={containerRef}
+      tabIndex={-1}
+      className="mx-auto my-3 max-w-[560px] rounded-xl border-2 outline-none wm-fade-in"
+      style={{
+        background: 'linear-gradient(180deg, #060810 0%, #0a1628 50%, #1B3A5C 100%)',
+        borderColor: 'rgba(247,148,29,0.5)',
+        boxShadow: '0 0 24px rgba(247,148,29,0.2), 0 0 48px rgba(124,58,237,0.15)',
+      }}
     >
-      <div className="relative max-w-full max-h-full flex flex-col items-center">
-        {/* Header */}
-        <div className="flex items-center justify-between w-full mb-3 px-2">
-          <div>
-            <h2 className="text-xl font-bold text-[#F7941D] tracking-wider" style={{ fontFamily: 'monospace', textShadow: '0 0 12px rgba(247,148,29,0.6)' }}>
-              ☀️ WINDMAR INVADERS
-            </h2>
-            <p className="text-[11px] text-gray-400 mt-0.5" style={{ fontFamily: 'monospace' }}>
-              ← → mover · ESPACIO disparar · ESC salir · R reintentar
-            </p>
-          </div>
-          <button
-            onClick={onClose}
-            className="text-gray-300 hover:text-red-400 cursor-pointer transition-colors p-2"
-            aria-label="Cerrar juego"
+      {/* Header */}
+      <div className="flex items-center justify-between px-3 py-2 border-b border-orange-500/30">
+        <div>
+          <p
+            className="text-[13px] font-bold tracking-widest"
+            style={{ fontFamily: 'monospace', color: '#F7941D', textShadow: '0 0 8px rgba(247,148,29,0.6)' }}
           >
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-              <line x1="18" y1="6" x2="6" y2="18" />
-              <line x1="6" y1="6" x2="18" y2="18" />
-            </svg>
-          </button>
+            ☀ WINDMAR INVADERS
+          </p>
+          <p className="text-[9px] text-gray-400 mt-0.5" style={{ fontFamily: 'monospace' }}>
+            ← → mover · ESPACIO disparar · ESC salir
+          </p>
         </div>
+        <button
+          onClick={onClose}
+          className="text-gray-400 hover:text-red-400 cursor-pointer p-1"
+          aria-label="Cerrar juego"
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+            <line x1="18" y1="6" x2="6" y2="18"/>
+            <line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+      </div>
 
-        {/* HUD */}
-        <div
-          className="flex justify-between w-full mb-2 px-3 py-2 rounded-lg"
+      {/* HUD */}
+      <div
+        className="flex justify-between px-3 py-1.5 border-b border-orange-500/20 text-[11px]"
+        style={{ fontFamily: 'monospace', color: '#F7941D', letterSpacing: '0.1em' }}
+      >
+        <span>SCORE: <strong>{score.toString().padStart(4, '0')}</strong></span>
+        <span>LIVES: {'♥'.repeat(Math.max(0, lives))}{'·'.repeat(3 - Math.max(0, lives))}</span>
+        <span>LVL: <strong>{level}</strong></span>
+      </div>
+
+      {/* Game board (ASCII grid) */}
+      <div className="relative px-3 py-2 select-none">
+        <pre
+          className="leading-[1.1] text-center"
           style={{
-            background: 'rgba(247,148,29,0.08)',
-            border: '1px solid rgba(247,148,29,0.3)',
-            fontFamily: 'monospace',
-            fontSize: 14,
-            color: '#F7941D',
-            letterSpacing: '0.1em',
+            fontFamily: '"JetBrains Mono", "Courier New", monospace',
+            fontSize: 'clamp(11px, 2.4vw, 16px)',
+            lineHeight: '1.1',
+            margin: 0,
           }}
         >
-          <span>SCORE: <strong>{score}</strong></span>
-          <span>LIVES: {'❤️'.repeat(Math.max(0, lives))}</span>
-          <span>LEVEL: <strong>{level}</strong></span>
-        </div>
+          {grid.map((row, ri) => (
+            <div key={ri} className="whitespace-pre">
+              {row.map((cell, ci) => (
+                <span key={ci} className={cell.cls}>{cell.c}</span>
+              ))}
+            </div>
+          ))}
+        </pre>
 
-        {/* Canvas */}
-        <canvas
-          ref={canvasRef}
-          width={CW}
-          height={CH}
-          tabIndex={0}
-          style={{
-            display: 'block',
-            borderRadius: 12,
-            border: '2px solid rgba(247,148,29,0.4)',
-            boxShadow: '0 0 30px rgba(247,148,29,0.25), 0 0 60px rgba(124,58,237,0.15)',
-            maxWidth: '100%',
-            height: 'auto',
-          }}
-        />
+        {/* Game over overlay */}
+        {gameState === 'gameover' && (
+          <div
+            className="absolute inset-0 flex flex-col items-center justify-center"
+            style={{ background: 'rgba(6, 8, 16, 0.85)', backdropFilter: 'blur(2px)' }}
+          >
+            <p
+              className="text-2xl font-bold mb-1"
+              style={{ fontFamily: 'monospace', color: '#f43f5e', textShadow: '0 0 16px rgba(244,63,94,0.7)' }}
+            >
+              GAME OVER
+            </p>
+            <p className="text-sm text-gray-300" style={{ fontFamily: 'monospace' }}>
+              Score: <strong style={{ color: '#F7941D' }}>{score}</strong>
+            </p>
+            <p className="text-[10px] text-gray-400 mt-2" style={{ fontFamily: 'monospace' }}>
+              Presiona <kbd className="px-1.5 py-0.5 rounded bg-white/10">R</kbd> para reintentar
+            </p>
+          </div>
+        )}
+      </div>
+
+      {/* Footer mini */}
+      <div className="px-3 py-1.5 border-t border-orange-500/20 text-center">
+        <p className="text-[9px] text-gray-500" style={{ fontFamily: 'monospace' }}>
+          Click acá para enfocar · Sigue chateando cuando quieras
+        </p>
       </div>
     </div>
   );
 }
 
-// ════════════════════════════════════════
-// DRAW HELPERS
-// ════════════════════════════════════════
-function drawSolarPanel(ctx: CanvasRenderingContext2D, x: number, y: number) {
-  // Marco
-  ctx.fillStyle = '#1B3A5C';
-  ctx.fillRect(x, y, ALIEN_W, ALIEN_H);
-  // Borde brillante
-  ctx.strokeStyle = '#06b6d4';
-  ctx.lineWidth = 1.5;
-  ctx.strokeRect(x + 1, y + 1, ALIEN_W - 2, ALIEN_H - 2);
-  ctx.shadowColor = '#06b6d4';
-  ctx.shadowBlur = 6;
-  // Cells (grid 4x3 de células solares)
-  ctx.fillStyle = '#06b6d4';
-  const cw = (ALIEN_W - 8) / 4;
-  const ch = (ALIEN_H - 8) / 3;
-  for (let r = 0; r < 3; r++) {
-    for (let c = 0; c < 4; c++) {
-      ctx.fillRect(x + 4 + c * cw + 1, y + 4 + r * ch + 1, cw - 2, ch - 2);
-    }
-  }
-  ctx.shadowBlur = 0;
-}
-
-function drawTank(ctx: CanvasRenderingContext2D, x: number, y: number) {
-  ctx.shadowColor = '#F7941D';
-  ctx.shadowBlur = 14;
-  // Base del tanque (chasis) — naranja Windmar
-  ctx.fillStyle = '#F7941D';
-  ctx.fillRect(x, y + 18, PLAYER_W, PLAYER_H - 18);
-  // Cuerpo central (cabeza SUN BOT)
-  ctx.fillStyle = '#FFB347';
-  ctx.fillRect(x + 12, y + 4, PLAYER_W - 24, 16);
-  // Cañón
-  ctx.fillStyle = '#F7941D';
-  ctx.fillRect(x + PLAYER_W / 2 - 3, y - 4, 6, 14);
-  ctx.shadowBlur = 0;
-  // Detalles SUN BOT — ojos
-  ctx.fillStyle = '#0a1628';
-  ctx.fillRect(x + 16, y + 9, 4, 4);
-  ctx.fillRect(x + PLAYER_W - 20, y + 9, 4, 4);
-  // Línea central del chasis
-  ctx.strokeStyle = '#0a1628';
-  ctx.lineWidth = 1;
-  ctx.beginPath();
-  ctx.moveTo(x + 4, y + 28);
-  ctx.lineTo(x + PLAYER_W - 4, y + 28);
-  ctx.stroke();
+function emptyGrid(): Cell[][] {
+  return Array.from({ length: ROWS }, () =>
+    Array.from({ length: COLS }, () => ({ c: ' ', cls: '' }))
+  );
 }
