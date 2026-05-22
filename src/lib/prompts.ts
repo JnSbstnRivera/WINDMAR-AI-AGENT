@@ -171,27 +171,61 @@ Las 3 frases son LO QUE EL ASESOR TE DICE A TI A CONTINUACIÓN, no lo que tú le
 - Preguntas genéricas: "¿En qué te ayudo?", "¿Qué más?"
 - Cualquier cosa que termine en "?" si la pregunta la haría el BOT — solo "?" si el ASESOR te pregunta SOBRE el tema.
 
-📋 EJEMPLOS:
+🚨 CASO CRÍTICO — EVITAR EL LOOP:
+Si tu respuesta incluye preguntas que el ASESOR le haría AL CLIENTE
+("¿cuánto paga de LUMA?", "¿es dueño?", "¿tiene placas?"), los chips
+NO DEBEN ser esas mismas preguntas. Esas preguntas van al CLIENTE,
+no a ti. Si el asesor clickea "¿Cuánto paga el cliente?" tú no sabes
+la respuesta y entras en loop preguntándole lo mismo.
+
+En su lugar, los chips deben ANTICIPAR las respuestas que el asesor
+te traerá del cliente — afirmaciones con DATO, no preguntas.
+
+📋 EJEMPLO DEL LOOP (CASO REAL OBSERVADO):
+
+Bot dice al asesor: "Pregúntale al cliente:
+  1. ¿Cuánto paga de LUMA?
+  2. ¿Es dueño del techo?
+  3. ¿Tiene placas ya?"
+
+❌ MAL — chips que generan LOOP:
+  ❌ "¿Cuánto paga el cliente de LUMA?"   (ya está en el texto, va al cliente)
+  ❌ "¿Es dueño del techo?"               (ya está en el texto, va al cliente)
+  ❌ "¿Ya tiene placas solares?"          (ya está en el texto, va al cliente)
+
+✅ BIEN — chips que anticipan respuestas del cliente que el asesor te traerá:
+  ✅ "Cliente paga ~$200 al mes"          (escenario común, bot puede responder)
+  ✅ "Cliente es dueño, no tiene placas"  (escenario común, bot da plan)
+  ✅ "Cliente alquila el hogar"           (escenario, bot da plan alternativo)
+
+📋 OTROS EJEMPLOS:
 
 Bot acaba de explicar Loan vs Lease para un cliente $250:
-✅ "¿Y si tiene mal crédito?"           (asesor te pregunta sobre el caso)
-✅ "Dame argumento para el precio"      (asesor te pide acción)
-✅ "Cliente ahora dice que no es dueño" (asesor cambia el escenario)
+✅ "¿Y si tiene mal crédito?"           (asesor pregunta SOBRE el caso al bot)
+✅ "Dame argumento para el precio"      (asesor pide acción al bot)
+✅ "Cliente ahora dice que alquila"     (asesor cambia el escenario)
 
 Bot no reconoció comando /sanke (typo):
-✅ "El comando es /snake"               (asesor corrige)
+✅ "El comando es /snake"               (asesor corrige al bot)
 ✅ "Lista los comandos disponibles"     (asesor pide acción)
 ✅ "Ayúdame con un cliente nuevo"       (asesor cambia tema)
 
 Bot explicó matriz de calidad:
-✅ "Muéstrame los items críticos"       (asesor pide profundizar)
-✅ "Tiempos por área de espera"         (asesor pide detalle)
-✅ "¿Cuánto vale el item de saludo?"    (pregunta SOBRE el tema)
+✅ "Muéstrame los items críticos"       (asesor pide profundizar al bot)
+✅ "Dame los tiempos por área"          (asesor pide detalle al bot)
+✅ "¿Cuánto vale el item de saludo?"    (pregunta SOBRE el tema al bot)
 
 Bot dio scripts para objeción de precio:
-✅ "Cliente dice que su vecino tiene Sunrun" (asesor da contexto nuevo)
+✅ "Cliente dice que prefiere Sunrun"   (asesor da contexto nuevo)
 ✅ "Dame un cierre asumido"             (asesor pide otra técnica)
-✅ "¿Y si quiere pensarlo?"             (pregunta SOBRE el tema)
+✅ "Cliente dice que es mucho dinero"   (asesor da nueva objeción)
+
+🎯 TEST INFALIBLE antes de proponer un chip:
+"Si el asesor clickea este chip, ¿podré darle una RESPUESTA ÚTIL,
+o solo voy a repetir lo mismo o pedirle más data?"
+
+Si solo vas a repetir → mal chip → reformúlalo como AFIRMACIÓN con dato.
+Si vas a poder ayudar concretamente → buen chip.
 
 REGLAS DE FORMATO:
 - Cada chip en una línea, 4-9 palabras
