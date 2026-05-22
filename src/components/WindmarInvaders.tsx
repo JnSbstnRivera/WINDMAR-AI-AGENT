@@ -7,32 +7,31 @@ interface Props {
 }
 
 // ════════════════════════════════════════
-// WINDMAR INVADERS ASCII — inline en el chat
+// WINDMAR INVADERS — Grid CSS con SUN BOT como nave
 // ════════════════════════════════════════
-// Mini-juego ASCII puro tipo Space Invaders. Se renderiza inline
-// encima del input del chat (no overlay full-screen).
-// Compacto (~520x320px), responsive, captura teclado solo cuando activo.
-//
-// Controles: ← → mover · ESPACIO disparar · ESC cerrar · R reintentar
+// Tank (player) = SUN BOT happy (imagen)
+// Aliens = placas solares (▓ cyan)
+// Bullets player = │ naranja, bullets enemigo = ! rosa
+// 3 vidas, R para reintentar, ESC para salir
 
 const COLS = 32;
-const ROWS = 14;
+const ROWS = 16;
 const ALIEN_ROWS = 4;
 const ALIEN_COLS = 8;
 const ALIEN_START_X = 3;
 const ALIEN_START_Y = 1;
 const PLAYER_Y = ROWS - 1;
-const TICK_MS = 80; // velocidad del loop (12.5 fps — adecuado para ASCII)
+const TICK_MS = 80;
 
-type Cell = { c: string; cls: string };
 type Pos = { x: number; y: number };
+type CellKind = 'empty' | 'star' | 'alien' | 'bullet-p' | 'bullet-e' | 'player';
 
 export function WindmarInvaders({ onClose }: Props) {
   const [score, setScore] = useState(0);
   const [lives, setLives] = useState(3);
   const [level, setLevel] = useState(1);
   const [gameState, setGameState] = useState<'playing' | 'gameover'>('playing');
-  const [grid, setGrid] = useState<Cell[][]>(() => emptyGrid());
+  const [grid, setGrid] = useState<CellKind[][]>(() => emptyGrid());
 
   const playerRef = useRef<number>(Math.floor(COLS / 2));
   const aliensRef = useRef<Pos[]>([]);
@@ -40,15 +39,12 @@ export function WindmarInvaders({ onClose }: Props) {
   const alienBulletsRef = useRef<Pos[]>([]);
   const alienDirRef = useRef<1 | -1>(1);
   const alienMoveCounterRef = useRef(0);
-  const alienMoveEveryRef = useRef(8); // mueve aliens cada N ticks
+  const alienMoveEveryRef = useRef(8);
   const keysRef = useRef({ left: false, right: false });
   const lastShotRef = useRef(0);
   const starsRef = useRef<Pos[]>([]);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // ════════════════════════════════════════
-  // INIT
-  // ════════════════════════════════════════
   const initLevel = useCallback((lvl: number) => {
     const aliens: Pos[] = [];
     for (let r = 0; r < ALIEN_ROWS; r++) {
@@ -66,7 +62,7 @@ export function WindmarInvaders({ onClose }: Props) {
   }, []);
 
   useEffect(() => {
-    starsRef.current = Array.from({ length: 12 }, () => ({
+    starsRef.current = Array.from({ length: 16 }, () => ({
       x: Math.floor(Math.random() * COLS),
       y: Math.floor(Math.random() * (ROWS - 2)) + 1,
     }));
@@ -74,9 +70,6 @@ export function WindmarInvaders({ onClose }: Props) {
     containerRef.current?.focus();
   }, [initLevel]);
 
-  // ════════════════════════════════════════
-  // CONTROLES (solo cuando el componente está montado)
-  // ════════════════════════════════════════
   useEffect(() => {
     function down(e: KeyboardEvent) {
       if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') {
@@ -119,9 +112,6 @@ export function WindmarInvaders({ onClose }: Props) {
     playerBulletsRef.current.push({ x: playerRef.current, y: PLAYER_Y - 1 });
   }
 
-  // ════════════════════════════════════════
-  // GAME LOOP
-  // ════════════════════════════════════════
   useEffect(() => {
     const id = setInterval(() => {
       if (gameState !== 'playing') {
@@ -129,19 +119,15 @@ export function WindmarInvaders({ onClose }: Props) {
         return;
       }
 
-      // Player move
       if (keysRef.current.left && playerRef.current > 1) playerRef.current -= 1;
       if (keysRef.current.right && playerRef.current < COLS - 2) playerRef.current += 1;
 
-      // Player bullets up
       playerBulletsRef.current.forEach((b) => (b.y -= 1));
       playerBulletsRef.current = playerBulletsRef.current.filter((b) => b.y >= 0);
 
-      // Alien bullets down
       alienBulletsRef.current.forEach((b) => (b.y += 1));
       alienBulletsRef.current = alienBulletsRef.current.filter((b) => b.y < ROWS);
 
-      // Alien movement (cada N ticks)
       alienMoveCounterRef.current += 1;
       if (alienMoveCounterRef.current >= alienMoveEveryRef.current) {
         alienMoveCounterRef.current = 0;
@@ -158,13 +144,11 @@ export function WindmarInvaders({ onClose }: Props) {
           for (const a of aliens) a.x += alienDirRef.current;
         }
 
-        // Alien shoot al azar (uno solo)
         if (aliens.length > 0 && Math.random() < 0.35) {
           const shooter = aliens[Math.floor(Math.random() * aliens.length)];
           alienBulletsRef.current.push({ x: shooter.x, y: shooter.y + 1 });
         }
 
-        // Aliens llegan a la fila del player
         for (const a of aliens) {
           if (a.y >= PLAYER_Y - 1) {
             setGameState('gameover');
@@ -173,18 +157,16 @@ export function WindmarInvaders({ onClose }: Props) {
         }
       }
 
-      // Colisión bullet → alien
       for (const b of playerBulletsRef.current) {
         const hit = aliensRef.current.findIndex((a) => a.x === b.x && a.y === b.y);
         if (hit !== -1) {
           aliensRef.current.splice(hit, 1);
-          b.y = -1; // marca para limpiar
+          b.y = -1;
           setScore((s) => s + 10);
         }
       }
       playerBulletsRef.current = playerBulletsRef.current.filter((b) => b.y >= 0);
 
-      // Colisión bullet enemigo → player
       for (const b of alienBulletsRef.current) {
         if (b.y === PLAYER_Y && b.x === playerRef.current) {
           b.y = -1;
@@ -197,7 +179,6 @@ export function WindmarInvaders({ onClose }: Props) {
       }
       alienBulletsRef.current = alienBulletsRef.current.filter((b) => b.y >= 0);
 
-      // Win → siguiente nivel
       if (aliensRef.current.length === 0) {
         setLevel((lv) => {
           const next = lv + 1;
@@ -211,26 +192,21 @@ export function WindmarInvaders({ onClose }: Props) {
     return () => clearInterval(id);
   }, [gameState, initLevel]);
 
-  function renderFrame(): Cell[][] {
-    const g: Cell[][] = emptyGrid();
-    // Estrellas
+  function renderFrame(): CellKind[][] {
+    const g = emptyGrid();
     for (const s of starsRef.current) {
-      if (g[s.y]) g[s.y][s.x] = { c: '·', cls: 'text-white/20' };
+      if (g[s.y] && s.x < COLS) g[s.y][s.x] = 'star';
     }
-    // Aliens (placas solares)
     for (const a of aliensRef.current) {
-      if (g[a.y] && a.x < COLS) g[a.y][a.x] = { c: '▓', cls: 'text-cyan-400' };
+      if (g[a.y] && a.x < COLS) g[a.y][a.x] = 'alien';
     }
-    // Bullets player
     for (const b of playerBulletsRef.current) {
-      if (b.y >= 0 && b.y < ROWS && b.x < COLS) g[b.y][b.x] = { c: '│', cls: 'text-orange-400' };
+      if (b.y >= 0 && b.y < ROWS && b.x < COLS) g[b.y][b.x] = 'bullet-p';
     }
-    // Bullets enemigos
     for (const b of alienBulletsRef.current) {
-      if (b.y >= 0 && b.y < ROWS && b.x < COLS) g[b.y][b.x] = { c: '!', cls: 'text-rose-400' };
+      if (b.y >= 0 && b.y < ROWS && b.x < COLS) g[b.y][b.x] = 'bullet-e';
     }
-    // Player tank
-    if (g[PLAYER_Y]) g[PLAYER_Y][playerRef.current] = { c: '▲', cls: 'text-orange-500' };
+    if (g[PLAYER_Y]) g[PLAYER_Y][playerRef.current] = 'player';
     return g;
   }
 
@@ -238,102 +214,110 @@ export function WindmarInvaders({ onClose }: Props) {
     <div
       ref={containerRef}
       tabIndex={-1}
-      className="mx-auto my-3 max-w-[560px] rounded-xl border-2 outline-none wm-fade-in"
+      className="mx-auto my-3 max-w-[760px] w-full rounded-xl border-2 outline-none wm-fade-in"
       style={{
         background: 'linear-gradient(180deg, #060810 0%, #0a1628 50%, #1B3A5C 100%)',
         borderColor: 'rgba(247,148,29,0.5)',
-        boxShadow: '0 0 24px rgba(247,148,29,0.2), 0 0 48px rgba(124,58,237,0.15)',
+        boxShadow: '0 0 32px rgba(247,148,29,0.25), 0 0 64px rgba(124,58,237,0.15)',
       }}
     >
-      {/* Header */}
-      <div className="flex items-center justify-between px-3 py-2 border-b border-orange-500/30">
+      <div className="flex items-center justify-between px-4 py-2.5 border-b border-orange-500/30">
         <div>
-          <p
-            className="text-[13px] font-bold tracking-widest"
-            style={{ fontFamily: 'monospace', color: '#F7941D', textShadow: '0 0 8px rgba(247,148,29,0.6)' }}
-          >
+          <p className="text-[15px] font-bold tracking-widest" style={{ fontFamily: 'monospace', color: '#F7941D', textShadow: '0 0 10px rgba(247,148,29,0.6)' }}>
             ☀ WINDMAR INVADERS
           </p>
-          <p className="text-[9px] text-gray-400 mt-0.5" style={{ fontFamily: 'monospace' }}>
+          <p className="text-[10px] text-gray-400 mt-0.5" style={{ fontFamily: 'monospace' }}>
             ← → mover · ESPACIO disparar · ESC salir
           </p>
         </div>
-        <button
-          onClick={onClose}
-          className="text-gray-400 hover:text-red-400 cursor-pointer p-1"
-          aria-label="Cerrar juego"
-        >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-            <line x1="18" y1="6" x2="6" y2="18"/>
-            <line x1="6" y1="6" x2="18" y2="18"/>
+        <button onClick={onClose} className="text-gray-400 hover:text-red-400 cursor-pointer p-1.5" aria-label="Cerrar juego">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+            <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
           </svg>
         </button>
       </div>
 
-      {/* HUD */}
-      <div
-        className="flex justify-between px-3 py-1.5 border-b border-orange-500/20 text-[11px]"
-        style={{ fontFamily: 'monospace', color: '#F7941D', letterSpacing: '0.1em' }}
-      >
+      <div className="flex justify-between px-4 py-2 border-b border-orange-500/20 text-[13px]" style={{ fontFamily: 'monospace', color: '#F7941D', letterSpacing: '0.1em' }}>
         <span>SCORE: <strong>{score.toString().padStart(4, '0')}</strong></span>
         <span>LIVES: {'♥'.repeat(Math.max(0, lives))}{'·'.repeat(3 - Math.max(0, lives))}</span>
         <span>LVL: <strong>{level}</strong></span>
       </div>
 
-      {/* Game board (ASCII grid) */}
-      <div className="relative px-3 py-2 select-none">
-        <pre
-          className="leading-[1.1] text-center"
+      <div className="relative px-3 py-3 select-none">
+        <div
+          className="mx-auto"
           style={{
-            fontFamily: '"JetBrains Mono", "Courier New", monospace',
-            fontSize: 'clamp(11px, 2.4vw, 16px)',
-            lineHeight: '1.1',
-            margin: 0,
+            display: 'grid',
+            gridTemplateColumns: `repeat(${COLS}, 1fr)`,
+            gridTemplateRows: `repeat(${ROWS}, 1fr)`,
+            aspectRatio: `${COLS} / ${ROWS}`,
+            maxWidth: '100%',
+            background: 'rgba(0,0,0,0.25)',
+            border: '1px solid rgba(247,148,29,0.18)',
+            borderRadius: 8,
+            overflow: 'hidden',
           }}
         >
-          {grid.map((row, ri) => (
-            <div key={ri} className="whitespace-pre">
-              {row.map((cell, ci) => (
-                <span key={ci} className={cell.cls}>{cell.c}</span>
-              ))}
-            </div>
-          ))}
-        </pre>
+          {grid.flatMap((row, ri) =>
+            row.map((cell, ci) => (
+              <div
+                key={`${ri}-${ci}`}
+                className="flex items-center justify-center relative"
+                style={{ fontFamily: 'monospace', fontSize: '0.85em', lineHeight: 1 }}
+              >
+                {cell === 'star' && <span style={{ color: 'rgba(255,255,255,0.25)' }}>·</span>}
+                {cell === 'alien' && (
+                  <span style={{ color: '#06b6d4', fontSize: '1.4em', textShadow: '0 0 8px rgba(6,182,212,0.6)' }}>▓</span>
+                )}
+                {cell === 'bullet-p' && (
+                  <span style={{ color: '#F7941D', fontSize: '1.3em', textShadow: '0 0 6px rgba(247,148,29,0.9)', fontWeight: 'bold' }}>│</span>
+                )}
+                {cell === 'bullet-e' && (
+                  <span style={{ color: '#f43f5e', fontSize: '1.3em', textShadow: '0 0 6px rgba(244,63,94,0.9)', fontWeight: 'bold' }}>!</span>
+                )}
+                {cell === 'player' && (
+                  <img
+                    src="/sunbot-feliz.png"
+                    alt=""
+                    style={{
+                      width: '160%',
+                      height: '160%',
+                      objectFit: 'contain',
+                      imageRendering: 'pixelated',
+                      filter: 'drop-shadow(0 0 8px rgba(247,148,29,0.85))',
+                      zIndex: 2,
+                    }}
+                  />
+                )}
+              </div>
+            ))
+          )}
+        </div>
 
-        {/* Game over overlay */}
         {gameState === 'gameover' && (
-          <div
-            className="absolute inset-0 flex flex-col items-center justify-center"
-            style={{ background: 'rgba(6, 8, 16, 0.85)', backdropFilter: 'blur(2px)' }}
-          >
-            <p
-              className="text-2xl font-bold mb-1"
-              style={{ fontFamily: 'monospace', color: '#f43f5e', textShadow: '0 0 16px rgba(244,63,94,0.7)' }}
-            >
+          <div className="absolute inset-0 flex flex-col items-center justify-center" style={{ background: 'rgba(6, 8, 16, 0.85)', backdropFilter: 'blur(2px)', borderRadius: 8, margin: 12 }}>
+            <p className="text-3xl font-bold mb-2" style={{ fontFamily: 'monospace', color: '#f43f5e', textShadow: '0 0 18px rgba(244,63,94,0.7)' }}>
               GAME OVER
             </p>
-            <p className="text-sm text-gray-300" style={{ fontFamily: 'monospace' }}>
-              Score: <strong style={{ color: '#F7941D' }}>{score}</strong>
+            <p className="text-base text-gray-300" style={{ fontFamily: 'monospace' }}>
+              Score: <strong style={{ color: '#F7941D' }}>{score}</strong> · Nivel: <strong>{level}</strong>
             </p>
-            <p className="text-[10px] text-gray-400 mt-2" style={{ fontFamily: 'monospace' }}>
-              Presiona <kbd className="px-1.5 py-0.5 rounded bg-white/10">R</kbd> para reintentar
+            <p className="text-xs text-gray-400 mt-3" style={{ fontFamily: 'monospace' }}>
+              <kbd className="px-2 py-0.5 rounded bg-white/10">R</kbd> reintentar · <kbd className="px-2 py-0.5 rounded bg-white/10">ESC</kbd> salir
             </p>
           </div>
         )}
       </div>
 
-      {/* Footer mini */}
-      <div className="px-3 py-1.5 border-t border-orange-500/20 text-center">
-        <p className="text-[9px] text-gray-500" style={{ fontFamily: 'monospace' }}>
-          Click acá para enfocar · Sigue chateando cuando quieras
+      <div className="px-3 py-2 border-t border-orange-500/20 text-center">
+        <p className="text-[10px] text-gray-500" style={{ fontFamily: 'monospace' }}>
+          Click acá para enfocar · ESC para volver al chat
         </p>
       </div>
     </div>
   );
 }
 
-function emptyGrid(): Cell[][] {
-  return Array.from({ length: ROWS }, () =>
-    Array.from({ length: COLS }, () => ({ c: ' ', cls: '' }))
-  );
+function emptyGrid(): CellKind[][] {
+  return Array.from({ length: ROWS }, () => Array.from({ length: COLS }, () => 'empty' as CellKind));
 }

@@ -186,38 +186,38 @@ export function WindmarPong({ onClose }: Props) {
     <div
       ref={containerRef}
       tabIndex={-1}
-      className="mx-auto my-3 max-w-[560px] rounded-xl border-2 outline-none wm-fade-in"
+      className="mx-auto my-3 max-w-[760px] w-full rounded-xl border-2 outline-none wm-fade-in"
       style={{
         background: 'linear-gradient(180deg, #060810 0%, #0a1628 50%, #1B3A5C 100%)',
         borderColor: 'rgba(247,148,29,0.5)',
-        boxShadow: '0 0 24px rgba(247,148,29,0.2), 0 0 48px rgba(124,58,237,0.15)',
+        boxShadow: '0 0 32px rgba(247,148,29,0.25), 0 0 64px rgba(124,58,237,0.15)',
       }}
     >
-      <div className="flex items-center justify-between px-3 py-2 border-b border-orange-500/30">
+      <div className="flex items-center justify-between px-4 py-2.5 border-b border-orange-500/30">
         <div>
-          <p className="text-[13px] font-bold tracking-widest" style={{ fontFamily: 'monospace', color: '#F7941D', textShadow: '0 0 8px rgba(247,148,29,0.6)' }}>
+          <p className="text-[15px] font-bold tracking-widest" style={{ fontFamily: 'monospace', color: '#F7941D', textShadow: '0 0 10px rgba(247,148,29,0.6)' }}>
             🏓 WINDMAR PONG
           </p>
-          <p className="text-[9px] text-gray-400 mt-0.5" style={{ fontFamily: 'monospace' }}>
+          <p className="text-[10px] text-gray-400 mt-0.5" style={{ fontFamily: 'monospace' }}>
             ← → mover · Primer a {WIN_SCORE} gana · ESC salir
           </p>
         </div>
-        <button onClick={onClose} className="text-gray-400 hover:text-red-400 cursor-pointer p-1" aria-label="Cerrar juego">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+        <button onClick={onClose} className="text-gray-400 hover:text-red-400 cursor-pointer p-1.5" aria-label="Cerrar juego">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
             <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
           </svg>
         </button>
       </div>
 
-      <div className="flex justify-between px-3 py-1.5 border-b border-orange-500/20 text-[11px]" style={{ fontFamily: 'monospace', letterSpacing: '0.1em' }}>
+      <div className="flex justify-between px-4 py-2 border-b border-orange-500/20 text-[14px]" style={{ fontFamily: 'monospace', letterSpacing: '0.1em' }}>
         <span style={{ color: '#06b6d4' }}>IA: <strong>{aiScore}</strong></span>
         <span style={{ color: '#F7941D' }}>TÚ: <strong>{playerScore}</strong></span>
       </div>
 
-      <div className="relative px-3 py-2 select-none">
+      <div className="relative px-3 py-3 select-none">
         <pre
           className="leading-[1.1] text-center"
-          style={{ fontFamily: '"JetBrains Mono", "Courier New", monospace', fontSize: 'clamp(11px, 2.4vw, 16px)', lineHeight: '1.1', margin: 0 }}
+          style={{ fontFamily: '"JetBrains Mono", "Courier New", monospace', fontSize: 'clamp(14px, 3vw, 22px)', lineHeight: '1.1', margin: 0 }}
         >
           {grid.map((row, ri) => (
             <div key={ri} className="whitespace-pre">
