@@ -9,6 +9,9 @@ import { MascotPanel, type MascotState } from './MascotPanel';
 import { TopBar } from './TopBar';
 import { ProfileModal } from './ProfileModal';
 import { WindmarInvaders } from './WindmarInvaders';
+import { WindmarSnake } from './WindmarSnake';
+import { WindmarPong } from './WindmarPong';
+import { SUNBOT_ART, TEMBLOR_TEXT, ABOUT_TEXT } from '@/lib/easter-eggs';
 import { useInactivityLogout } from '@/hooks/useInactivityLogout';
 import type { Message, Conversation, ToolRef, QualityMeta } from '@/types';
 
@@ -84,6 +87,8 @@ export function ChatApp({ user, onSignOut }: Props) {
   const [profileOpen, setProfileOpen] = useState(false);
   const [postLoginLoading, setPostLoginLoading] = useState(false);
   const [invadersOpen, setInvadersOpen] = useState(false);
+  const [snakeOpen, setSnakeOpen] = useState(false);
+  const [pongOpen, setPongOpen] = useState(false);
 
   // AbortController para poder cortar el fetch del streaming desde el botón "detener".
   // Lo guardamos en ref para que persista entre renders sin disparar re-renders.
@@ -386,17 +391,80 @@ export function ChatApp({ user, onSignOut }: Props) {
     }
   }
 
+  /**
+   * Inserta una respuesta estática del asistente sin llamar al LLM.
+   * Útil para easter eggs tipo /sunbot, /temblor, /sobre — el texto está
+   * predefinido en lib/easter-eggs.ts. NO gasta tokens.
+   */
+  async function insertStaticReply(staticText: string) {
+    let convId = activeId;
+    if (!convId) {
+      const res = await fetch('/api/conversations', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: '🎮 Easter egg' }),
+      });
+      if (!res.ok) return;
+      const { conversation } = await res.json() as { conversation: Conversation };
+      convId = conversation.id;
+      const newConv: Conversation = {
+        ...conversation,
+        createdAt: new Date(conversation.createdAt),
+        updatedAt: new Date(conversation.updatedAt),
+        messages: [],
+      };
+      setConversations((prev) => [newConv, ...prev]);
+      setActiveId(convId);
+    }
+    const assistantMsg: Message = {
+      id: generateId(),
+      role: 'assistant',
+      content: staticText,
+      timestamp: new Date(),
+    };
+    setConversations((prev) =>
+      prev.map((c) => (c.id === convId ? { ...c, messages: [...c.messages, assistantMsg] } : c))
+    );
+    await fetch('/api/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ conversation_id: convId, role: 'assistant', content: staticText }),
+    });
+  }
+
   async function sendMessage(text: string) {
     if (!text.trim() || isStreaming) return;
 
     // ════════════════════════════════════════
-    // EASTER EGG — comando secreto del juego
+    // EASTER EGGS — comandos secretos del chat
     // ════════════════════════════════════════
-    // Si el asesor escribe /invaders, /juego o /space → abre el mini-juego
-    // sin gastar tokens del LLM.
+    // Comandos interceptados en cliente — NO gastan tokens del LLM.
+    // Juegos: abren componente inline. Estáticos: insertan respuesta predefinida.
     const cmd = text.trim().toLowerCase();
+    // Juegos interactivos
     if (cmd === '/invaders' || cmd === '/juego' || cmd === '/space' || cmd === '/play') {
       setInvadersOpen(true);
+      return;
+    }
+    if (cmd === '/snake' || cmd === '/serpiente') {
+      setSnakeOpen(true);
+      return;
+    }
+    if (cmd === '/pong') {
+      setPongOpen(true);
+      return;
+    }
+    // Respuestas estáticas (insertadas como mensaje del asistente, sin LLM)
+    if (cmd === '/sunbot' || cmd === '/bot') {
+      await insertStaticReply(SUNBOT_ART);
+      return;
+    }
+    if (cmd === '/temblor' || cmd === '/sismo' || cmd === '/terremoto') {
+      await insertStaticReply(TEMBLOR_TEXT);
+      return;
+    }
+    if (cmd === '/sobre' || cmd === '/about' || cmd === '/help' || cmd === '/?') {
+      await insertStaticReply(ABOUT_TEXT);
       return;
     }
 
@@ -860,8 +928,10 @@ export function ChatApp({ user, onSignOut }: Props) {
               conversationId={activeId}
               onQuickReply={(text) => sendMessage(text)}
             />
-            {/* Easter egg — Windmar Invaders inline encima del input */}
+            {/* Easter eggs — juegos inline encima del input */}
             {invadersOpen && <WindmarInvaders onClose={() => setInvadersOpen(false)} />}
+            {snakeOpen && <WindmarSnake onClose={() => setSnakeOpen(false)} />}
+            {pongOpen && <WindmarPong onClose={() => setPongOpen(false)} />}
             <ChatInput
               onSend={sendMessage}
               disabled={isStreaming}
