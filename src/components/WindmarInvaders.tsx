@@ -245,47 +245,106 @@ export function WindmarInvaders({ onClose }: Props) {
 
       <div className="relative px-3 py-3 select-none">
         <div
-          className="mx-auto"
+          className="mx-auto relative"
           style={{
             display: 'grid',
             gridTemplateColumns: `repeat(${COLS}, 1fr)`,
             gridTemplateRows: `repeat(${ROWS}, 1fr)`,
             aspectRatio: `${COLS} / ${ROWS}`,
             maxWidth: '100%',
-            background: 'rgba(0,0,0,0.25)',
+            background: 'linear-gradient(180deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%)',
             border: '1px solid rgba(247,148,29,0.18)',
             borderRadius: 8,
             overflow: 'hidden',
           }}
         >
+          {/* ☀ SOL PIXEL ART decorativo de fondo — semitransparente
+              Las nubes pasan por delante y lo ocultan parcialmente. */}
+          <div
+            style={{
+              position: 'absolute',
+              top: '40%',
+              left: '50%',
+              transform: 'translate(-50%, -50%)',
+              width: '42%',
+              aspectRatio: '1',
+              zIndex: 0,
+              pointerEvents: 'none',
+              opacity: 0.45,
+            }}
+          >
+            <img
+              src="/sunbot.png"
+              alt=""
+              style={{
+                width: '100%',
+                height: '100%',
+                objectFit: 'contain',
+                imageRendering: 'pixelated',
+                filter: 'drop-shadow(0 0 24px rgba(247,148,29,0.6)) drop-shadow(0 0 48px rgba(247,148,29,0.35))',
+              }}
+            />
+          </div>
+
           {grid.flatMap((row, ri) =>
             row.map((cell, ci) => (
               <div
                 key={`${ri}-${ci}`}
                 className="flex items-center justify-center relative"
-                style={{ fontFamily: 'monospace', fontSize: '0.85em', lineHeight: 1 }}
+                style={{ fontFamily: 'monospace', fontSize: '0.85em', lineHeight: 1, zIndex: 1 }}
               >
-                {cell === 'star' && <span style={{ color: 'rgba(255,255,255,0.25)' }}>·</span>}
+                {cell === 'star' && <span style={{ color: 'rgba(255,255,255,0.35)' }}>·</span>}
                 {cell === 'alien' && (
-                  <span style={{ color: '#06b6d4', fontSize: '1.4em', textShadow: '0 0 8px rgba(6,182,212,0.6)' }}>▓</span>
+                  // ☁ NUBES NEGRAS — bloquean el sol del fondo
+                  <span
+                    style={{
+                      fontSize: '2em',
+                      filter: 'brightness(0.15) saturate(0) contrast(1.4) drop-shadow(0 0 3px rgba(120,120,120,0.9))',
+                      textShadow: '0 0 0 #000',
+                      lineHeight: 1,
+                    }}
+                  >
+                    ☁
+                  </span>
                 )}
                 {cell === 'bullet-p' && (
-                  <span style={{ color: '#F7941D', fontSize: '1.3em', textShadow: '0 0 6px rgba(247,148,29,0.9)', fontWeight: 'bold' }}>│</span>
+                  // ⚡ RAYO del player (amarillo brillante, electrified)
+                  <span
+                    style={{
+                      fontSize: '1.6em',
+                      filter: 'drop-shadow(0 0 8px rgba(255,215,0,1)) drop-shadow(0 0 16px rgba(247,148,29,0.6))',
+                      color: '#FFD700',
+                      fontWeight: 'bold',
+                      lineHeight: 1,
+                    }}
+                  >
+                    ⚡
+                  </span>
                 )}
                 {cell === 'bullet-e' && (
-                  <span style={{ color: '#f43f5e', fontSize: '1.3em', textShadow: '0 0 6px rgba(244,63,94,0.9)', fontWeight: 'bold' }}>!</span>
+                  // 💧 Gota de lluvia (las nubes negras llueven contra ti)
+                  <span
+                    style={{
+                      fontSize: '1.4em',
+                      filter: 'drop-shadow(0 0 4px rgba(244,63,94,0.9))',
+                      color: '#f43f5e',
+                      lineHeight: 1,
+                    }}
+                  >
+                    💧
+                  </span>
                 )}
                 {cell === 'player' && (
                   <img
                     src="/sunbot-feliz.png"
                     alt=""
                     style={{
-                      width: '160%',
-                      height: '160%',
+                      width: '220%',
+                      height: '220%',
                       objectFit: 'contain',
                       imageRendering: 'pixelated',
-                      filter: 'drop-shadow(0 0 8px rgba(247,148,29,0.85))',
-                      zIndex: 2,
+                      filter: 'drop-shadow(0 0 12px rgba(247,148,29,1)) drop-shadow(0 0 24px rgba(247,148,29,0.5))',
+                      zIndex: 3,
                     }}
                   />
                 )}

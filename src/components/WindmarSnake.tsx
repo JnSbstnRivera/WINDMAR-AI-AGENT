@@ -194,27 +194,46 @@ export function WindmarSnake({ onClose }: Props) {
               <div
                 key={`${ri}-${ci}`}
                 className="flex items-center justify-center relative"
-                style={{ fontFamily: 'monospace', fontSize: '0.85em', lineHeight: 1 }}
+                style={{ lineHeight: 1 }}
               >
                 {cell === 'head' && (
                   <img
                     src="/sunbot-feliz.png"
                     alt=""
                     style={{
-                      width: '125%',
-                      height: '125%',
+                      width: '160%',
+                      height: '160%',
                       objectFit: 'contain',
                       imageRendering: 'pixelated',
-                      filter: 'drop-shadow(0 0 6px rgba(247,148,29,0.7))',
-                      zIndex: 2,
+                      filter: 'drop-shadow(0 0 10px rgba(247,148,29,0.85))',
+                      zIndex: 3,
                     }}
                   />
                 )}
                 {cell === 'body' && (
-                  <span style={{ color: '#F7941D', fontSize: '1.4em', textShadow: '0 0 6px rgba(247,148,29,0.5)' }}>▓</span>
+                  // Bloque sólido naranja que llena la celda — segmentos
+                  // contiguos se conectan visualmente formando una línea continua
+                  <div
+                    style={{
+                      width: '100%',
+                      height: '100%',
+                      background: '#F7941D',
+                      boxShadow: 'inset 0 0 0 1px rgba(0,0,0,0.25), 0 0 4px rgba(247,148,29,0.4)',
+                    }}
+                  />
                 )}
                 {cell === 'food' && (
-                  <span style={{ color: '#06b6d4', fontSize: '1.2em', textShadow: '0 0 8px rgba(6,182,212,0.8)' }}>▪</span>
+                  // Manzana = círculo cyan brillante (más grande que antes)
+                  <div
+                    style={{
+                      width: '85%',
+                      height: '85%',
+                      background: 'radial-gradient(circle at 30% 30%, #67e8f9 0%, #06b6d4 60%, #0891b2 100%)',
+                      borderRadius: '50%',
+                      boxShadow: '0 0 14px rgba(6,182,212,1), 0 0 28px rgba(6,182,212,0.5), inset -2px -3px 4px rgba(0,0,0,0.3)',
+                      animation: 'wmPulse 1.4s ease-in-out infinite',
+                    }}
+                  />
                 )}
               </div>
             ))

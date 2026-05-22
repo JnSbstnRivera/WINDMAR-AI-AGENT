@@ -65,6 +65,12 @@ body {
     transform: translateY(0);
   }
 }
+/* Pulso para elementos destacados (ej. manzana del Snake) */
+@keyframes wmPulse {
+  0%, 100% { transform: scale(1); }
+  50%      { transform: scale(1.15); }
+}
+
 .wm-fade-in {
   animation: wmFadeInUp 0.3s ease-out;
 }
