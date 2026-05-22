@@ -8,6 +8,7 @@ import { WelcomeScreen } from './WelcomeScreen';
 import { MascotPanel, type MascotState } from './MascotPanel';
 import { TopBar } from './TopBar';
 import { ProfileModal } from './ProfileModal';
+import { WindmarInvaders } from './WindmarInvaders';
 import { useInactivityLogout } from '@/hooks/useInactivityLogout';
 import type { Message, Conversation, ToolRef, QualityMeta } from '@/types';
 
@@ -82,6 +83,7 @@ export function ChatApp({ user, onSignOut }: Props) {
   const [mascotState, setMascotState] = useState<MascotState>('idle');
   const [profileOpen, setProfileOpen] = useState(false);
   const [postLoginLoading, setPostLoginLoading] = useState(false);
+  const [invadersOpen, setInvadersOpen] = useState(false);
 
   // AbortController para poder cortar el fetch del streaming desde el botón "detener".
   // Lo guardamos en ref para que persista entre renders sin disparar re-renders.
@@ -386,6 +388,17 @@ export function ChatApp({ user, onSignOut }: Props) {
 
   async function sendMessage(text: string) {
     if (!text.trim() || isStreaming) return;
+
+    // ════════════════════════════════════════
+    // EASTER EGG — comando secreto del juego
+    // ════════════════════════════════════════
+    // Si el asesor escribe /invaders, /juego o /space → abre el mini-juego
+    // sin gastar tokens del LLM.
+    const cmd = text.trim().toLowerCase();
+    if (cmd === '/invaders' || cmd === '/juego' || cmd === '/space' || cmd === '/play') {
+      setInvadersOpen(true);
+      return;
+    }
 
     const userMsg: Message = {
       id: generateId(),
@@ -774,6 +787,8 @@ export function ChatApp({ user, onSignOut }: Props) {
         onOpenProfile={() => setProfileOpen(true)}
         displayName={user.displayName ?? undefined}
       />
+
+      {invadersOpen && <WindmarInvaders onClose={() => setInvadersOpen(false)} />}
 
       {profileOpen && (
         <ProfileModal
