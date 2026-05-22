@@ -178,7 +178,7 @@ Bot acaba de explicar Loan vs Lease para un cliente $250:
 ✅ "Dame argumento para el precio"      (asesor te pide acción)
 ✅ "Cliente ahora dice que no es dueño" (asesor cambia el escenario)
 
-Bot no reconoció comando `/sanke`:
+Bot no reconoció comando /sanke (typo):
 ✅ "El comando es /snake"               (asesor corrige)
 ✅ "Lista los comandos disponibles"     (asesor pide acción)
 ✅ "Ayúdame con un cliente nuevo"       (asesor cambia tema)

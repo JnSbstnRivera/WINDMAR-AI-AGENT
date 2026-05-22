@@ -4,30 +4,53 @@
 // Textos fijos para comandos que NO necesitan LLM (sin gastar tokens).
 // Se insertan como mensaje del asistente directamente desde el cliente.
 
-export const SUNBOT_ART = `🌞 **SUN BOT — Tu copiloto Windmar**
-
+export const SUNBOT_ART = `\`\`\`
+                                  --
+                                 :--:
+                                :-==-:
+                               --=++=-:
+                              --=+**++-=
+                             %+++++++++=#
+          ---            #*==:..........:==##             -=
+           ---==     %+:......................-+%     =----
+            -====-=%*.....+#*#+:.%##*.:*%#=....:.+#=--===-
+             -+***%.::.....=**#--####:-%#=.......::#+*+=-
+              =*%%*::.......***#@%+-##@#+-........::##+-
+              @##%--:.......:+*##=:@+##*-.........:-++#+
+             @%#%%-=::.......:+**-.:***=..........--=%=#
+            @%#%%%==::.........:-+++*#######****+====%+#
+            @#%%%%==-:::.:+**##########%%%%%%%%%%%%##%#%@
+         --=#%%%%%====*#%%######%%%%@%%%%%%%%@@@@@@@@@%%%#+-+
+      ----=*%%%%%%*#%%%%%##%%%%%#*###########**#%%%@@@@@@%#+----
+   ---==++**%%%%%@@%%%%%%%%##%%@@@@@@@@@@@@@@@@%#**#%@@@@%#+++==---=
+---==++++***%%%@%%%%@@%%%%@@@@@@@@@@@@@@@@@@@@@@@%#=+#%@%#**+++++=----
+  ---==++**#%%@%#**@%%%@@@@@@@@@@@@@@@@@@@@@@@@@@@%%-=*%#****++==---
+      ---=+*#%@*+=%%%@@@@@@@@@@@@@@@@@@@@@@@@@@@@@#%#-+##**+=---
+         --=*#%*=-@#@@@@@@@%#*%@@@@@@@@@@@#*#%@@@@###-=##+=--
+            =*%*=-@*@@@@@@@%+=#%@@@@@@@@@%*=*%@@@@###-=#*=
+              %*=-@*%@@@@@@%+=#%@@@@@@@@@%#=*%@@@@###-+#
+              %++-%*%@@@@@@@##%@@@@@@@@@@@%##@@@@@#%#-+#
+              %+*==%*@@@@@@@@@@@@@@@@@@@@@@@@@@@@%#%-=+%
+              =#**=+%#%@@@@@@@@@@@@@@@@@@@@@@@@@###==*#-=
+            ==+*#+++=+%#%@@@@@@@@@@@@@@@@@@@@%**#==+*#*+-=
+            -=*++=%%++=-+@%################%%%=-=+*%==++=--
+           -==--     *##*+=----------------==+*##     =-==-
+          ---             %%%@%%%%%%%%%%%%%%%            ---
+                              =+*####*+=
+                               =+***++-
+                                -=++=--
+                                 -==-
+                                  ==
 \`\`\`
-            \\   |   /
-              .-"-.
-            .'  ◉ ◉  '.
-           /     ‿     \\
-          |   W I N D   |
-          |     M A R   |
-           \\   H O M E /
-            '.       .'
-              '-...-'
-          /   |   |   \\
-         /    |   |    \\
-        '─────┴───┴─────'
-\`\`\`
 
-**22 años iluminando hogares en Puerto Rico** 🇵🇷
+☀ **SUN BOT — Windmar Home Puerto Rico**
+**22 años iluminando hogares** 🇵🇷
 
-Soy tu copiloto IA. Estoy aquí para que cierres más, pierdas menos tiempo en cada llamada, y que tu cliente sienta que habla con un experto desde el primer segundo.
+Soy tu copiloto IA durante cada llamada. Pregúntame lo que necesites — argumentos, productos, herramientas, matriz de calidad, scripts. Lo que sea para que cierres más rápido.
 
-Pregúntame lo que necesites — argumentos, productos, herramientas, calidad, lo que sea.
+Escribe \`/sobre\` para ver todos los comandos secretos.
 
-¿En qué te ayudo? ☀`;
+¿En qué te ayudo hoy? 💪`;
 
 export const TEMBLOR_TEXT = `🚨 **PROTOCOLO DE TEMBLOR — Puerto Rico**
 
