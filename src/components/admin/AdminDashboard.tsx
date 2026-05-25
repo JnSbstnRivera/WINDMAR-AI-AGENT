@@ -182,8 +182,9 @@ export function AdminDashboard({ initialPeriod, initial }: Props) {
         </div>
       </div>
 
-      {/* KPI grid neón — iconos SVG en color del slot, tooltips al hover */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3">
+      {/* KPI grid neón — iconos SVG en color del slot, tooltips al hover.
+          key={period} fuerza re-mount al cambiar filtro → re-dispara animaciones */}
+      <div key={`kpi-${period}`} className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3 ad-anim-in">
         <MetricCard
           label="Mensajes"
           value={data.kpis.totalMessages}
@@ -242,25 +243,27 @@ export function AdminDashboard({ initialPeriod, initial }: Props) {
       </div>
 
       {/* Gráficas — uso temporal y calidad */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+      <div key={`charts1-${period}`} className="grid grid-cols-1 lg:grid-cols-2 gap-3 ad-anim-in ad-anim-d1">
         <UsageChart data={data.usage} />
         <QualityDonut thumbsUp={data.kpis.thumbsUp} thumbsDown={data.kpis.thumbsDown} />
       </div>
 
       {/* Gráficas — uso por departamento y hora pico */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+      <div key={`charts2-${period}`} className="grid grid-cols-1 lg:grid-cols-2 gap-3 ad-anim-in ad-anim-d2">
         <DepartmentChart data={data.departments} />
         <HourlyChart data={data.hourly} />
       </div>
 
       {/* Tablas: ranking + downvotes */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+      <div key={`tables-${period}`} className="grid grid-cols-1 lg:grid-cols-2 gap-3 ad-anim-in ad-anim-d3">
         <TopAsesoresTable data={data.topAsesores} />
         <DownvotesTable data={data.downvotes} />
       </div>
 
       {/* Lista de conversaciones recientes (auditoría completa) */}
-      <ConversationsList data={data.conversations} />
+      <div key={`convs-${period}`} className="ad-anim-in ad-anim-d4">
+        <ConversationsList data={data.conversations} />
+      </div>
     </div>
   );
 }

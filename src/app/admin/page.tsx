@@ -13,17 +13,20 @@ async function loadMetrics(period: Period) {
   // 7 queries en paralelo para minimizar latencia.
   // NOTA: admin_top_keywords y admin_week_comparison existen en DB pero ya no
   // se llaman desde aquí (componentes removidos del dashboard por preferencia).
+  // TODAS las RPCs ahora respetan el period seleccionado — dashboard
+  // 100% coherente: cambiar a "Hoy" filtra KPIs + chart + conversaciones
+  // + downvotes + departamentos + hora pico, todo al mismo tiempo.
   const [
     kpisRes, usageRes, topRes, downvotesRes, convsRes,
     deptsRes, hourlyRes,
   ] = await Promise.all([
     supabase.rpc('admin_metrics_kpis', { period }),
-    supabase.rpc('admin_usage_by_day'),
+    supabase.rpc('admin_usage_by_day', { period }),
     supabase.rpc('admin_top_asesores', { period, max_rows: 7 }),
-    supabase.rpc('admin_recent_downvotes', { max_rows: 20 }),
-    supabase.rpc('admin_recent_conversations', { max_rows: 30 }),
+    supabase.rpc('admin_recent_downvotes', { period, max_rows: 20 }),
+    supabase.rpc('admin_recent_conversations', { period, max_rows: 30 }),
     supabase.rpc('admin_messages_by_dept', { period }),
-    supabase.rpc('admin_usage_by_hour', { period: 'all' }),
+    supabase.rpc('admin_usage_by_hour', { period }),
   ]);
 
   return {

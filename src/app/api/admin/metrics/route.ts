@@ -31,17 +31,18 @@ export async function GET(req: Request) {
 
   const supabase = getSupabaseAdmin();
 
+  // TODAS las RPCs respetan el period — dashboard 100% coherente
   const [
     kpisRes, usageRes, topRes, downvotesRes, convsRes,
     deptsRes, hourlyRes,
   ] = await Promise.all([
     supabase.rpc('admin_metrics_kpis', { period }),
-    supabase.rpc('admin_usage_by_day'),
+    supabase.rpc('admin_usage_by_day', { period }),
     supabase.rpc('admin_top_asesores', { period, max_rows: 7 }),
-    supabase.rpc('admin_recent_downvotes', { max_rows: 20 }),
-    supabase.rpc('admin_recent_conversations', { max_rows: 30 }),
+    supabase.rpc('admin_recent_downvotes', { period, max_rows: 20 }),
+    supabase.rpc('admin_recent_conversations', { period, max_rows: 30 }),
     supabase.rpc('admin_messages_by_dept', { period }),
-    supabase.rpc('admin_usage_by_hour', { period: 'all' }),
+    supabase.rpc('admin_usage_by_hour', { period }),
   ]);
 
   return Response.json({
