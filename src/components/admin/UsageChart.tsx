@@ -5,19 +5,40 @@ import { useAdminThemeColors } from '@/hooks/useAdminThemeColors';
 
 interface Props {
   data: Array<{ day_label: string; messages_count: number }>;
+  /** Periodo seleccionado — afecta título y badge */
+  period?: 'today' | 'week' | 'month' | 'all';
 }
 
 /**
- * Line chart de uso (mensajes/día) últimos 7 días.
+ * Line chart de uso (mensajes por unidad de tiempo).
+ * El backend ya agrupa correctamente según period:
+ *   today → por hora
+ *   week  → por día (7)
+ *   month → por día (30)
+ *   all   → por mes (12 meses del último año)
  * Cliente component porque Recharts necesita DOM (window/SVG).
  */
-export function UsageChart({ data }: Props) {
+export function UsageChart({ data, period = 'week' }: Props) {
   const c = useAdminThemeColors();
+
+  const titleByPeriod: Record<NonNullable<Props['period']>, string> = {
+    today: 'Mensajes por hora',
+    week: 'Mensajes por día',
+    month: 'Mensajes por día',
+    all: 'Mensajes por mes',
+  };
+  const badgeByPeriod: Record<NonNullable<Props['period']>, string> = {
+    today: 'HOY',
+    week: '7 DÍAS',
+    month: '30 DÍAS',
+    all: 'ÚLTIMO AÑO',
+  };
+
   return (
     <div className="ad-card" style={{ padding: 22 }}>
       <div className="ad-ph">
-        <span className="ad-pt">Mensajes por día</span>
-        <span className="ad-pb">7 DÍAS</span>
+        <span className="ad-pt">{titleByPeriod[period]}</span>
+        <span className="ad-pb">{badgeByPeriod[period]}</span>
       </div>
 
       <div style={{ width: '100%', height: 220 }}>

@@ -244,7 +244,7 @@ export function AdminDashboard({ initialPeriod, initial }: Props) {
 
       {/* Gráficas — uso temporal y calidad */}
       <div key={`charts1-${period}`} className="grid grid-cols-1 lg:grid-cols-2 gap-3 ad-anim-in ad-anim-d1">
-        <UsageChart data={data.usage} />
+        <UsageChart data={data.usage} period={period} />
         <QualityDonut thumbsUp={data.kpis.thumbsUp} thumbsDown={data.kpis.thumbsDown} />
       </div>
 
