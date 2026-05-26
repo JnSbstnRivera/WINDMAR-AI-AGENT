@@ -30,7 +30,6 @@
 // la URL de producción conocida.
 const HOST_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://windmar-ai-agent.vercel.app';
 const LOGO_URL = `${HOST_URL}/email-assets/windmar-logo.gif`;
-const SOCIAL_URL = `${HOST_URL}/email-assets/windmar-social.png`;
 
 // Teléfono corporativo común (extensión es por asesor — futuro)
 const PHONE = '787-395-7766';
@@ -100,10 +99,9 @@ function buildSignature(asesorName: string, asesorEmail: string, asesorExt?: str
           <p style="margin: 0 0 2px 0; font-size: 13px; font-weight: bold;">
             <a href="mailto:${safeEmail}" style="color: #F7941D; text-decoration: none;">${safeEmail}</a>
           </p>
-          <p style="margin: 0 0 10px 0; font-size: 13px; font-weight: bold; color: #F7941D;">
+          <p style="margin: 0; font-size: 13px; font-weight: bold; color: #F7941D;">
             ${phoneLine}
           </p>
-          <img src="${SOCIAL_URL}" alt="Windmar Group · Síguenos en redes" width="180" style="display: block; border: 0; max-width: 180px; height: auto;" />
         </td>
       </tr>
     </table>
