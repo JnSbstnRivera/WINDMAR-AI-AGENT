@@ -728,10 +728,13 @@ function ExtraFieldInput({
   const commonClass =
     'w-full px-3.5 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-[#0a1628] text-[#1B3A5C] dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#F7941D]/50 focus:border-[#F7941D] transition-all disabled:opacity-50';
 
-  // Render correcto del input según tipo
+  // Textarea SIEMPRE ocupa toda la fila; otros tipos respetan field.fullWidth
+  const isFullWidth = field.type === 'textarea' || field.fullWidth;
+  const wrapperClass = isFullWidth ? 'md:col-span-2' : '';
+
   if (field.type === 'textarea') {
     return (
-      <div className="md:col-span-2">
+      <div className={wrapperClass}>
         {labelEl}
         <textarea
           value={value}
@@ -746,7 +749,7 @@ function ExtraFieldInput({
   }
 
   return (
-    <div>
+    <div className={wrapperClass}>
       {labelEl}
       <input
         type={field.type}

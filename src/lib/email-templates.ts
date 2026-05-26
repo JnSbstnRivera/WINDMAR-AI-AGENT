@@ -47,6 +47,8 @@ export interface EmailExtraField {
   defaultValue?: string;
   /** Si es obligatorio para enviar el correo */
   required?: boolean;
+  /** Si true, el input ocupa toda la fila del grid (no se aparea con otro al lado) */
+  fullWidth?: boolean;
 }
 
 export interface EmailTemplate {
@@ -177,19 +179,20 @@ export const EMAIL_TEMPLATES: EmailTemplate[] = [
     `),
   },
 
-  // ─── 4. Confirmar cita técnica (con fecha + hora) ─────────────────
+  // ─── 4. Confirmar cita técnica (con fecha + hora + consultor) ─────
   {
     id: 'appointment',
     label: 'Confirmar cita técnica',
     icon: '📅',
-    description: 'Confirmar visita técnica con fecha y hora específicas',
+    description: 'Confirmar visita técnica con fecha, hora y consultor',
     subject: 'Confirmación de visita técnica — Windmar Home',
     htmlBody: wrap(`
       <p>Estimado/a <strong>{{name}}</strong>,</p>
       <p>Le confirmo su <strong>visita técnica</strong> con nuestro equipo de Windmar Home para los siguientes datos:</p>
       <div style="margin: 16px 0; padding: 16px 20px; background-color: #fff7ed; border: 1px solid #F7941D; border-radius: 6px;">
         <p style="margin: 0 0 6px 0; font-size: 14px;">📅 <strong>Fecha:</strong> {{date}}</p>
-        <p style="margin: 0; font-size: 14px;">🕐 <strong>Hora:</strong> {{time}}</p>
+        <p style="margin: 0 0 6px 0; font-size: 14px;">🕐 <strong>Hora:</strong> {{time}}</p>
+        <p style="margin: 0; font-size: 14px;">👤 <strong>Consultor asignado:</strong> {{consultant}}</p>
       </div>
       <p>Nuestro técnico realizará una inspección de su hogar para preparar la propuesta más precisa posible. La visita toma aproximadamente 30 a 45 minutos.</p>
       <p>Si necesita <strong>reagendar</strong>, por favor avíseme con anticipación y lo coordinamos sin problema.</p>
@@ -198,6 +201,14 @@ export const EMAIL_TEMPLATES: EmailTemplate[] = [
     extraFields: [
       { key: 'date', label: 'Fecha de la visita', type: 'date', required: true },
       { key: 'time', label: 'Hora', type: 'time', defaultValue: '10:00', required: true },
+      {
+        key: 'consultant',
+        label: 'Consultor asignado',
+        type: 'text',
+        placeholder: 'Nombre del consultor que hará la visita',
+        required: true,
+        fullWidth: true,
+      },
     ],
   },
 
