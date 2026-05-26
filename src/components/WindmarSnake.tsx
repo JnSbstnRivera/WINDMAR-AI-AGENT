@@ -28,7 +28,17 @@ export function WindmarSnake({ onClose }: Props) {
   const [score, setScore] = useState(0);
   const [best, setBest] = useState(0);
   const [gameState, setGameState] = useState<'playing' | 'gameover'>('playing');
-  const [grid, setGrid] = useState<CellKind[][]>(() => emptyGrid());
+  // Grid inicial CON el snake y la comida ya dibujados — así aparece al instante
+  // en vez de mostrar un tablero vacío durante el primer tick (130ms).
+  const [grid, setGrid] = useState<CellKind[][]>(() => {
+    const g = emptyGrid();
+    const initialSnake = [{ x: 8, y: 8 }, { x: 7, y: 8 }, { x: 6, y: 8 }];
+    if (g[8]) g[8][18] = 'food';
+    initialSnake.forEach((seg, i) => {
+      if (g[seg.y]) g[seg.y][seg.x] = i === 0 ? 'head' : 'body';
+    });
+    return g;
+  });
 
   const snakeRef = useRef<Pos[]>([{ x: 8, y: 8 }, { x: 7, y: 8 }, { x: 6, y: 8 }]);
   const dirRef = useRef<Dir>('right');

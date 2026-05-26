@@ -983,6 +983,8 @@ export function ChatApp({ user, onSignOut }: Props) {
         ) : (
           <>
             {invadersOpen && <WindmarInvaders onClose={() => setInvadersOpen(false)} />}
+            {snakeOpen && <WindmarSnake onClose={() => setSnakeOpen(false)} />}
+            {pongOpen && <WindmarPong onClose={() => setPongOpen(false)} />}
             {followUpOpen && (
               <FollowUpEmailModal
                 asesorName={user.formalName || capDisplayName}
