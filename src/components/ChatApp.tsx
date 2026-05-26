@@ -944,9 +944,9 @@ export function ChatApp({ user, onSignOut }: Props) {
               <FollowUpEmailModal
                 asesorName={capDisplayName}
                 onClose={() => setFollowUpOpen(false)}
-                onSent={(to, name) =>
+                onSent={(to, name, templateLabel) =>
                   insertStaticReply(
-                    `✅ **Correo de seguimiento enviado**\n\n📧 A: **${name}** (${to})\n📂 Quedó guardado en tu carpeta **Enviados** de Outlook.\n\n¿En qué más te ayudo?`
+                    `✅ **Correo enviado** — *${templateLabel}*\n\n📧 A: **${name}** (${to})\n📂 Quedó guardado en tu carpeta **Enviados** de Outlook.\n\n¿En qué más te ayudo?`
                   )
                 }
               />
@@ -969,9 +969,9 @@ export function ChatApp({ user, onSignOut }: Props) {
               <FollowUpEmailModal
                 asesorName={capDisplayName}
                 onClose={() => setFollowUpOpen(false)}
-                onSent={(to, name) =>
+                onSent={(to, name, templateLabel) =>
                   insertStaticReply(
-                    `✅ **Correo de seguimiento enviado**\n\n📧 A: **${name}** (${to})\n📂 Quedó guardado en tu carpeta **Enviados** de Outlook.\n\n¿En qué más te ayudo?`
+                    `✅ **Correo enviado** — *${templateLabel}*\n\n📧 A: **${name}** (${to})\n📂 Quedó guardado en tu carpeta **Enviados** de Outlook.\n\n¿En qué más te ayudo?`
                   )
                 }
               />

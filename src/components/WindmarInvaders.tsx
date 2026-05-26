@@ -214,7 +214,7 @@ export function WindmarInvaders({ onClose }: Props) {
     <div
       ref={containerRef}
       tabIndex={-1}
-      className="mx-auto my-3 max-w-[760px] w-full rounded-xl border-2 outline-none wm-fade-in"
+      className="mx-auto my-3 max-w-[920px] w-full rounded-xl border-2 outline-none wm-fade-in"
       style={{
         background: 'linear-gradient(180deg, #060810 0%, #0a1628 50%, #1B3A5C 100%)',
         borderColor: 'rgba(247,148,29,0.5)',
@@ -295,13 +295,14 @@ export function WindmarInvaders({ onClose }: Props) {
               >
                 {cell === 'star' && <span style={{ color: 'rgba(255,255,255,0.35)' }}>·</span>}
                 {cell === 'alien' && (
-                  // ☁ NUBES NEGRAS — bloquean el sol del fondo
+                  // ☁ NUBES NEGRAS — bloquean el sol del fondo (más grandes)
                   <span
                     style={{
-                      fontSize: '2em',
-                      filter: 'brightness(0.15) saturate(0) contrast(1.4) drop-shadow(0 0 3px rgba(120,120,120,0.9))',
+                      fontSize: '3.2em',
+                      filter: 'brightness(0.15) saturate(0) contrast(1.4) drop-shadow(0 0 4px rgba(120,120,120,0.9))',
                       textShadow: '0 0 0 #000',
                       lineHeight: 1,
+                      zIndex: 2,
                     }}
                   >
                     ☁
@@ -311,11 +312,12 @@ export function WindmarInvaders({ onClose }: Props) {
                   // ⚡ RAYO del player (amarillo brillante, electrified)
                   <span
                     style={{
-                      fontSize: '1.6em',
-                      filter: 'drop-shadow(0 0 8px rgba(255,215,0,1)) drop-shadow(0 0 16px rgba(247,148,29,0.6))',
+                      fontSize: '2.2em',
+                      filter: 'drop-shadow(0 0 10px rgba(255,215,0,1)) drop-shadow(0 0 18px rgba(247,148,29,0.7))',
                       color: '#FFD700',
                       fontWeight: 'bold',
                       lineHeight: 1,
+                      zIndex: 3,
                     }}
                   >
                     ⚡
@@ -325,10 +327,11 @@ export function WindmarInvaders({ onClose }: Props) {
                   // 💧 Gota de lluvia (las nubes negras llueven contra ti)
                   <span
                     style={{
-                      fontSize: '1.4em',
-                      filter: 'drop-shadow(0 0 4px rgba(244,63,94,0.9))',
+                      fontSize: '1.9em',
+                      filter: 'drop-shadow(0 0 5px rgba(244,63,94,0.9))',
                       color: '#f43f5e',
                       lineHeight: 1,
+                      zIndex: 3,
                     }}
                   >
                     💧
@@ -339,12 +342,12 @@ export function WindmarInvaders({ onClose }: Props) {
                     src="/sunbot-feliz.png"
                     alt=""
                     style={{
-                      width: '220%',
-                      height: '220%',
+                      width: '340%',
+                      height: '340%',
                       objectFit: 'contain',
                       imageRendering: 'pixelated',
-                      filter: 'drop-shadow(0 0 12px rgba(247,148,29,1)) drop-shadow(0 0 24px rgba(247,148,29,0.5))',
-                      zIndex: 3,
+                      filter: 'drop-shadow(0 0 14px rgba(247,148,29,1)) drop-shadow(0 0 28px rgba(247,148,29,0.55))',
+                      zIndex: 4,
                     }}
                   />
                 )}

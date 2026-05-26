@@ -1,14 +1,16 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@/auth';
+import { findTemplate, renderTemplate } from '@/lib/email-templates';
 
 /**
  * POST /api/email/send
  * Envía un correo de seguimiento desde el Outlook del asesor logueado.
  * Usa Microsoft Graph (sendMail) con el access_token guardado en el JWT.
  *
- * Body: { to: string, name: string }
- * - to:   correo del cliente
- * - name: nombre del cliente para personalizar el saludo
+ * Body: { to: string, name: string, templateId: string }
+ * - to:         correo del cliente
+ * - name:       nombre del cliente para personalizar el saludo
+ * - templateId: id de la plantilla en src/lib/email-templates.ts
  *
  * El correo queda automáticamente en la carpeta /Enviados del asesor.
  */
@@ -31,7 +33,7 @@ export async function POST(req: Request) {
     );
   }
 
-  let body: { to?: string; name?: string };
+  let body: { to?: string; name?: string; templateId?: string };
   try {
     body = await req.json();
   } catch {
@@ -40,6 +42,7 @@ export async function POST(req: Request) {
 
   const to = (body.to || '').trim();
   const name = (body.name || '').trim();
+  const templateId = (body.templateId || 'general').trim();
 
   // Validación mínima — Graph también valida pero damos errores legibles
   if (!to || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to)) {
@@ -49,33 +52,20 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Falta el nombre del cliente' }, { status: 400 });
   }
 
+  // Validar que la plantilla existe — protege contra IDs inventados desde el cliente
+  const template = findTemplate(templateId);
+  if (!template) {
+    return NextResponse.json({ error: `Plantilla "${templateId}" no existe` }, { status: 400 });
+  }
+
   // Nombre del asesor para la firma (cae al email si no hay displayName)
   const asesorName =
     ((session.user as unknown as { displayName?: string | null }).displayName) ||
     session.user.name ||
     session.user.email.split('@')[0];
 
-  const subject = `Seguimiento — Windmar Home`;
-
-  // Plantilla simple en HTML — sin precios (regla suprema), tono cálido.
-  // Saludo personalizado, CTA abierta para que el cliente responda.
-  const htmlBody = `
-    <div style="font-family: Arial, Helvetica, sans-serif; font-size: 14px; color: #1B3A5C; line-height: 1.6;">
-      <p>Hola <strong>${escapeHtml(name)}</strong>,</p>
-
-      <p>¿Cómo estás? Te escribo de <strong>Windmar Home</strong> para saber si todavía sigues interesado en lo que conversamos.</p>
-
-      <p>Si quieres, dime cuándo te queda bien y conversamos para aclarar cualquier duda que tengas.</p>
-
-      <p>¡Quedo pendiente!</p>
-
-      <p style="margin-top: 24px;">
-        Saludos,<br>
-        <strong>${escapeHtml(asesorName)}</strong><br>
-        <span style="color: #6b7280; font-size: 12px;">Windmar Home Puerto Rico · 22 años iluminando hogares 🇵🇷</span>
-      </p>
-    </div>
-  `.trim();
+  // Renderizar la plantilla — escape HTML interno, sin precios (regla suprema)
+  const { subject, html: htmlBody } = renderTemplate(template, { name, asesor: asesorName });
 
   // Llamada a Graph API — sendMail envía y guarda en Enviados automáticamente
   try {
@@ -127,19 +117,10 @@ export async function POST(req: Request) {
     return NextResponse.json({
       ok: true,
       message: `Correo enviado a ${name} (${to})`,
+      template: template.label,
     });
   } catch (err) {
     console.error('[email/send] Error de red:', err);
     return NextResponse.json({ error: 'Error de conexión con Microsoft' }, { status: 500 });
   }
-}
-
-/** Escapa HTML para evitar inyección en el correo (nombre del cliente viene del asesor). */
-function escapeHtml(s: string): string {
-  return s
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
 }

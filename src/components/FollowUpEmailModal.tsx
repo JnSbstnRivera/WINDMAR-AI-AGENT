@@ -1,35 +1,52 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import { EMAIL_TEMPLATES, renderTemplate, type EmailTemplate } from '@/lib/email-templates';
 
 interface Props {
   /** Nombre del asesor — para personalizar la firma del preview */
   asesorName: string;
   /** Cierra el modal sin enviar */
   onClose: () => void;
-  /** Callback cuando el correo se envió exitosamente — recibe to+name para insertar mensaje confirmación en el chat */
-  onSent: (to: string, name: string) => void;
+  /** Callback cuando el correo se envió exitosamente — recibe to+name+template para el mensaje en el chat */
+  onSent: (to: string, name: string, templateLabel: string) => void;
 }
 
 type Status = 'idle' | 'sending' | 'sent' | 'error';
 
 /**
- * Modal de correo de seguimiento.
- * Form simple: nombre cliente + correo cliente → POST /api/email/send.
- * El correo sale del Outlook del asesor (Microsoft Graph) y queda en /Enviados.
+ * Modal de correo de seguimiento con SELECTOR DE PLANTILLAS.
+ *
+ * Flow:
+ *  1. Asesor elige plantilla (5 opciones: general, factura LUMA, no contestó, cita, info)
+ *  2. Llena nombre + correo del cliente
+ *  3. Preview se actualiza en vivo con la plantilla y los datos
+ *  4. POST /api/email/send con { to, name, templateId }
+ *  5. El correo sale del Outlook del asesor vía Microsoft Graph
  *
  * UX:
- *  - ESC cierra
- *  - Enter en el último input envía
- *  - Tras enviar, muestra ✓ verde 1.5s y auto-cierra
- *  - Si falla, mensaje rojo persistente con detalle
+ *  - ESC cierra (excepto cuando está enviando)
+ *  - Enter en correo envía (si todo válido)
+ *  - Tras enviar: ✓ verde 1.5s, auto-cierra y notifica al chat
  */
 export function FollowUpEmailModal({ asesorName, onClose, onSent }: Props) {
+  const [templateId, setTemplateId] = useState<string>(EMAIL_TEMPLATES[0].id);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [status, setStatus] = useState<Status>('idle');
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const nameInputRef = useRef<HTMLInputElement>(null);
+
+  const template: EmailTemplate =
+    EMAIL_TEMPLATES.find((t) => t.id === templateId) || EMAIL_TEMPLATES[0];
+
+  // Render del preview en vivo — usa la misma función que el backend
+  const previewName = name.trim() || '[nombre del cliente]';
+  const previewAsesor = asesorName || 'tú';
+  const { subject: previewSubject, html: previewHtml } = renderTemplate(template, {
+    name: previewName,
+    asesor: previewAsesor,
+  });
 
   // Focus inicial en el primer input
   useEffect(() => {
@@ -58,7 +75,7 @@ export function FollowUpEmailModal({ asesorName, onClose, onSent }: Props) {
       const res = await fetch('/api/email/send', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ to: email.trim(), name: name.trim() }),
+        body: JSON.stringify({ to: email.trim(), name: name.trim(), templateId }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -67,9 +84,9 @@ export function FollowUpEmailModal({ asesorName, onClose, onSent }: Props) {
         return;
       }
       setStatus('sent');
-      // Auto-cerrar tras 1.5s y notificar al chat
+      // Auto-cerrar tras 1.5s y notificar al chat con el label de la plantilla
       setTimeout(() => {
-        onSent(email.trim(), name.trim());
+        onSent(email.trim(), name.trim(), template.label);
         onClose();
       }, 1500);
     } catch (err) {
@@ -79,20 +96,17 @@ export function FollowUpEmailModal({ asesorName, onClose, onSent }: Props) {
     }
   }
 
-  // Preview del correo — refleja la plantilla del backend
-  const previewName = name.trim() || '[nombre del cliente]';
-  const previewAsesor = asesorName || 'tú';
+  const disabled = status === 'sending' || status === 'sent';
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 overflow-y-auto"
       onClick={(e) => {
-        // Click fuera del modal cierra (solo si no está enviando)
         if (e.target === e.currentTarget && status !== 'sending') onClose();
       }}
     >
       <div
-        className="relative w-full max-w-lg bg-white dark:bg-[#0f1c2e] rounded-2xl shadow-2xl border-2 border-[#F7941D]/40 overflow-hidden"
+        className="relative w-full max-w-2xl bg-white dark:bg-[#0f1c2e] rounded-2xl shadow-2xl border-2 border-[#F7941D]/40 overflow-hidden my-auto"
         style={{
           boxShadow: '0 0 40px rgba(247, 148, 29, 0.3), 0 25px 50px rgba(0, 0, 0, 0.5)',
         }}
@@ -128,10 +142,49 @@ export function FollowUpEmailModal({ asesorName, onClose, onSent }: Props) {
           </button>
         </div>
 
+        {/* Selector de plantillas */}
+        <div className="px-5 pt-4 pb-2">
+          <label className="block text-xs font-semibold text-[#1B3A5C] dark:text-gray-300 mb-2 uppercase tracking-wider">
+            Elige una plantilla
+          </label>
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
+            {EMAIL_TEMPLATES.map((t) => {
+              const selected = templateId === t.id;
+              return (
+                <button
+                  key={t.id}
+                  onClick={() => setTemplateId(t.id)}
+                  disabled={disabled}
+                  className="relative flex flex-col items-center gap-1 px-2 py-2.5 rounded-lg border-2 transition-all cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
+                  style={{
+                    borderColor: selected ? '#F7941D' : 'rgba(156, 163, 175, 0.3)',
+                    background: selected
+                      ? 'linear-gradient(135deg, rgba(247,148,29,0.15) 0%, rgba(247,148,29,0.05) 100%)'
+                      : 'transparent',
+                    boxShadow: selected ? '0 0 12px rgba(247,148,29,0.25)' : 'none',
+                  }}
+                  title={t.description}
+                >
+                  <span className="text-xl leading-none">{t.icon}</span>
+                  <span
+                    className="text-[10px] font-semibold text-center leading-tight"
+                    style={{ color: selected ? '#F7941D' : 'inherit' }}
+                  >
+                    {t.label}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+          <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-2 italic">
+            {template.description}
+          </p>
+        </div>
+
         {/* Body */}
-        <div className="p-5 space-y-4">
+        <div className="px-5 pb-5 pt-2 space-y-4">
           {/* Inputs */}
-          <div className="space-y-3">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-semibold text-[#1B3A5C] dark:text-gray-300 mb-1.5 uppercase tracking-wider">
                 Nombre del cliente
@@ -141,7 +194,7 @@ export function FollowUpEmailModal({ asesorName, onClose, onSent }: Props) {
                 type="text"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                disabled={status === 'sending' || status === 'sent'}
+                disabled={disabled}
                 placeholder="Ej. María González"
                 className="w-full px-3.5 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-[#0a1628] text-[#1B3A5C] dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#F7941D]/50 focus:border-[#F7941D] transition-all disabled:opacity-50"
               />
@@ -158,7 +211,7 @@ export function FollowUpEmailModal({ asesorName, onClose, onSent }: Props) {
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' && canSubmit) handleSubmit();
                 }}
-                disabled={status === 'sending' || status === 'sent'}
+                disabled={disabled}
                 placeholder="cliente@correo.com"
                 className="w-full px-3.5 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-[#0a1628] text-[#1B3A5C] dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#F7941D]/50 focus:border-[#F7941D] transition-all disabled:opacity-50"
               />
@@ -166,7 +219,7 @@ export function FollowUpEmailModal({ asesorName, onClose, onSent }: Props) {
           </div>
 
           {/* Preview del correo */}
-          <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-[#0a1628]/50 p-4">
+          <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-[#0a1628]/50 p-4 max-h-72 overflow-y-auto">
             <div className="text-[10px] uppercase tracking-wider text-gray-500 dark:text-gray-400 font-semibold mb-2 flex items-center gap-1.5">
               <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
                 <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
@@ -174,25 +227,14 @@ export function FollowUpEmailModal({ asesorName, onClose, onSent }: Props) {
               </svg>
               Vista previa
             </div>
-            <div className="text-[13px] text-[#1B3A5C] dark:text-gray-200 leading-relaxed space-y-2">
-              <p className="font-semibold text-xs text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-gray-700 pb-1.5 mb-2">
-                Asunto: Seguimiento — Windmar Home
-              </p>
-              <p>
-                Hola <strong>{previewName}</strong>,
-              </p>
-              <p>
-                ¿Cómo estás? Te escribo de <strong>Windmar Home</strong> para saber si todavía sigues interesado en lo que conversamos.
-              </p>
-              <p>Si quieres, dime cuándo te queda bien y conversamos para aclarar cualquier duda que tengas.</p>
-              <p>¡Quedo pendiente!</p>
-              <div className="pt-2 text-xs text-gray-600 dark:text-gray-400">
-                Saludos,<br />
-                <strong className="text-[#1B3A5C] dark:text-white">{previewAsesor}</strong>
-                <br />
-                <span className="text-[10px]">Windmar Home Puerto Rico</span>
-              </div>
-            </div>
+            <p className="font-semibold text-xs text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-gray-700 pb-1.5 mb-2">
+              Asunto: {previewSubject}
+            </p>
+            {/* Renderizamos el HTML de la plantilla — viene de email-templates.ts (trusted) */}
+            <div
+              className="text-[13px] text-[#1B3A5C] dark:text-gray-200 leading-relaxed prose-sm dark:prose-invert"
+              dangerouslySetInnerHTML={{ __html: previewHtml }}
+            />
           </div>
 
           {/* Mensaje de error */}
