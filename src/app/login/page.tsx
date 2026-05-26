@@ -25,7 +25,7 @@ export default function LoginPage() {
           </div>
           <h1 className="text-xl font-bold text-[#1B3A5C] dark:text-white">Agente Windmar Home</h1>
           <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 text-center">
-            Inicia sesión con tu cuenta de Microsoft Windmar
+            Inicia sesión con tu correo corporativo Windmar
           </p>
         </div>
 
@@ -89,7 +89,7 @@ export default function LoginPage() {
                   <rect x="12.5" y="12.5" width="8" height="8" rx="0.6" fill="none" stroke="#FFB900" strokeWidth="1.4" />
                 </g>
               </svg>
-              Iniciar sesión con Microsoft
+              Iniciar sesión
             </button>
 
             {/* Trazos neón animados — dos paths nacen desde esquinas opuestas (TL y BR).
@@ -150,7 +150,7 @@ export default function LoginPage() {
 
         <div className="mt-6 pt-5 border-t border-gray-100 dark:border-gray-800">
           <p className="text-[11px] text-gray-500 dark:text-gray-400 text-center leading-relaxed">
-            Si tienes problemas iniciando sesión, contacta a IT.
+            Si tienes problemas para iniciar sesión, contacta a IT.
           </p>
         </div>
 
