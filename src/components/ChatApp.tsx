@@ -460,7 +460,14 @@ export function ChatApp({ user, onSignOut }: Props) {
     }
     // Comando de productividad: abre el modal de correo de seguimiento.
     // El bot NO se involucra — es solo UI que llama Graph API directo.
-    if (cmd === '/seguimiento' || cmd === '/correo' || cmd === '/email' || cmd === '/followup') {
+    // Aliases: /@ es atajo rápido (símbolo natural de correo).
+    if (
+      cmd === '/seguimiento' ||
+      cmd === '/correo' ||
+      cmd === '/email' ||
+      cmd === '/followup' ||
+      cmd === '/@'
+    ) {
       setFollowUpOpen(true);
       return;
     }
