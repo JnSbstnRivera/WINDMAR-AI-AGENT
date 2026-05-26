@@ -94,7 +94,8 @@ Soy el copiloto IA del Call Center de Windmar Home Puerto Rico. Construido con:
 
 Hecho por Juan Sebastián Rivera · 2026
 
-**Comandos secretos disponibles:**
+**Comandos disponibles:**
+- \`/seguimiento\` — envía correo de seguimiento al cliente 📧
 - \`/sunbot\` — saludo del SUN BOT
 - \`/temblor\` — protocolo sísmico PR
 - \`/snake\` — mini-juego serpiente

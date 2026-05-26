@@ -11,6 +11,7 @@ import { ProfileModal } from './ProfileModal';
 import { WindmarInvaders } from './WindmarInvaders';
 import { WindmarSnake } from './WindmarSnake';
 import { WindmarPong } from './WindmarPong';
+import { FollowUpEmailModal } from './FollowUpEmailModal';
 import { SUNBOT_ART, TEMBLOR_TEXT, ABOUT_TEXT } from '@/lib/easter-eggs';
 import { useInactivityLogout } from '@/hooks/useInactivityLogout';
 import type { Message, Conversation, ToolRef, QualityMeta } from '@/types';
@@ -89,6 +90,7 @@ export function ChatApp({ user, onSignOut }: Props) {
   const [invadersOpen, setInvadersOpen] = useState(false);
   const [snakeOpen, setSnakeOpen] = useState(false);
   const [pongOpen, setPongOpen] = useState(false);
+  const [followUpOpen, setFollowUpOpen] = useState(false);
 
   // AbortController para poder cortar el fetch del streaming desde el botón "detener".
   // Lo guardamos en ref para que persista entre renders sin disparar re-renders.
@@ -452,6 +454,12 @@ export function ChatApp({ user, onSignOut }: Props) {
     }
     if (cmd === '/pong') {
       setPongOpen(true);
+      return;
+    }
+    // Comando de productividad: abre el modal de correo de seguimiento.
+    // El bot NO se involucra — es solo UI que llama Graph API directo.
+    if (cmd === '/seguimiento' || cmd === '/correo' || cmd === '/email' || cmd === '/followup') {
+      setFollowUpOpen(true);
       return;
     }
     // Respuestas estáticas (insertadas como mensaje del asistente, sin LLM)
@@ -932,6 +940,17 @@ export function ChatApp({ user, onSignOut }: Props) {
             {invadersOpen && <WindmarInvaders onClose={() => setInvadersOpen(false)} />}
             {snakeOpen && <WindmarSnake onClose={() => setSnakeOpen(false)} />}
             {pongOpen && <WindmarPong onClose={() => setPongOpen(false)} />}
+            {followUpOpen && (
+              <FollowUpEmailModal
+                asesorName={capDisplayName}
+                onClose={() => setFollowUpOpen(false)}
+                onSent={(to, name) =>
+                  insertStaticReply(
+                    `✅ **Correo de seguimiento enviado**\n\n📧 A: **${name}** (${to})\n📂 Quedó guardado en tu carpeta **Enviados** de Outlook.\n\n¿En qué más te ayudo?`
+                  )
+                }
+              />
+            )}
             <ChatInput
               onSend={sendMessage}
               disabled={isStreaming}
@@ -946,6 +965,17 @@ export function ChatApp({ user, onSignOut }: Props) {
         ) : (
           <>
             {invadersOpen && <WindmarInvaders onClose={() => setInvadersOpen(false)} />}
+            {followUpOpen && (
+              <FollowUpEmailModal
+                asesorName={capDisplayName}
+                onClose={() => setFollowUpOpen(false)}
+                onSent={(to, name) =>
+                  insertStaticReply(
+                    `✅ **Correo de seguimiento enviado**\n\n📧 A: **${name}** (${to})\n📂 Quedó guardado en tu carpeta **Enviados** de Outlook.\n\n¿En qué más te ayudo?`
+                  )
+                }
+              />
+            )}
             <WelcomeScreen
               onSend={sendMessage}
               disabled={isStreaming}

@@ -18,6 +18,45 @@ export function isAuthEnabled() {
 }
 
 /**
+ * Refresca el access_token de Microsoft Graph usando el refresh_token guardado.
+ * Llamada al endpoint OAuth2 de Microsoft. Si falla (refresh_token revocado o
+ * expirado a los 90 días), el siguiente intento de enviar correo falla con 401
+ * y el asesor tendrá que volver a iniciar sesión.
+ */
+async function refreshMicrosoftToken(refreshToken: string) {
+  const issuerRaw = process.env.AUTH_MICROSOFT_ENTRA_ID_ISSUER || '';
+  // Extraer tenant: acepta UUID o URL completa
+  const tenant = issuerRaw.startsWith('http')
+    ? issuerRaw.split('/').find((p) => p.length >= 30 && p.includes('-')) || 'common'
+    : (issuerRaw || 'common');
+
+  const params = new URLSearchParams({
+    client_id: process.env.AUTH_MICROSOFT_ENTRA_ID_ID!,
+    client_secret: process.env.AUTH_MICROSOFT_ENTRA_ID_SECRET!,
+    grant_type: 'refresh_token',
+    refresh_token: refreshToken,
+    scope: 'openid profile email offline_access User.Read Mail.Send',
+  });
+
+  const res = await fetch(`https://login.microsoftonline.com/${tenant}/oauth2/v2.0/token`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: params.toString(),
+  });
+
+  if (!res.ok) {
+    const text = await res.text().catch(() => '');
+    throw new Error(`Refresh failed ${res.status}: ${text.slice(0, 200)}`);
+  }
+
+  return (await res.json()) as {
+    access_token: string;
+    refresh_token?: string;
+    expires_in: number;
+  };
+}
+
+/**
  * Descarga la foto de perfil del usuario desde Microsoft Graph API.
  * Endpoint: GET https://graph.microsoft.com/v1.0/me/photo/$value
  * Devuelve un data URI base64 listo para usar en <img src> o NULL si el usuario
@@ -50,8 +89,10 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       clientId: process.env.AUTH_MICROSOFT_ENTRA_ID_ID,
       clientSecret: process.env.AUTH_MICROSOFT_ENTRA_ID_SECRET,
       issuer: getIssuer(),
-      // Pedimos User.Read explícitamente para acceder a /me/photo/$value
-      authorization: { params: { scope: 'openid profile email User.Read' } },
+      // User.Read → /me/photo/$value (foto de perfil)
+      // Mail.Send → enviar correos en nombre del asesor (feature de seguimiento)
+      // offline_access → permite refresh_token para mantener Mail.Send vivo más de 1h
+      authorization: { params: { scope: 'openid profile email offline_access User.Read Mail.Send' } },
     }),
   ],
   pages: {
@@ -114,7 +155,33 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 
     // Enriquecer el JWT con display_name, departamento, rol y onboarded_at desde user_roles.
     // En 'update' aceptamos los datos del cliente directamente (más confiable que re-leer DB).
-    async jwt({ token, trigger, session }) {
+    async jwt({ token, trigger, session, account }) {
+      // Persistir tokens de Microsoft Graph en el primer signIn.
+      // Estos viajan en la cookie JWT encriptada (server-only) y se usan después
+      // para llamar Graph API (Mail.Send) desde /api/email/send.
+      if (account?.provider === 'microsoft-entra-id' && account.access_token) {
+        token.msAccessToken = account.access_token;
+        token.msRefreshToken = account.refresh_token;
+        token.msExpiresAt = account.expires_at; // Unix timestamp en segundos
+      }
+
+      // Si el access token está expirado (o expira en menos de 60s), refrescamos.
+      // Sin esto, después de 1h el feature de email dejaría de funcionar.
+      if (token.msExpiresAt && typeof token.msExpiresAt === 'number' && token.msRefreshToken) {
+        const nowSec = Math.floor(Date.now() / 1000);
+        if (nowSec >= (token.msExpiresAt as number) - 60) {
+          try {
+            const refreshed = await refreshMicrosoftToken(token.msRefreshToken as string);
+            token.msAccessToken = refreshed.access_token;
+            if (refreshed.refresh_token) token.msRefreshToken = refreshed.refresh_token;
+            token.msExpiresAt = Math.floor(Date.now() / 1000) + refreshed.expires_in;
+          } catch (err) {
+            console.error('[auth] Refresh de token Microsoft falló:', err);
+            // No bloqueamos — el endpoint de email manejará el error 401 y pedirá re-login
+          }
+        }
+      }
+
       // Caso 1: cliente llamó update({ displayName, departamento, rol, onboardedAt }) tras guardar perfil/onboarding
       if (trigger === 'update' && session && typeof session === 'object') {
         const s = session as Record<string, unknown>;
@@ -163,6 +230,13 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         u.rol = token.userRole ?? 'Asesor';
         u.onboardedAt = token.onboardedAt ?? null;
       }
+      // Exponer access token de Microsoft Graph al server (vía auth()).
+      // Necesario para /api/email/send → Graph API.
+      // Sí, /api/auth/session también lo devuelve al cliente — riesgo aceptado:
+      // app interna @windmarhome.com, cookie httpOnly, scope mínimo (Mail.Send solo).
+      const s = session as unknown as Record<string, unknown>;
+      s.msAccessToken = token.msAccessToken ?? null;
+      s.msExpiresAt = token.msExpiresAt ?? null;
       return session;
     },
 
