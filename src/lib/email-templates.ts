@@ -347,6 +347,80 @@ export function renderTemplate(
 }
 
 /**
+ * Convierte el cuerpo de una plantilla a TEXTO PLANO editable.
+ * Resuelve placeholders del cliente (name) y campos extra (date, documents, etc.)
+ * pero NO incluye la firma (esa se mantiene automática y no editable).
+ *
+ * Usado cuando el asesor activa "Editar texto" para personalizar el correo
+ * de un cliente especial. El resultado se muestra en un textarea.
+ */
+export function templateBodyToPlainText(
+  template: EmailTemplate,
+  vars: { name: string; extras?: Record<string, string> }
+): string {
+  const allVars: Record<string, string> = { name: vars.name };
+  if (vars.extras && template.extraFields) {
+    for (const field of template.extraFields) {
+      const raw = vars.extras[field.key] || '';
+      if (field.type === 'date') allVars[field.key] = formatDateES(raw);
+      else if (field.type === 'time') allVars[field.key] = formatTimeES(raw);
+      else allVars[field.key] = raw;
+    }
+  }
+
+  // Resolver placeholders (sin escape — vamos a texto plano)
+  const resolved = template.htmlBody.replace(/\{\{(\w+)\}\}/g, (_, key) => allVars[key] ?? '');
+
+  // HTML → texto plano legible
+  return resolved
+    .replace(/<div[^>]*>/gi, '')
+    .replace(/<\/div>/gi, '')
+    .replace(/<p[^>]*>/gi, '')
+    .replace(/<\/p>/gi, '\n\n')
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<[^>]+>/g, '') // quitar resto de tags
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&#39;/g, "'")
+    .replace(/&quot;/g, '"')
+    .replace(/\n{3,}/g, '\n\n') // colapsar saltos excesivos
+    .trim();
+}
+
+/**
+ * Renderiza un correo con CUERPO PERSONALIZADO (texto plano del asesor).
+ * Convierte el texto a párrafos HTML y le agrega la firma corporativa.
+ * Usado cuando el asesor editó el texto para un cliente especial.
+ */
+export function renderCustomEmail(vars: {
+  subject: string;
+  bodyText: string;
+  asesorName: string;
+  asesorEmail: string;
+  asesorExt?: string;
+}): { subject: string; html: string } {
+  // Texto plano → párrafos HTML (doble salto = nuevo párrafo, salto simple = <br>)
+  const paragraphs = vars.bodyText
+    .split(/\n\n+/)
+    .map((p) => p.trim())
+    .filter(Boolean)
+    .map((p) => `<p style="margin: 0 0 12px 0;">${escapeHtml(p).replace(/\n/g, '<br>')}</p>`)
+    .join('\n');
+
+  const signature = buildSignature(vars.asesorName, vars.asesorEmail, vars.asesorExt);
+  const html = `
+    <div style="font-family: Arial, Helvetica, sans-serif; font-size: 14px; color: #1B3A5C; line-height: 1.65; max-width: 600px;">
+      ${paragraphs}
+      ${signature}
+    </div>
+  `.trim();
+
+  return { subject: vars.subject, html };
+}
+
+/**
  * Convierte YYYY-MM-DD a "26 de mayo de 2026" (español).
  */
 function formatDateES(yyyyMmDd: string): string {

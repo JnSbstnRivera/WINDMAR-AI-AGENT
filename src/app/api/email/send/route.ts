@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@/auth';
-import { findTemplate, renderTemplate } from '@/lib/email-templates';
+import { findTemplate, renderTemplate, renderCustomEmail } from '@/lib/email-templates';
 
 /**
  * POST /api/email/send
@@ -42,6 +42,10 @@ export async function POST(req: Request) {
     extras?: Record<string, string>;
     /** Extensión del asesor — opcional, se agrega a la firma */
     asesorExt?: string;
+    /** Cuerpo personalizado (texto plano) — si viene, sustituye la plantilla */
+    customBody?: string;
+    /** Asunto personalizado — solo aplica si hay customBody */
+    customSubject?: string;
     /** Archivos adjuntos — base64 con metadata */
     attachments?: Array<{
       name: string;
@@ -61,6 +65,9 @@ export async function POST(req: Request) {
   const extras = body.extras || {};
   const asesorExt = (body.asesorExt || '').trim();
   const attachments = body.attachments || [];
+  const customBody = (body.customBody || '').trim();
+  const customSubject = (body.customSubject || '').trim();
+  const isCustom = customBody.length > 0;
 
   // Validar attachments: Graph permite hasta ~3MB inline (4MB con overhead base64).
   // Más allá requiere upload session que no implementamos en MVP.
@@ -96,14 +103,15 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Falta el nombre del cliente' }, { status: 400 });
   }
 
-  // Validar plantilla
+  // Validar plantilla (sirve para el label de tracking aunque sea custom)
   const template = findTemplate(templateId);
   if (!template) {
     return NextResponse.json({ error: `Plantilla "${templateId}" no existe` }, { status: 400 });
   }
 
-  // Validar campos extra requeridos
-  if (template.extraFields) {
+  // Validar campos extra requeridos SOLO si NO es cuerpo personalizado.
+  // Cuando el asesor editó el texto, los campos ya están "horneados" en el body.
+  if (!isCustom && template.extraFields) {
     for (const field of template.extraFields) {
       if (field.required && !(extras[field.key] || '').trim()) {
         return NextResponse.json(
@@ -126,14 +134,23 @@ export async function POST(req: Request) {
     session.user.email.split('@')[0];
   const asesorEmail = session.user.email;
 
-  // Renderizar plantilla (con extensión si la pasaron)
-  const { subject, html: htmlBody } = renderTemplate(template, {
-    name,
-    asesorName,
-    asesorEmail,
-    asesorExt: asesorExt || undefined,
-    extras,
-  });
+  // Renderizar: cuerpo personalizado del asesor O plantilla normal.
+  // En ambos casos la firma corporativa se agrega automáticamente.
+  const { subject, html: htmlBody } = isCustom
+    ? renderCustomEmail({
+        subject: customSubject || template.subject,
+        bodyText: customBody,
+        asesorName,
+        asesorEmail,
+        asesorExt: asesorExt || undefined,
+      })
+    : renderTemplate(template, {
+        name,
+        asesorName,
+        asesorEmail,
+        asesorExt: asesorExt || undefined,
+        extras,
+      });
 
   // Llamada a Graph API — sendMail envía y guarda en Enviados automáticamente
   try {

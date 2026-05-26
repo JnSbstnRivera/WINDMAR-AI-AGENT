@@ -4,6 +4,8 @@ import { useState, useEffect, useRef, useMemo, type JSX } from 'react';
 import {
   EMAIL_TEMPLATES,
   renderTemplate,
+  renderCustomEmail,
+  templateBodyToPlainText,
   type EmailTemplate,
   type EmailExtraField,
 } from '@/lib/email-templates';
@@ -117,6 +119,11 @@ export function FollowUpEmailModal({ asesorName, asesorEmail, onClose, onSent }:
   const [asesorExt, setAsesorExt] = useState<string>('');
   const [attachments, setAttachments] = useState<AttachmentFile[]>([]);
   const [attachError, setAttachError] = useState<string | null>(null);
+  // Edición personalizada del texto (para clientes especiales).
+  // customBody = null → usar plantilla. string → texto editado por el asesor.
+  const [editMode, setEditMode] = useState(false);
+  const [customBody, setCustomBody] = useState<string | null>(null);
+  const [customSubject, setCustomSubject] = useState<string>('');
   const [status, setStatus] = useState<Status>('idle');
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const nameInputRef = useRef<HTMLInputElement>(null);
@@ -159,7 +166,8 @@ export function FollowUpEmailModal({ asesorName, asesorEmail, onClose, onSent }:
     [templateId]
   );
 
-  // Reset campos extra cuando cambia la plantilla, precargando defaults
+  // Reset campos extra cuando cambia la plantilla, precargando defaults.
+  // También descarta cualquier edición personalizada (vuelve a plantilla).
   useEffect(() => {
     const initial: Record<string, string> = {};
     if (template.extraFields) {
@@ -168,6 +176,9 @@ export function FollowUpEmailModal({ asesorName, asesorEmail, onClose, onSent }:
       }
     }
     setExtras(initial);
+    setEditMode(false);
+    setCustomBody(null);
+    setCustomSubject('');
   }, [template]);
 
   // Focus inicial
@@ -193,23 +204,56 @@ export function FollowUpEmailModal({ asesorName, asesorEmail, onClose, onSent }:
     return true;
   }, [template, extras]);
 
+  const isCustom = customBody !== null;
+
+  // Si está en modo personalizado, no exigimos los campos extra (ya horneados)
   const canSubmit =
     name.trim().length >= 2 &&
     /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()) &&
-    extrasValid &&
+    (isCustom ? customBody!.trim().length > 0 : extrasValid) &&
     status !== 'sending';
 
   // Render del preview en vivo
   const previewName = name.trim() || '[nombre del cliente]';
   const previewAsesor = asesorName || 'tú';
   const previewEmail = asesorEmail || 'asesor@windmarhome.com';
-  const { subject: previewSubject, html: previewHtml } = renderTemplate(template, {
-    name: previewName,
-    asesorName: previewAsesor,
-    asesorEmail: previewEmail,
-    asesorExt: asesorExt || undefined,
-    extras,
-  });
+  // El preview usa el cuerpo personalizado si existe, sino la plantilla
+  const { subject: previewSubject, html: previewHtml } = isCustom
+    ? renderCustomEmail({
+        subject: customSubject || template.subject,
+        bodyText: customBody!,
+        asesorName: previewAsesor,
+        asesorEmail: previewEmail,
+        asesorExt: asesorExt || undefined,
+      })
+    : renderTemplate(template, {
+        name: previewName,
+        asesorName: previewAsesor,
+        asesorEmail: previewEmail,
+        asesorExt: asesorExt || undefined,
+        extras,
+      });
+
+  // Activa el modo edición: inicializa el cuerpo custom con el texto de la
+  // plantilla actual (placeholders resueltos), listo para personalizar.
+  function startEditing() {
+    if (customBody === null) {
+      const plainBody = templateBodyToPlainText(template, {
+        name: name.trim() || '[nombre del cliente]',
+        extras,
+      });
+      setCustomBody(plainBody);
+      setCustomSubject(template.subject);
+    }
+    setEditMode(true);
+  }
+
+  // Descarta la edición y vuelve a la plantilla original
+  function restoreTemplate() {
+    setCustomBody(null);
+    setCustomSubject('');
+    setEditMode(false);
+  }
 
   // Procesa archivos seleccionados: valida tipo/tamaño y los convierte a base64
   async function handleFiles(files: FileList | null) {
@@ -278,6 +322,9 @@ export function FollowUpEmailModal({ asesorName, asesorEmail, onClose, onSent }:
           templateId,
           extras,
           asesorExt: asesorExt.trim() || undefined,
+          // Cuerpo personalizado (si el asesor editó el texto)
+          customBody: isCustom ? customBody : undefined,
+          customSubject: isCustom ? customSubject : undefined,
           // Mandamos solo lo que necesita el endpoint (sin el field `size`)
           attachments: attachments.map((a) => ({
             name: a.name,
@@ -522,8 +569,9 @@ export function FollowUpEmailModal({ asesorName, asesorEmail, onClose, onSent }:
             </span>
           </div>
 
-          {/* Campos extra dinámicos por plantilla */}
-          {template.extraFields && template.extraFields.length > 0 && (
+          {/* Campos extra dinámicos por plantilla — se ocultan en modo edición
+              porque sus valores ya quedaron horneados en el texto personalizado */}
+          {!isCustom && template.extraFields && template.extraFields.length > 0 && (
             <div className="space-y-3 p-3.5 rounded-lg bg-[#F7941D]/5 border border-[#F7941D]/20">
               <p className="text-[10px] uppercase tracking-wider font-semibold text-[#F7941D]">
                 ✨ Detalles para esta plantilla
@@ -619,23 +667,120 @@ export function FollowUpEmailModal({ asesorName, asesorEmail, onClose, onSent }:
             </p>
           </div>
 
-          {/* Preview del correo */}
-          <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-[#0a1628]/50 p-4 max-h-80 overflow-y-auto">
-            <div className="text-[10px] uppercase tracking-wider text-gray-500 dark:text-gray-400 font-semibold mb-2 flex items-center gap-1.5">
-              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-                <circle cx="12" cy="12" r="3" />
-              </svg>
-              Vista previa
+          {/* Barra de acciones del preview: vista previa ↔ editar */}
+          <div className="flex items-center justify-between">
+            <div className="text-[10px] uppercase tracking-wider text-gray-500 dark:text-gray-400 font-semibold flex items-center gap-1.5">
+              {editMode ? (
+                <>
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M12 20h9" />
+                    <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" />
+                  </svg>
+                  Editando texto
+                </>
+              ) : (
+                <>
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                    <circle cx="12" cy="12" r="3" />
+                  </svg>
+                  Vista previa
+                  {isCustom && (
+                    <span className="ml-1 normal-case tracking-normal text-[#F7941D] font-bold">· personalizado</span>
+                  )}
+                </>
+              )}
             </div>
-            <p className="font-semibold text-xs text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-gray-700 pb-1.5 mb-2">
-              Asunto: {previewSubject}
-            </p>
-            <div
-              className="text-[13px] text-[#1B3A5C] dark:text-gray-200 leading-relaxed"
-              dangerouslySetInnerHTML={{ __html: previewHtml }}
-            />
+
+            <div className="flex items-center gap-1.5">
+              {/* Botón restaurar — solo si hay edición personalizada */}
+              {isCustom && (
+                <button
+                  type="button"
+                  onClick={restoreTemplate}
+                  disabled={disabled}
+                  className="flex items-center gap-1 px-2 py-1 text-[10px] font-semibold text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 rounded-md transition-colors cursor-pointer disabled:opacity-50"
+                  title="Descartar cambios y volver a la plantilla original"
+                >
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+                    <path d="M3 3v5h5" />
+                  </svg>
+                  Restaurar
+                </button>
+              )}
+
+              {/* Botón toggle editar / vista previa */}
+              <button
+                type="button"
+                onClick={() => (editMode ? setEditMode(false) : startEditing())}
+                disabled={disabled}
+                className="flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] font-semibold text-[#F7941D] hover:bg-[#F7941D]/10 rounded-md transition-colors cursor-pointer disabled:opacity-50"
+              >
+                {editMode ? (
+                  <>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                      <circle cx="12" cy="12" r="3" />
+                    </svg>
+                    Ver vista previa
+                  </>
+                ) : (
+                  <>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M12 20h9" />
+                      <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" />
+                    </svg>
+                    Editar texto
+                  </>
+                )}
+              </button>
+            </div>
           </div>
+
+          {/* MODO EDICIÓN: asunto + cuerpo editables */}
+          {editMode ? (
+            <div className="space-y-3">
+              <div>
+                <label className="block text-[10px] uppercase tracking-wider font-semibold text-gray-500 dark:text-gray-400 mb-1">
+                  Asunto
+                </label>
+                <input
+                  type="text"
+                  value={customSubject}
+                  onChange={(e) => setCustomSubject(e.target.value)}
+                  disabled={disabled}
+                  className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-[#0a1628] text-[#1B3A5C] dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#F7941D]/50 focus:border-[#F7941D] transition-all disabled:opacity-50"
+                />
+              </div>
+              <div>
+                <label className="block text-[10px] uppercase tracking-wider font-semibold text-gray-500 dark:text-gray-400 mb-1">
+                  Cuerpo del mensaje
+                </label>
+                <textarea
+                  value={customBody ?? ''}
+                  onChange={(e) => setCustomBody(e.target.value)}
+                  disabled={disabled}
+                  rows={10}
+                  className="w-full px-3 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-[#0a1628] text-[#1B3A5C] dark:text-white text-[13px] leading-relaxed focus:outline-none focus:ring-2 focus:ring-[#F7941D]/50 focus:border-[#F7941D] transition-all disabled:opacity-50 resize-y min-h-[180px] font-sans"
+                />
+                <p className="text-[10px] text-gray-400 italic mt-1">
+                  La firma de Windmar se agrega automáticamente al final. Deja una línea en blanco para separar párrafos.
+                </p>
+              </div>
+            </div>
+          ) : (
+            /* VISTA PREVIA del correo renderizado */
+            <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-[#0a1628]/50 p-4 max-h-80 overflow-y-auto">
+              <p className="font-semibold text-xs text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-gray-700 pb-1.5 mb-2">
+                Asunto: {previewSubject}
+              </p>
+              <div
+                className="text-[13px] text-[#1B3A5C] dark:text-gray-200 leading-relaxed"
+                dangerouslySetInnerHTML={{ __html: previewHtml }}
+              />
+            </div>
+          )}
 
           {/* Mensaje de error */}
           {status === 'error' && errorMsg && (
