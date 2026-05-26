@@ -201,7 +201,35 @@ export const EMAIL_TEMPLATES: EmailTemplate[] = [
     ],
   },
 
-  // ─── 5. Bienvenida (producto + consultor) ─────────────────────────
+  // ─── 5. Enviar documento (cotización / contrato / cualquier cosa) ─
+  {
+    id: 'send_document',
+    label: 'Enviar documento',
+    icon: '📎',
+    description: 'Envío formal de cotización, copia de contrato, estudio técnico, etc.',
+    subject: '{{documentName}} — Windmar Home',
+    htmlBody: wrap(`
+      <p>Estimado/a <strong>{{name}}</strong>,</p>
+      <p>Reciba un cordial saludo de parte de <strong>Windmar Home</strong>.</p>
+      <p>Por medio de la presente le hago llegar el documento que conversamos: <strong>{{documentName}}</strong>.</p>
+      <p>Le agradezco que revise el contenido adjunto cuando le sea posible. Quedo a su entera disposición para cualquier consulta, aclaración o ajuste que considere necesario realizar.</p>
+      <p>Será un verdadero gusto atenderle. Le agradezco profundamente su confianza y el tiempo que dedica a esta gestión.</p>
+      <p>Sin otro particular por el momento, quedo atento/a a sus comentarios.</p>
+      <p><strong>Atentamente,</strong></p>
+    `),
+    extraFields: [
+      {
+        key: 'documentName',
+        label: 'Documento que envías',
+        type: 'text',
+        placeholder: 'Ej. Cotización solar · Copia del contrato · Estudio técnico',
+        defaultValue: 'Documento solicitado',
+        required: true,
+      },
+    ],
+  },
+
+  // ─── 6. Bienvenida (producto + consultor) ─────────────────────────
   {
     id: 'welcome',
     label: 'Bienvenida',

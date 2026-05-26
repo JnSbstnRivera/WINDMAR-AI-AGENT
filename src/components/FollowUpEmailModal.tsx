@@ -280,7 +280,7 @@ export function FollowUpEmailModal({ asesorName, asesorEmail, onClose, onSent }:
           <label className="block text-xs font-semibold text-[#1B3A5C] dark:text-gray-300 mb-2 uppercase tracking-wider">
             Elige una plantilla
           </label>
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
             {EMAIL_TEMPLATES.map((t) => {
               const selected = templateId === t.id;
               return (
