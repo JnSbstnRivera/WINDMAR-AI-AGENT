@@ -40,6 +40,14 @@ export async function POST(req: Request) {
     name?: string;
     templateId?: string;
     extras?: Record<string, string>;
+    /** Extensión del asesor — opcional, se agrega a la firma */
+    asesorExt?: string;
+    /** Archivos adjuntos — base64 con metadata */
+    attachments?: Array<{
+      name: string;
+      contentType: string;
+      contentBytes: string; // base64
+    }>;
   };
   try {
     body = await req.json();
@@ -51,6 +59,34 @@ export async function POST(req: Request) {
   const name = (body.name || '').trim();
   const templateId = (body.templateId || 'general').trim();
   const extras = body.extras || {};
+  const asesorExt = (body.asesorExt || '').trim();
+  const attachments = body.attachments || [];
+
+  // Validar attachments: Graph permite hasta ~3MB inline (4MB con overhead base64).
+  // Más allá requiere upload session que no implementamos en MVP.
+  const MAX_ATTACHMENT_BYTES = 3 * 1024 * 1024; // 3MB por archivo
+  const MAX_TOTAL_BYTES = 4 * 1024 * 1024; // 4MB total
+  let totalBytes = 0;
+  for (const att of attachments) {
+    if (!att.name || !att.contentType || !att.contentBytes) {
+      return NextResponse.json({ error: 'Archivo adjunto malformado' }, { status: 400 });
+    }
+    // base64 → bytes reales: longitud * 3/4 aprox
+    const bytes = Math.floor((att.contentBytes.length * 3) / 4);
+    if (bytes > MAX_ATTACHMENT_BYTES) {
+      return NextResponse.json(
+        { error: `El archivo "${att.name}" excede 3MB. Comprímelo o súbelo a Drive.` },
+        { status: 400 }
+      );
+    }
+    totalBytes += bytes;
+  }
+  if (totalBytes > MAX_TOTAL_BYTES) {
+    return NextResponse.json(
+      { error: 'Los archivos suman más de 4MB. Quita alguno o reduce tamaño.' },
+      { status: 400 }
+    );
+  }
 
   // Validación mínima
   if (!to || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to)) {
@@ -90,11 +126,12 @@ export async function POST(req: Request) {
     session.user.email.split('@')[0];
   const asesorEmail = session.user.email;
 
-  // Renderizar plantilla
+  // Renderizar plantilla (con extensión si la pasaron)
   const { subject, html: htmlBody } = renderTemplate(template, {
     name,
     asesorName,
     asesorEmail,
+    asesorExt: asesorExt || undefined,
     extras,
   });
 
@@ -111,6 +148,13 @@ export async function POST(req: Request) {
           subject,
           body: { contentType: 'HTML', content: htmlBody },
           toRecipients: [{ emailAddress: { address: to, name } }],
+          // Attachments inline (base64) — formato fileAttachment de Graph
+          attachments: attachments.map((att) => ({
+            '@odata.type': '#microsoft.graph.fileAttachment',
+            name: att.name,
+            contentType: att.contentType,
+            contentBytes: att.contentBytes,
+          })),
         },
         saveToSentItems: true,
       }),

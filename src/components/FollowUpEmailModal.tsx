@@ -21,6 +21,20 @@ interface Props {
 
 type Status = 'idle' | 'sending' | 'sent' | 'error';
 
+interface AttachmentFile {
+  name: string;
+  contentType: string;
+  /** base64 sin el prefijo data: */
+  contentBytes: string;
+  /** Tamaño en bytes (para mostrar y validar) */
+  size: number;
+}
+
+const ALLOWED_TYPES = ['application/pdf', 'image/png', 'image/jpeg', 'image/jpg'];
+const MAX_FILE_SIZE = 3 * 1024 * 1024; // 3MB
+const MAX_TOTAL_SIZE = 4 * 1024 * 1024; // 4MB
+const EXT_STORAGE_KEY = 'wh-asesor-extension';
+
 /**
  * Modal de correo de seguimiento con SELECTOR DE PLANTILLAS y CAMPOS EXTRA dinámicos.
  *
@@ -39,9 +53,31 @@ export function FollowUpEmailModal({ asesorName, asesorEmail, onClose, onSent }:
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [extras, setExtras] = useState<Record<string, string>>({});
+  const [asesorExt, setAsesorExt] = useState<string>('');
+  const [attachments, setAttachments] = useState<AttachmentFile[]>([]);
+  const [attachError, setAttachError] = useState<string | null>(null);
   const [status, setStatus] = useState<Status>('idle');
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const nameInputRef = useRef<HTMLInputElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Cargar extensión guardada de localStorage al montar
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(EXT_STORAGE_KEY);
+      if (saved) setAsesorExt(saved);
+    } catch {
+      // localStorage puede fallar en algunos contextos — no es crítico
+    }
+  }, []);
+
+  // Persistir extensión en localStorage cuando cambia
+  useEffect(() => {
+    try {
+      if (asesorExt) localStorage.setItem(EXT_STORAGE_KEY, asesorExt);
+      else localStorage.removeItem(EXT_STORAGE_KEY);
+    } catch {}
+  }, [asesorExt]);
 
   const template: EmailTemplate = useMemo(
     () => EMAIL_TEMPLATES.find((t) => t.id === templateId) || EMAIL_TEMPLATES[0],
@@ -96,8 +132,62 @@ export function FollowUpEmailModal({ asesorName, asesorEmail, onClose, onSent }:
     name: previewName,
     asesorName: previewAsesor,
     asesorEmail: previewEmail,
+    asesorExt: asesorExt || undefined,
     extras,
   });
+
+  // Procesa archivos seleccionados: valida tipo/tamaño y los convierte a base64
+  async function handleFiles(files: FileList | null) {
+    if (!files || files.length === 0) return;
+    setAttachError(null);
+
+    const currentTotal = attachments.reduce((sum, a) => sum + a.size, 0);
+    const newAttachments: AttachmentFile[] = [];
+    let runningTotal = currentTotal;
+
+    for (const file of Array.from(files)) {
+      // Validar tipo
+      if (!ALLOWED_TYPES.includes(file.type)) {
+        setAttachError(`"${file.name}" no es un formato permitido (PDF, JPG, PNG).`);
+        return;
+      }
+      // Validar tamaño individual
+      if (file.size > MAX_FILE_SIZE) {
+        setAttachError(`"${file.name}" excede 3MB. Comprímelo primero.`);
+        return;
+      }
+      // Validar tamaño total acumulado
+      if (runningTotal + file.size > MAX_TOTAL_SIZE) {
+        setAttachError('Los archivos suman más de 4MB. Quita alguno.');
+        return;
+      }
+      runningTotal += file.size;
+
+      // Leer como base64
+      try {
+        const base64 = await fileToBase64(file);
+        newAttachments.push({
+          name: file.name,
+          contentType: file.type,
+          contentBytes: base64,
+          size: file.size,
+        });
+      } catch (err) {
+        console.error('[FollowUpEmailModal] No se pudo leer archivo:', file.name, err);
+        setAttachError(`No se pudo leer "${file.name}". Intenta de nuevo.`);
+        return;
+      }
+    }
+
+    setAttachments((prev) => [...prev, ...newAttachments]);
+    // Reset input para poder volver a seleccionar el mismo archivo
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  }
+
+  function removeAttachment(index: number) {
+    setAttachments((prev) => prev.filter((_, i) => i !== index));
+    setAttachError(null);
+  }
 
   async function handleSubmit() {
     if (!canSubmit) return;
@@ -112,6 +202,13 @@ export function FollowUpEmailModal({ asesorName, asesorEmail, onClose, onSent }:
           name: name.trim(),
           templateId,
           extras,
+          asesorExt: asesorExt.trim() || undefined,
+          // Mandamos solo lo que necesita el endpoint (sin el field `size`)
+          attachments: attachments.map((a) => ({
+            name: a.name,
+            contentType: a.contentType,
+            contentBytes: a.contentBytes,
+          })),
         }),
       });
       const data = await res.json();
@@ -254,6 +351,25 @@ export function FollowUpEmailModal({ asesorName, asesorEmail, onClose, onSent }:
             </div>
           </div>
 
+          {/* Extensión telefónica del asesor — opcional, persiste en localStorage */}
+          <div className="flex items-center gap-2 -mt-2">
+            <span className="text-[10px] uppercase tracking-wider font-semibold text-gray-500 dark:text-gray-400 whitespace-nowrap">
+              Tu extensión
+            </span>
+            <input
+              type="text"
+              value={asesorExt}
+              onChange={(e) => setAsesorExt(e.target.value.replace(/[^\d]/g, '').slice(0, 6))}
+              disabled={disabled}
+              placeholder="Opcional · Ej. 454"
+              maxLength={6}
+              className="flex-1 max-w-[180px] px-2.5 py-1.5 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-[#0a1628] text-[#1B3A5C] dark:text-white text-xs focus:outline-none focus:ring-1 focus:ring-[#F7941D]/50 focus:border-[#F7941D] transition-all disabled:opacity-50"
+            />
+            <span className="text-[10px] text-gray-400 italic">
+              se guarda en tu navegador
+            </span>
+          </div>
+
           {/* Campos extra dinámicos por plantilla */}
           {template.extraFields && template.extraFields.length > 0 && (
             <div className="space-y-3 p-3.5 rounded-lg bg-[#F7941D]/5 border border-[#F7941D]/20">
@@ -273,6 +389,83 @@ export function FollowUpEmailModal({ asesorName, asesorEmail, onClose, onSent }:
               </div>
             </div>
           )}
+
+          {/* Adjuntar archivos (PDF / JPG / PNG, máx 3MB c/u, 4MB total) */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <label className="block text-xs font-semibold text-[#1B3A5C] dark:text-gray-300 uppercase tracking-wider">
+                Adjuntos {attachments.length > 0 && (
+                  <span className="text-gray-400 font-normal normal-case ml-1">
+                    ({attachments.length} · {formatBytes(attachments.reduce((s, a) => s + a.size, 0))})
+                  </span>
+                )}
+              </label>
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                disabled={disabled}
+                type="button"
+                className="flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] font-semibold text-[#F7941D] hover:bg-[#F7941D]/10 rounded-md transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" />
+                </svg>
+                Adjuntar archivo
+              </button>
+              <input
+                ref={fileInputRef}
+                type="file"
+                multiple
+                accept=".pdf,.png,.jpg,.jpeg,application/pdf,image/png,image/jpeg"
+                onChange={(e) => handleFiles(e.target.files)}
+                className="hidden"
+              />
+            </div>
+
+            {attachments.length > 0 && (
+              <div className="space-y-1.5">
+                {attachments.map((att, idx) => (
+                  <div
+                    key={`${att.name}-${idx}`}
+                    className="flex items-center gap-2 px-3 py-2 rounded-lg bg-[#F7941D]/5 border border-[#F7941D]/20"
+                  >
+                    {/* Icono según tipo */}
+                    <span className="text-base flex-shrink-0">
+                      {att.contentType === 'application/pdf' ? '📄' : '🖼️'}
+                    </span>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-medium text-[#1B3A5C] dark:text-white truncate">
+                        {att.name}
+                      </p>
+                      <p className="text-[10px] text-gray-500 dark:text-gray-400">
+                        {formatBytes(att.size)}
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => removeAttachment(idx)}
+                      disabled={disabled}
+                      className="text-gray-400 hover:text-red-500 transition-colors p-1 cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed flex-shrink-0"
+                      aria-label={`Quitar ${att.name}`}
+                    >
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                        <line x1="18" y1="6" x2="6" y2="18" />
+                        <line x1="6" y1="6" x2="18" y2="18" />
+                      </svg>
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {attachError && (
+              <div className="rounded-md bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 px-2.5 py-1.5 text-[11px] text-red-700 dark:text-red-300">
+                ⚠️ {attachError}
+              </div>
+            )}
+
+            <p className="text-[10px] text-gray-400 italic">
+              PDF, JPG o PNG · máx 3MB por archivo · 4MB total
+            </p>
+          </div>
 
           {/* Preview del correo */}
           <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-[#0a1628]/50 p-4 max-h-80 overflow-y-auto">
@@ -383,6 +576,7 @@ function ExtraFieldInput({
   const commonClass =
     'w-full px-3.5 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-[#0a1628] text-[#1B3A5C] dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#F7941D]/50 focus:border-[#F7941D] transition-all disabled:opacity-50';
 
+  // Render correcto del input según tipo
   if (field.type === 'textarea') {
     return (
       <div className="md:col-span-2">
@@ -412,4 +606,30 @@ function ExtraFieldInput({
       />
     </div>
   );
+}
+
+/**
+ * Lee un File del navegador y lo convierte a base64 SIN el prefijo "data:...;base64,".
+ * Microsoft Graph espera solo los bytes en base64.
+ */
+function fileToBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = reader.result as string;
+      // FileReader devuelve "data:application/pdf;base64,JVBERi0..."
+      // Cortamos el prefijo para mandar solo los bytes
+      const idx = result.indexOf(',');
+      resolve(idx >= 0 ? result.slice(idx + 1) : result);
+    };
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(file);
+  });
+}
+
+/** Formatea bytes a "1.2 MB" / "543 KB" / etc. */
+export function formatBytes(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
 }

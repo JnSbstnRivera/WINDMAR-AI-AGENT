@@ -70,10 +70,17 @@ export interface EmailTemplate {
 // ════════════════════════════════════════
 // FIRMA CORPORATIVA WINDMAR
 // ════════════════════════════════════════
-// HTML con tabla para máxima compatibilidad con clientes de correo (Outlook,
-// Gmail, Apple Mail). Las imágenes tienen alt text para fallback cuando se
-// bloquean. El diseño imita la firma oficial de Outlook del asesor.
-function buildSignature(): string {
+// Se construye dinámicamente con valores reales (nombre, correo, extensión).
+// HTML table para compatibilidad máxima con Outlook/Gmail/Apple Mail.
+// Las imágenes apuntan a /email-assets/ del deploy (URLs absolutas para que
+// se carguen también cuando el correo se abre desde otro cliente).
+function buildSignature(asesorName: string, asesorEmail: string, asesorExt?: string): string {
+  const safeName = escapeHtml(asesorName);
+  const safeEmail = escapeHtml(asesorEmail);
+  const phoneLine = asesorExt
+    ? `${PHONE} <strong>Ext. ${escapeHtml(asesorExt)}</strong>`
+    : PHONE;
+
   return `
     <table cellpadding="0" cellspacing="0" border="0" style="margin-top: 28px; border-collapse: collapse; font-family: Arial, Helvetica, sans-serif;">
       <tr>
@@ -82,19 +89,19 @@ function buildSignature(): string {
         </td>
         <td style="padding-left: 18px; vertical-align: top;">
           <p style="margin: 0 0 2px 0; font-size: 16px; font-weight: bold; color: #4f46e5; font-family: Georgia, 'Times New Roman', serif;">
-            {{asesorName}}
+            ${safeName}
           </p>
-          <p style="margin: 0 0 6px 0; font-size: 13px; color: #d1d5db; font-style: italic;">
+          <p style="margin: 0 0 6px 0; font-size: 13px; color: #6b7280; font-style: italic;">
             Asesor de soluciones
           </p>
           <p style="margin: 0 0 2px 0; font-size: 13px; font-weight: bold; color: #F7941D;">
             Windmar Group
           </p>
           <p style="margin: 0 0 2px 0; font-size: 13px; font-weight: bold;">
-            <a href="mailto:{{asesorEmail}}" style="color: #F7941D; text-decoration: none;">{{asesorEmail}}</a>
+            <a href="mailto:${safeEmail}" style="color: #F7941D; text-decoration: none;">${safeEmail}</a>
           </p>
           <p style="margin: 0 0 10px 0; font-size: 13px; font-weight: bold; color: #F7941D;">
-            ${PHONE}
+            ${phoneLine}
           </p>
           <img src="${SOCIAL_URL}" alt="Windmar Group · Síguenos en redes" width="180" style="display: block; border: 0; max-width: 180px; height: auto;" />
         </td>
@@ -103,12 +110,12 @@ function buildSignature(): string {
   `.trim();
 }
 
-// Wrap común — envuelve el cuerpo en un div con estilos consistentes
+// Wrap común — solo div container. La FIRMA se agrega en renderTemplate()
+// porque necesita valores reales (no placeholders) para escapar bien.
 function wrap(innerHtml: string): string {
   return `
     <div style="font-family: Arial, Helvetica, sans-serif; font-size: 14px; color: #1B3A5C; line-height: 1.65; max-width: 600px;">
       ${innerHtml}
-      ${buildSignature()}
     </div>
   `.trim();
 }
@@ -250,6 +257,8 @@ export function renderTemplate(
     name: string;
     asesorName: string;
     asesorEmail: string;
+    /** Extensión telefónica del asesor — opcional, se agrega "Ext. {ext}" en firma */
+    asesorExt?: string;
     extras?: Record<string, string>;
   }
 ): { subject: string; html: string } {
@@ -273,20 +282,30 @@ export function renderTemplate(
     }
   }
 
-  // Reemplazar placeholders en subject y html
-  // El body se escapa por placeholder; las URLs de imágenes y href en la firma
-  // se preservan porque están escritas directamente en el template (no son input).
+  // Reemplazar placeholders del body — escapa contenido y convierte \n a <br>
   const replaceAll = (str: string): string =>
     str.replace(/\{\{(\w+)\}\}/g, (_, key) => {
       const val = allVars[key] ?? '';
-      // Si el campo es textarea, convertimos \n a <br> después del escape
       const escaped = escapeHtml(val);
       return escaped.replace(/\n/g, '<br>');
     });
 
+  // Construir firma con valores reales (no placeholders) — la firma maneja
+  // su propio escape internamente para preservar las URLs de imágenes.
+  const signature = buildSignature(vars.asesorName, vars.asesorEmail, vars.asesorExt);
+
+  // El htmlBody renderizado + la firma, todo dentro del wrap div del template.
+  // Para inyectar la firma DENTRO del wrap (no después), reemplazamos el </div>
+  // de cierre de wrap por la firma + </div>.
+  const bodyHtml = replaceAll(template.htmlBody);
+  const htmlWithSignature = bodyHtml.replace(
+    /<\/div>\s*$/,
+    `${signature}</div>`
+  );
+
   return {
     subject: replaceAll(template.subject),
-    html: replaceAll(template.htmlBody),
+    html: htmlWithSignature,
   };
 }
 
