@@ -263,22 +263,28 @@ export function ChatApp({ user, onSignOut }: Props) {
   }
 
   /**
-   * Handler para upload de foto/PDF de factura LUMA.
+   * Handler para upload de CUALQUIER documento (foto o PDF).
    * Acepta texto adicional opcional (estilo GPT: archivo + mensaje juntos).
+   *
+   * Si el asesor escribe texto, el bot cumple ese pedido sobre el documento
+   * (ej. "extrae los datos", "¿quién es el titular?", "dime el monto").
+   * Si no escribe nada, el bot detecta el tipo de documento (factura LUMA,
+   * ID, cotización, contrato, etc.) y extrae datos automáticamente.
+   *
    * 1. Inserta un mensaje "USER" con el archivo (+ texto si hay)
-   * 2. Llama POST /api/upload-luma con FormData
+   * 2. Llama POST /api/upload-document con FormData
    * 3. Inserta la respuesta del asistente con el análisis y tools
    */
-  async function uploadLumaBill(file: File, userMessage?: string) {
+  async function uploadDocument(file: File, userMessage?: string) {
     if (isStreaming) return;
 
     let convId = activeId;
-    // Crear conversación si no hay una activa
+    // Crear conversación si no hay una activa — título genérico basado en archivo
     if (!convId) {
       const res = await fetch('/api/conversations', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title: 'Factura LUMA · ' + file.name.slice(0, 40) }),
+        body: JSON.stringify({ title: 'Documento · ' + file.name.slice(0, 40) }),
       });
       if (!res.ok) return;
       const { conversation } = await res.json() as { conversation: Conversation };
@@ -294,9 +300,10 @@ export function ChatApp({ user, onSignOut }: Props) {
     }
 
     // Mensaje del usuario representando el archivo + texto opcional
+    // Sin texto: el bot detecta tipo de documento automáticamente
     const userContent = userMessage
       ? `📎 **${file.name}** (${Math.round(file.size / 1024)} KB)\n\n${userMessage}`
-      : `📎 Adjunté: **${file.name}** (${Math.round(file.size / 1024)} KB) — analizar consumo`;
+      : `📎 Adjunté: **${file.name}** (${Math.round(file.size / 1024)} KB)`;
     const userMsg: Message = {
       id: generateId(),
       role: 'user',
@@ -331,7 +338,7 @@ export function ChatApp({ user, onSignOut }: Props) {
       if (convId) formData.append('conversation_id', convId);
       if (userMessage) formData.append('additional_message', userMessage);
 
-      const res = await fetch('/api/upload-luma', { method: 'POST', body: formData });
+      const res = await fetch('/api/upload-document', { method: 'POST', body: formData });
       const data = await res.json() as { text?: string; error?: string };
 
       if (!res.ok || !data.text) {
@@ -375,7 +382,7 @@ export function ChatApp({ user, onSignOut }: Props) {
         )
       );
     } catch (err) {
-      console.error('[uploadLumaBill]', err);
+      console.error('[uploadDocument]', err);
       setConversations((prev) =>
         prev.map((c) =>
           c.id === convId
@@ -966,7 +973,7 @@ export function ChatApp({ user, onSignOut }: Props) {
               disabled={isStreaming}
               isStreaming={isStreaming}
               onStop={stopStreaming}
-              onAttach={uploadLumaBill}
+              onAttach={uploadDocument}
               onTypingChange={(typing) => {
                 if (!isStreaming) setMascotState(typing ? 'typing' : 'idle');
               }}
@@ -990,7 +997,7 @@ export function ChatApp({ user, onSignOut }: Props) {
             <WelcomeScreen
               onSend={sendMessage}
               disabled={isStreaming}
-              onAttach={uploadLumaBill}
+              onAttach={uploadDocument}
               onTypingChange={(typing) => {
                 if (!isStreaming) setMascotState(typing ? 'typing' : 'idle');
               }}

@@ -159,8 +159,8 @@ export function ChatInput({ onSend, disabled, onTypingChange, isStreaming, onSto
                     onClick={handleAttachClick}
                     disabled={disabled || isStreaming || !!attachedFile}
                     className="text-gray-500 hover:text-[#F7941D] disabled:opacity-40 disabled:cursor-not-allowed transition-colors w-10 h-10 flex items-center justify-center rounded-lg hover:bg-[#F7941D]/10 cursor-pointer flex-shrink-0"
-                    aria-label="Adjuntar factura LUMA (foto o PDF)"
-                    title="Subir factura LUMA (foto o PDF)"
+                    aria-label="Adjuntar documento (foto o PDF)"
+                    title="Adjuntar documento (foto o PDF) — factura LUMA, ID, cotización, etc."
                   >
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/>
