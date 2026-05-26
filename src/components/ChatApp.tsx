@@ -469,11 +469,12 @@ export function ChatApp({ user, onSignOut }: Props) {
     // El bot NO se involucra — es solo UI que llama Graph API directo.
     // Aliases: /@ es atajo rápido (símbolo natural de correo).
     if (
+      cmd === '/@' ||
       cmd === '/seguimiento' ||
+      cmd === '/correos' ||
       cmd === '/correo' ||
       cmd === '/email' ||
-      cmd === '/followup' ||
-      cmd === '/@'
+      cmd === '/followup'
     ) {
       setFollowUpOpen(true);
       return;
