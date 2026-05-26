@@ -1,12 +1,73 @@
 'use client';
 
-import { useState, useEffect, useRef, useMemo } from 'react';
+import { useState, useEffect, useRef, useMemo, type JSX } from 'react';
 import {
   EMAIL_TEMPLATES,
   renderTemplate,
   type EmailTemplate,
   type EmailExtraField,
 } from '@/lib/email-templates';
+
+// ════════════════════════════════════════
+// ICONOS VECTOR (estilo Lucide — línea fina, no emojis)
+// ════════════════════════════════════════
+// Un SVG por plantilla, todos comparten el mismo strokeWidth para armonía
+// visual. Color se hereda de currentColor para adaptarse al estado (naranja
+// si selected, gris si no).
+const ICON_STROKE = 1.7;
+const TEMPLATE_ICONS: Record<string, JSX.Element> = {
+  // message-circle — conversación / seguimiento
+  general: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={ICON_STROKE} strokeLinecap="round" strokeLinejoin="round">
+      <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
+    </svg>
+  ),
+  // file-text — documento con líneas (pedir documentos)
+  documents: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={ICON_STROKE} strokeLinecap="round" strokeLinejoin="round">
+      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+      <polyline points="14 2 14 8 20 8" />
+      <line x1="16" y1="13" x2="8" y2="13" />
+      <line x1="16" y1="17" x2="8" y2="17" />
+      <polyline points="10 9 9 9 8 9" />
+    </svg>
+  ),
+  // phone-missed — llamada con X arriba
+  missed_call: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={ICON_STROKE} strokeLinecap="round" strokeLinejoin="round">
+      <line x1="23" y1="1" x2="17" y2="7" />
+      <line x1="17" y1="1" x2="23" y2="7" />
+      <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
+    </svg>
+  ),
+  // calendar-check — cita confirmada
+  appointment: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={ICON_STROKE} strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+      <line x1="16" y1="2" x2="16" y2="6" />
+      <line x1="8" y1="2" x2="8" y2="6" />
+      <line x1="3" y1="10" x2="21" y2="10" />
+      <polyline points="9 16 11 18 15 14" />
+    </svg>
+  ),
+  // send — flecha papel enviar (documento)
+  send_document: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={ICON_STROKE} strokeLinecap="round" strokeLinejoin="round">
+      <line x1="22" y1="2" x2="11" y2="13" />
+      <polygon points="22 2 15 22 11 13 2 9 22 2" />
+    </svg>
+  ),
+  // sparkles — bienvenida (sutil, no fiesta)
+  welcome: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={ICON_STROKE} strokeLinecap="round" strokeLinejoin="round">
+      <path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3L12 3Z" />
+      <path d="M5 3v4" />
+      <path d="M19 17v4" />
+      <path d="M3 5h4" />
+      <path d="M17 19h4" />
+    </svg>
+  ),
+};
 
 interface Props {
   /** Nombre formal del asesor (Juan Rivera) — del SSO de Microsoft */
@@ -60,6 +121,20 @@ export function FollowUpEmailModal({ asesorName, asesorEmail, onClose, onSent }:
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const nameInputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+
+  // Click fuera del dropdown lo cierra (no afecta al modal completo)
+  useEffect(() => {
+    if (!dropdownOpen) return;
+    const handler = (e: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [dropdownOpen]);
 
   // Cargar extensión guardada de localStorage al montar
   useEffect(() => {
@@ -275,43 +350,120 @@ export function FollowUpEmailModal({ asesorName, asesorEmail, onClose, onSent }:
           </button>
         </div>
 
-        {/* Selector de plantillas */}
+        {/* Selector de plantillas — dropdown transparente con iconos vector */}
         <div className="px-5 pt-4 pb-2">
           <label className="block text-xs font-semibold text-[#1B3A5C] dark:text-gray-300 mb-2 uppercase tracking-wider">
             Elige una plantilla
           </label>
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-            {EMAIL_TEMPLATES.map((t) => {
-              const selected = templateId === t.id;
-              return (
-                <button
-                  key={t.id}
-                  onClick={() => setTemplateId(t.id)}
-                  disabled={disabled}
-                  className="relative flex flex-col items-center gap-1 px-2 py-2.5 rounded-lg border-2 transition-all cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
-                  style={{
-                    borderColor: selected ? '#F7941D' : 'rgba(156, 163, 175, 0.3)',
-                    background: selected
-                      ? 'linear-gradient(135deg, rgba(247,148,29,0.15) 0%, rgba(247,148,29,0.05) 100%)'
-                      : 'transparent',
-                    boxShadow: selected ? '0 0 12px rgba(247,148,29,0.25)' : 'none',
-                  }}
-                  title={t.description}
-                >
-                  <span className="text-xl leading-none">{t.icon}</span>
-                  <span
-                    className="text-[10px] font-semibold text-center leading-tight"
-                    style={{ color: selected ? '#F7941D' : 'inherit' }}
-                  >
-                    {t.label}
-                  </span>
-                </button>
-              );
-            })}
+          <div className="relative" ref={dropdownRef}>
+            {/* Trigger del dropdown */}
+            <button
+              type="button"
+              onClick={() => setDropdownOpen((o) => !o)}
+              disabled={disabled}
+              className="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-lg border transition-all cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 group"
+              style={{
+                borderColor: dropdownOpen ? '#F7941D' : 'rgba(156, 163, 175, 0.4)',
+                background: dropdownOpen
+                  ? 'linear-gradient(135deg, rgba(247,148,29,0.08) 0%, transparent 100%)'
+                  : 'transparent',
+                boxShadow: dropdownOpen ? '0 0 14px rgba(247,148,29,0.18)' : 'none',
+              }}
+            >
+              <span className="w-5 h-5 flex-shrink-0 text-[#F7941D]">
+                {TEMPLATE_ICONS[template.id]}
+              </span>
+              <div className="flex-1 text-left min-w-0">
+                <p className="text-sm font-semibold text-[#1B3A5C] dark:text-white truncate">
+                  {template.label}
+                </p>
+                <p className="text-[11px] text-gray-500 dark:text-gray-400 truncate italic">
+                  {template.description}
+                </p>
+              </div>
+              {/* Chevron — rota cuando abierto */}
+              <svg
+                className="w-4 h-4 text-gray-400 transition-transform flex-shrink-0"
+                style={{ transform: dropdownOpen ? 'rotate(180deg)' : 'rotate(0deg)' }}
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={2}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <polyline points="6 9 12 15 18 9" />
+              </svg>
+            </button>
+
+            {/* Panel del dropdown — transparente con backdrop blur, dark-mode aware */}
+            {dropdownOpen && (
+              <div
+                className="absolute z-20 mt-1.5 w-full rounded-lg overflow-hidden bg-white/75 dark:bg-[#0f1c2e]/85 border border-[#F7941D]/35"
+                style={{
+                  backdropFilter: 'blur(14px) saturate(180%)',
+                  WebkitBackdropFilter: 'blur(14px) saturate(180%)',
+                  boxShadow: '0 10px 30px rgba(0, 0, 0, 0.25), 0 0 22px rgba(247, 148, 29, 0.18)',
+                  animation: 'wmDropdownIn 160ms cubic-bezier(0.34, 1.15, 0.55, 1) both',
+                }}
+              >
+                {EMAIL_TEMPLATES.map((t) => {
+                  const selected = templateId === t.id;
+                  return (
+                    <button
+                      key={t.id}
+                      type="button"
+                      onClick={() => {
+                        setTemplateId(t.id);
+                        setDropdownOpen(false);
+                      }}
+                      className={`w-full flex items-center gap-3 px-3.5 py-2.5 transition-colors cursor-pointer text-left border-b last:border-b-0 border-gray-200/30 dark:border-white/5 ${
+                        selected
+                          ? 'bg-gradient-to-r from-[#F7941D]/20 to-[#F7941D]/5'
+                          : 'hover:bg-[#F7941D]/10 dark:hover:bg-[#F7941D]/12'
+                      }`}
+                    >
+                      <span
+                        className={`w-5 h-5 flex-shrink-0 ${
+                          selected ? 'text-[#F7941D]' : 'text-gray-500 dark:text-gray-400'
+                        }`}
+                      >
+                        {TEMPLATE_ICONS[t.id]}
+                      </span>
+                      <div className="flex-1 min-w-0">
+                        <p
+                          className={`text-sm font-semibold truncate ${
+                            selected
+                              ? 'text-[#F7941D]'
+                              : 'text-[#1B3A5C] dark:text-white'
+                          }`}
+                        >
+                          {t.label}
+                        </p>
+                        <p className="text-[11px] text-gray-500 dark:text-gray-400 truncate">
+                          {t.description}
+                        </p>
+                      </div>
+                      {/* Check sutil cuando está seleccionada */}
+                      {selected && (
+                        <svg
+                          className="w-4 h-4 flex-shrink-0 text-[#F7941D]"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth={2.5}
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        >
+                          <polyline points="20 6 9 17 4 12" />
+                        </svg>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
           </div>
-          <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-2 italic">
-            {template.description}
-          </p>
         </div>
 
         {/* Body */}

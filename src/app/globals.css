@@ -71,6 +71,18 @@ body {
   50%      { transform: scale(1.15); }
 }
 
+/* Apertura suave del dropdown de plantillas de correo de seguimiento */
+@keyframes wmDropdownIn {
+  from {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
 .wm-fade-in {
   animation: wmFadeInUp 0.3s ease-out;
 }
