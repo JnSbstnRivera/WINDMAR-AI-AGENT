@@ -7,12 +7,16 @@ import { findTemplate, renderTemplate } from '@/lib/email-templates';
  * Envía un correo de seguimiento desde el Outlook del asesor logueado.
  * Usa Microsoft Graph (sendMail) con el access_token guardado en el JWT.
  *
- * Body: { to: string, name: string, templateId: string }
- * - to:         correo del cliente
- * - name:       nombre del cliente para personalizar el saludo
- * - templateId: id de la plantilla en src/lib/email-templates.ts
+ * Body: {
+ *   to:         string,                 // correo del cliente
+ *   name:       string,                 // nombre del cliente
+ *   templateId: string,                 // id de la plantilla
+ *   extras?:    Record<string, string>  // campos extra (documents, date, time, etc.)
+ * }
  *
  * El correo queda automáticamente en la carpeta /Enviados del asesor.
+ * La firma usa el NOMBRE FORMAL del asesor (Juan Rivera) extraído del SSO,
+ * no el display_name personalizado (que puede ser un apodo).
  */
 export async function POST(req: Request) {
   const session = await auth();
@@ -20,8 +24,6 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'No autenticado' }, { status: 401 });
   }
 
-  // session.msAccessToken viene del JWT (callback en auth.ts).
-  // Si es null, el asesor entró ANTES del cambio de scope → debe hacer logout/login.
   const accessToken = (session as unknown as { msAccessToken?: string | null }).msAccessToken;
   if (!accessToken) {
     return NextResponse.json(
@@ -33,7 +35,12 @@ export async function POST(req: Request) {
     );
   }
 
-  let body: { to?: string; name?: string; templateId?: string };
+  let body: {
+    to?: string;
+    name?: string;
+    templateId?: string;
+    extras?: Record<string, string>;
+  };
   try {
     body = await req.json();
   } catch {
@@ -43,8 +50,9 @@ export async function POST(req: Request) {
   const to = (body.to || '').trim();
   const name = (body.name || '').trim();
   const templateId = (body.templateId || 'general').trim();
+  const extras = body.extras || {};
 
-  // Validación mínima — Graph también valida pero damos errores legibles
+  // Validación mínima
   if (!to || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to)) {
     return NextResponse.json({ error: 'Correo del cliente inválido' }, { status: 400 });
   }
@@ -52,20 +60,43 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Falta el nombre del cliente' }, { status: 400 });
   }
 
-  // Validar que la plantilla existe — protege contra IDs inventados desde el cliente
+  // Validar plantilla
   const template = findTemplate(templateId);
   if (!template) {
     return NextResponse.json({ error: `Plantilla "${templateId}" no existe` }, { status: 400 });
   }
 
-  // Nombre del asesor para la firma (cae al email si no hay displayName)
+  // Validar campos extra requeridos
+  if (template.extraFields) {
+    for (const field of template.extraFields) {
+      if (field.required && !(extras[field.key] || '').trim()) {
+        return NextResponse.json(
+          { error: `Falta el campo "${field.label}"` },
+          { status: 400 }
+        );
+      }
+    }
+  }
+
+  // Datos del asesor para la firma — formal_name del SSO de Microsoft
+  const userExt = session.user as unknown as {
+    formalName?: string | null;
+    displayName?: string | null;
+  };
   const asesorName =
-    ((session.user as unknown as { displayName?: string | null }).displayName) ||
+    userExt.formalName ||
+    userExt.displayName ||
     session.user.name ||
     session.user.email.split('@')[0];
+  const asesorEmail = session.user.email;
 
-  // Renderizar la plantilla — escape HTML interno, sin precios (regla suprema)
-  const { subject, html: htmlBody } = renderTemplate(template, { name, asesor: asesorName });
+  // Renderizar plantilla
+  const { subject, html: htmlBody } = renderTemplate(template, {
+    name,
+    asesorName,
+    asesorEmail,
+    extras,
+  });
 
   // Llamada a Graph API — sendMail envía y guarda en Enviados automáticamente
   try {
@@ -89,22 +120,15 @@ export async function POST(req: Request) {
       const errText = await graphRes.text().catch(() => '');
       console.error('[email/send] Graph rechazó:', graphRes.status, errText);
 
-      // 401 = token expirado o inválido → asesor debe re-login
       if (graphRes.status === 401) {
         return NextResponse.json(
-          {
-            error: 'Tu sesión expiró. Cierra sesión y vuelve a iniciar.',
-            needsRelogin: true,
-          },
+          { error: 'Tu sesión expiró. Cierra sesión y vuelve a iniciar.', needsRelogin: true },
           { status: 401 }
         );
       }
-      // 403 = scope insuficiente (raro, pero por si acaso)
       if (graphRes.status === 403) {
         return NextResponse.json(
-          {
-            error: 'No tienes permiso de enviar correos. Pide a IT que apruebe Mail.Send.',
-          },
+          { error: 'No tienes permiso de enviar correos. Pide a IT que apruebe Mail.Send.' },
           { status: 403 }
         );
       }

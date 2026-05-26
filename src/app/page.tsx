@@ -37,6 +37,8 @@ export default async function HomePage() {
     photoUrl,
     // Nombre completo de Microsoft (para mostrar como referencia en onboarding modal)
     microsoftFullName: session.user.name ?? '',
+    // Nombre formal del SSO ("Juan Rivera") — usado en firmas de correo
+    formalName: (sessionUser.formalName as string | null) ?? null,
   };
 
   // Saludo según hora local Puerto Rico (UTC-4)

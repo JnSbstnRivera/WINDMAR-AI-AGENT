@@ -67,6 +67,8 @@ interface UserData {
   rol: string | null;
   /** Foto de perfil de Microsoft 365 (data URI base64) o null si no la tiene. */
   photoUrl?: string | null;
+  /** Nombre formal del SSO (Juan Rivera) — usado en firmas de correo. */
+  formalName?: string | null;
 }
 
 interface Props {
@@ -942,7 +944,8 @@ export function ChatApp({ user, onSignOut }: Props) {
             {pongOpen && <WindmarPong onClose={() => setPongOpen(false)} />}
             {followUpOpen && (
               <FollowUpEmailModal
-                asesorName={capDisplayName}
+                asesorName={user.formalName || capDisplayName}
+                asesorEmail={user.email}
                 onClose={() => setFollowUpOpen(false)}
                 onSent={(to, name, templateLabel) =>
                   insertStaticReply(
@@ -967,7 +970,8 @@ export function ChatApp({ user, onSignOut }: Props) {
             {invadersOpen && <WindmarInvaders onClose={() => setInvadersOpen(false)} />}
             {followUpOpen && (
               <FollowUpEmailModal
-                asesorName={capDisplayName}
+                asesorName={user.formalName || capDisplayName}
+                asesorEmail={user.email}
                 onClose={() => setFollowUpOpen(false)}
                 onSent={(to, name, templateLabel) =>
                   insertStaticReply(

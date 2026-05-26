@@ -1,59 +1,70 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
-import { EMAIL_TEMPLATES, renderTemplate, type EmailTemplate } from '@/lib/email-templates';
+import { useState, useEffect, useRef, useMemo } from 'react';
+import {
+  EMAIL_TEMPLATES,
+  renderTemplate,
+  type EmailTemplate,
+  type EmailExtraField,
+} from '@/lib/email-templates';
 
 interface Props {
-  /** Nombre del asesor — para personalizar la firma del preview */
+  /** Nombre formal del asesor (Juan Rivera) — del SSO de Microsoft */
   asesorName: string;
+  /** Correo corporativo del asesor — para la firma */
+  asesorEmail: string;
   /** Cierra el modal sin enviar */
   onClose: () => void;
-  /** Callback cuando el correo se envió exitosamente — recibe to+name+template para el mensaje en el chat */
+  /** Callback cuando el correo se envió exitosamente */
   onSent: (to: string, name: string, templateLabel: string) => void;
 }
 
 type Status = 'idle' | 'sending' | 'sent' | 'error';
 
 /**
- * Modal de correo de seguimiento con SELECTOR DE PLANTILLAS.
+ * Modal de correo de seguimiento con SELECTOR DE PLANTILLAS y CAMPOS EXTRA dinámicos.
  *
- * Flow:
- *  1. Asesor elige plantilla (5 opciones: general, factura LUMA, no contestó, cita, info)
- *  2. Llena nombre + correo del cliente
- *  3. Preview se actualiza en vivo con la plantilla y los datos
- *  4. POST /api/email/send con { to, name, templateId }
- *  5. El correo sale del Outlook del asesor vía Microsoft Graph
- *
- * UX:
- *  - ESC cierra (excepto cuando está enviando)
- *  - Enter en correo envía (si todo válido)
- *  - Tras enviar: ✓ verde 1.5s, auto-cierra y notifica al chat
+ * Flujo:
+ *  1. Asesor elige una de 5 plantillas
+ *  2. Llena nombre + correo del cliente (siempre requeridos)
+ *  3. Llena campos extra si la plantilla los requiere
+ *     - documents: textarea para especificar qué pedir
+ *     - appointment: fecha + hora
+ *     - welcome: producto + consultor
+ *  4. Preview se actualiza en vivo
+ *  5. POST /api/email/send con { to, name, templateId, extras }
  */
-export function FollowUpEmailModal({ asesorName, onClose, onSent }: Props) {
+export function FollowUpEmailModal({ asesorName, asesorEmail, onClose, onSent }: Props) {
   const [templateId, setTemplateId] = useState<string>(EMAIL_TEMPLATES[0].id);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
+  const [extras, setExtras] = useState<Record<string, string>>({});
   const [status, setStatus] = useState<Status>('idle');
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const nameInputRef = useRef<HTMLInputElement>(null);
 
-  const template: EmailTemplate =
-    EMAIL_TEMPLATES.find((t) => t.id === templateId) || EMAIL_TEMPLATES[0];
+  const template: EmailTemplate = useMemo(
+    () => EMAIL_TEMPLATES.find((t) => t.id === templateId) || EMAIL_TEMPLATES[0],
+    [templateId]
+  );
 
-  // Render del preview en vivo — usa la misma función que el backend
-  const previewName = name.trim() || '[nombre del cliente]';
-  const previewAsesor = asesorName || 'tú';
-  const { subject: previewSubject, html: previewHtml } = renderTemplate(template, {
-    name: previewName,
-    asesor: previewAsesor,
-  });
+  // Reset campos extra cuando cambia la plantilla, precargando defaults
+  useEffect(() => {
+    const initial: Record<string, string> = {};
+    if (template.extraFields) {
+      for (const f of template.extraFields) {
+        initial[f.key] = f.defaultValue || '';
+      }
+    }
+    setExtras(initial);
+  }, [template]);
 
-  // Focus inicial en el primer input
+  // Focus inicial
   useEffect(() => {
     nameInputRef.current?.focus();
   }, []);
 
-  // ESC para cerrar
+  // ESC cierra
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && status !== 'sending') onClose();
@@ -62,10 +73,31 @@ export function FollowUpEmailModal({ asesorName, onClose, onSent }: Props) {
     return () => window.removeEventListener('keydown', handler);
   }, [onClose, status]);
 
+  // Validación: nombre + email + todos los extras requeridos
+  const extrasValid = useMemo(() => {
+    if (!template.extraFields) return true;
+    for (const f of template.extraFields) {
+      if (f.required && !(extras[f.key] || '').trim()) return false;
+    }
+    return true;
+  }, [template, extras]);
+
   const canSubmit =
     name.trim().length >= 2 &&
     /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()) &&
+    extrasValid &&
     status !== 'sending';
+
+  // Render del preview en vivo
+  const previewName = name.trim() || '[nombre del cliente]';
+  const previewAsesor = asesorName || 'tú';
+  const previewEmail = asesorEmail || 'asesor@windmarhome.com';
+  const { subject: previewSubject, html: previewHtml } = renderTemplate(template, {
+    name: previewName,
+    asesorName: previewAsesor,
+    asesorEmail: previewEmail,
+    extras,
+  });
 
   async function handleSubmit() {
     if (!canSubmit) return;
@@ -75,7 +107,12 @@ export function FollowUpEmailModal({ asesorName, onClose, onSent }: Props) {
       const res = await fetch('/api/email/send', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ to: email.trim(), name: name.trim(), templateId }),
+        body: JSON.stringify({
+          to: email.trim(),
+          name: name.trim(),
+          templateId,
+          extras,
+        }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -84,7 +121,6 @@ export function FollowUpEmailModal({ asesorName, onClose, onSent }: Props) {
         return;
       }
       setStatus('sent');
-      // Auto-cerrar tras 1.5s y notificar al chat con el label de la plantilla
       setTimeout(() => {
         onSent(email.trim(), name.trim(), template.label);
         onClose();
@@ -125,7 +161,7 @@ export function FollowUpEmailModal({ asesorName, onClose, onSent }: Props) {
                 Correo de seguimiento
               </h2>
               <p className="text-[11px] text-gray-500 dark:text-gray-400 leading-tight">
-                Se envía desde tu Outlook
+                Desde tu Outlook · firma como <strong>{asesorName}</strong>
               </p>
             </div>
           </div>
@@ -183,7 +219,7 @@ export function FollowUpEmailModal({ asesorName, onClose, onSent }: Props) {
 
         {/* Body */}
         <div className="px-5 pb-5 pt-2 space-y-4">
-          {/* Inputs */}
+          {/* Inputs base */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-semibold text-[#1B3A5C] dark:text-gray-300 mb-1.5 uppercase tracking-wider">
@@ -209,7 +245,7 @@ export function FollowUpEmailModal({ asesorName, onClose, onSent }: Props) {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 onKeyDown={(e) => {
-                  if (e.key === 'Enter' && canSubmit) handleSubmit();
+                  if (e.key === 'Enter' && canSubmit && !template.extraFields?.length) handleSubmit();
                 }}
                 disabled={disabled}
                 placeholder="cliente@correo.com"
@@ -218,8 +254,28 @@ export function FollowUpEmailModal({ asesorName, onClose, onSent }: Props) {
             </div>
           </div>
 
+          {/* Campos extra dinámicos por plantilla */}
+          {template.extraFields && template.extraFields.length > 0 && (
+            <div className="space-y-3 p-3.5 rounded-lg bg-[#F7941D]/5 border border-[#F7941D]/20">
+              <p className="text-[10px] uppercase tracking-wider font-semibold text-[#F7941D]">
+                ✨ Detalles para esta plantilla
+              </p>
+              <div className={template.extraFields.length > 1 ? 'grid grid-cols-1 md:grid-cols-2 gap-3' : ''}>
+                {template.extraFields.map((field) => (
+                  <ExtraFieldInput
+                    key={field.key}
+                    field={field}
+                    value={extras[field.key] || ''}
+                    disabled={disabled}
+                    onChange={(v) => setExtras((prev) => ({ ...prev, [field.key]: v }))}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Preview del correo */}
-          <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-[#0a1628]/50 p-4 max-h-72 overflow-y-auto">
+          <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-[#0a1628]/50 p-4 max-h-80 overflow-y-auto">
             <div className="text-[10px] uppercase tracking-wider text-gray-500 dark:text-gray-400 font-semibold mb-2 flex items-center gap-1.5">
               <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
                 <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
@@ -230,9 +286,8 @@ export function FollowUpEmailModal({ asesorName, onClose, onSent }: Props) {
             <p className="font-semibold text-xs text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-gray-700 pb-1.5 mb-2">
               Asunto: {previewSubject}
             </p>
-            {/* Renderizamos el HTML de la plantilla — viene de email-templates.ts (trusted) */}
             <div
-              className="text-[13px] text-[#1B3A5C] dark:text-gray-200 leading-relaxed prose-sm dark:prose-invert"
+              className="text-[13px] text-[#1B3A5C] dark:text-gray-200 leading-relaxed"
               dangerouslySetInnerHTML={{ __html: previewHtml }}
             />
           </div>
@@ -255,7 +310,7 @@ export function FollowUpEmailModal({ asesorName, onClose, onSent }: Props) {
           )}
         </div>
 
-        {/* Footer con botón principal */}
+        {/* Footer */}
         <div className="px-5 py-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-[#0a1628]/30">
           <button
             onClick={handleSubmit}
@@ -299,6 +354,62 @@ export function FollowUpEmailModal({ asesorName, onClose, onSent }: Props) {
           </p>
         </div>
       </div>
+    </div>
+  );
+}
+
+/**
+ * Renderiza el input apropiado según el tipo de campo extra.
+ * Maneja: text, textarea, date, time.
+ */
+function ExtraFieldInput({
+  field,
+  value,
+  disabled,
+  onChange,
+}: {
+  field: EmailExtraField;
+  value: string;
+  disabled: boolean;
+  onChange: (v: string) => void;
+}) {
+  const labelEl = (
+    <label className="block text-xs font-semibold text-[#1B3A5C] dark:text-gray-300 mb-1.5 uppercase tracking-wider">
+      {field.label}
+      {field.required && <span className="text-red-500 ml-0.5">*</span>}
+    </label>
+  );
+
+  const commonClass =
+    'w-full px-3.5 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-[#0a1628] text-[#1B3A5C] dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#F7941D]/50 focus:border-[#F7941D] transition-all disabled:opacity-50';
+
+  if (field.type === 'textarea') {
+    return (
+      <div className="md:col-span-2">
+        {labelEl}
+        <textarea
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          disabled={disabled}
+          placeholder={field.placeholder}
+          rows={3}
+          className={commonClass + ' resize-y min-h-[80px]'}
+        />
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      {labelEl}
+      <input
+        type={field.type}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        disabled={disabled}
+        placeholder={field.placeholder}
+        className={commonClass}
+      />
     </div>
   );
 }

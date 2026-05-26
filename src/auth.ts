@@ -18,6 +18,27 @@ export function isAuthEnabled() {
 }
 
 /**
+ * Convierte "Juan Sebastian Rivera Jiménez" → "Juan Rivera" (primer nombre + primer apellido).
+ * Útil para firmas formales de correo aunque el display_name del asesor sea un apodo.
+ *
+ * Heurística para nombres hispanos:
+ *   1 palabra:  "Juan"           → "Juan"
+ *   2 palabras: "Juan Rivera"    → "Juan Rivera"
+ *   3 palabras: "Juan A Rivera"  → "Juan A"  (no podemos saber si hay apellido materno)
+ *   4+ palabras: "Juan Seb Rivera Jiménez" → "Juan Rivera" (primer nombre + apellido paterno)
+ */
+export function computeFormalName(fullName: string): string {
+  const parts = (fullName || '').trim().split(/\s+/).filter(Boolean);
+  const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1).toLowerCase();
+  if (parts.length === 0) return '';
+  if (parts.length === 1) return cap(parts[0]);
+  if (parts.length === 2) return `${cap(parts[0])} ${cap(parts[1])}`;
+  if (parts.length === 3) return `${cap(parts[0])} ${cap(parts[1])}`;
+  // 4+: nombre + apellido paterno (penúltima palabra)
+  return `${cap(parts[0])} ${cap(parts[parts.length - 2])}`;
+}
+
+/**
  * Refresca el access_token de Microsoft Graph usando el refresh_token guardado.
  * Llamada al endpoint OAuth2 de Microsoft. Si falla (refresh_token revocado o
  * expirado a los 90 días), el siguiente intento de enviar correo falla con 401
@@ -165,6 +186,15 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         token.msExpiresAt = account.expires_at; // Unix timestamp en segundos
       }
 
+      // Persistir nombre completo y formal del SSO de Microsoft.
+      // Usado para firmas formales de correo (ej: "Juan Rivera" aunque el
+      // display_name del onboarding sea "Juanse").
+      if (token.email && (!token.formalName || trigger === 'signIn')) {
+        const rawName = (token.name as string) || '';
+        token.fullName = rawName;
+        token.formalName = computeFormalName(rawName);
+      }
+
       // Si el access token está expirado (o expira en menos de 60s), refrescamos.
       // Sin esto, después de 1h el feature de email dejaría de funcionar.
       if (token.msExpiresAt && typeof token.msExpiresAt === 'number' && token.msRefreshToken) {
@@ -229,6 +259,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         u.departamento = token.departamento ?? null;
         u.rol = token.userRole ?? 'Asesor';
         u.onboardedAt = token.onboardedAt ?? null;
+        u.formalName = token.formalName ?? null;
+        u.fullName = token.fullName ?? null;
       }
       // Exponer access token de Microsoft Graph al server (vía auth()).
       // Necesario para /api/email/send → Graph API.
