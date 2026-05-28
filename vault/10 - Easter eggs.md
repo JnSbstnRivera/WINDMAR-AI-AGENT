@@ -94,31 +94,31 @@ La IA "ve" la posición X de la pelota y se mueve hacia ella con un pequeño ret
 - **Las nubes te llueven** gotas 💧 (rosa-rojizo)
 
 ```
-┌──────────────────────────┐
-│ ☀ WINDMAR INVADERS       │
-│ Score 0080 · Lives ♥♥♥   │
-│                          │
+┌────────────────────────────┐
+│ ☀ WINDMAR INVADERS        │
+│ Score 0080 · Lives ♥♥♥     │
+│                            │
 │  ☁  ☁  ☁  ☁  ☁  ☁  ☁    │
 │  ☁  ☁  ☁  ☁  ☁  ☁  ☁    │   ← Nubes (alien)
 │  ☁  ☁  ☁  ☁  ☁  ☁  ☁    │
-│       💧                  │   ← Lluvia (bullets enemigo)
-│         ⚡               │   ← Rayo (bullet player)
-│                          │
-│         🌞                │   ← SUN BOT happy 340%
-│  (sol decorativo detrás) │
-└──────────────────────────┘
+│       💧                   │   ← Lluvia (bullets enemigo)
+│         ⚡                 │   ← Rayo (bullet player)
+│                            │
+│         🌞                 │   ← SUN BOT happy 340%
+│  (sol decorativo detrás)   │
+└────────────────────────────┘ 
 ```
 
 ### Especificaciones
 
-| Aspecto | Valor |
-|---------|-------|
-| Grid | 32 × 16 |
-| Tick | 80ms |
-| Alien rows | 4 |
-| Alien cols | 8 |
-| Player vidas | 3 |
-| Cooldown disparo | 220ms |
+| Aspecto          | Valor   |     |
+| ---------------- | ------- | --- |
+| Grid             | 32 × 16 |     |
+| Tick             | 80ms    |     |
+| Alien rows       | 4       |     |
+| Alien cols       | 8       |     |
+| Player vidas     | 3       |     |
+| Cooldown disparo | 220ms   |     |
 
 ### Tamaños de sprites
 

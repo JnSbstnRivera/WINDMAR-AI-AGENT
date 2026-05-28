@@ -518,12 +518,15 @@ export function FollowUpEmailModal({ asesorName, asesorEmail, onClose, onSent }:
             COL IZQUIERDA (320px fijo): formulario (4-5 filas compactas)
             COL DERECHA (1fr elástico): preview/editor — el protagonista visual.
             En móvil (< lg) vuelve a columna única.
-            flex-1 + overflow-y-auto: si el contenido excede la altura del
-            viewport, solo este bloque hace scroll (header/footer quedan fijos). */}
-        <div className="flex-1 min-h-0 overflow-y-auto grid grid-cols-1 lg:grid-cols-[320px_1fr] gap-5 px-5 pb-5 pt-2">
+            min-h-0 + sin overflow: el body NO scrollea como bloque. Cada
+            columna maneja su propio scroll internamente cuando lo necesita.
+            Solo la VISTA PREVIA del correo scrollea; el resto permanece fijo. */}
+        <div className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-[320px_1fr] gap-5 px-5 pb-5 pt-2 overflow-hidden">
 
-          {/* ═══════════════ COLUMNA IZQUIERDA — FORMULARIO ═══════════════ */}
-          <div className="space-y-4">
+          {/* ═══════════════ COLUMNA IZQUIERDA — FORMULARIO ═══════════════
+              overflow-y-auto solo de esta columna (si el form crece mucho
+              con extras o muchos adjuntos); en uso normal no scrollea. */}
+          <div className="space-y-4 min-h-0 overflow-y-auto pr-1">
           {/* Inputs base */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div>
@@ -677,11 +680,13 @@ export function FollowUpEmailModal({ asesorName, asesorEmail, onClose, onSent }:
           </div>
 
           </div>
-          {/* ═══════════════ COLUMNA DERECHA — PREVIEW / EDITOR ═══════════════ */}
-          <div className="space-y-3 lg:border-l lg:border-gray-200 lg:dark:border-gray-700 lg:pl-5">
+          {/* ═══════════════ COLUMNA DERECHA — PREVIEW / EDITOR ═══════════════
+              flex-col + min-h-0 → el preview/editor adentro toma el alto
+              disponible y SOLO ÉL scrollea internamente. */}
+          <div className="flex flex-col min-h-0 gap-3 lg:border-l lg:border-gray-200 lg:dark:border-gray-700 lg:pl-5">
 
-          {/* Barra de acciones del preview: vista previa ↔ editar */}
-          <div className="flex items-center justify-between">
+          {/* Barra de acciones del preview: vista previa ↔ editar (fija arriba) */}
+          <div className="flex-shrink-0 flex items-center justify-between">
             <div className="text-[10px] uppercase tracking-wider text-gray-500 dark:text-gray-400 font-semibold flex items-center gap-1.5">
               {editMode ? (
                 <>
@@ -785,23 +790,23 @@ export function FollowUpEmailModal({ asesorName, asesorEmail, onClose, onSent }:
           ) : (
             /* VISTA PREVIA del correo renderizado — alto contraste para
                que el texto NO se confunda con el fondo del modal.
-               El bloque del ASUNTO se destaca como una "card" prominente
-               para que sea lo primero que el asesor identifique. */
+               El bloque del ASUNTO se destaca como una "card" prominente.
+               flex-1 + overflow-y-auto: ÚNICO bloque scrollable del modal.
+               Toma todo el alto disponible y scrollea cuando el cuerpo del
+               correo es muy largo. El header (ASUNTO) NO se desplaza
+               porque está sticky. */
             <div
-              className="rounded-lg border-2 border-[#F7941D]/25 bg-white dark:bg-[#0a1628] max-h-[560px] overflow-y-auto shadow-sm"
+              className="flex-1 min-h-0 rounded-lg border-2 border-[#F7941D]/25 bg-white dark:bg-[#0a1628] overflow-y-auto shadow-sm"
               style={{
                 boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.04)',
               }}
             >
               {/* Cabecera ASUNTO — card prominente con fondo naranja sutil,
-                  icono y tipografía amplia. Es lo primero que se lee. */}
-              <div
-                className="px-5 py-4 border-b-2 border-[#F7941D]/30 flex items-start gap-3"
-                style={{
-                  background:
-                    'linear-gradient(135deg, rgba(247,148,29,0.10) 0%, rgba(247,148,29,0.02) 100%)',
-                }}
-              >
+                  icono y tipografía amplia. STICKY arriba: queda visible
+                  mientras el asesor scrollea el cuerpo del correo abajo.
+                  Dark-mode aware con clases Tailwind + tinte naranja sutil. */}
+              <div className="sticky top-0 z-10 px-5 py-4 border-b-2 border-[#F7941D]/30 flex items-start gap-3 backdrop-blur-md bg-gradient-to-br from-[#F7941D]/10 via-white/95 to-white/95 dark:from-[#F7941D]/20 dark:via-[#0a1628]/95 dark:to-[#0a1628]/95">
+
                 <div className="w-9 h-9 rounded-lg bg-[#F7941D]/20 flex items-center justify-center flex-shrink-0 mt-0.5">
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#F7941D" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                     <rect x="2" y="4" width="20" height="16" rx="2" />
