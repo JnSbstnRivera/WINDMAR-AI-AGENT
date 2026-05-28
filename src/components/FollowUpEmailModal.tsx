@@ -513,11 +513,11 @@ export function FollowUpEmailModal({ asesorName, asesorEmail, onClose, onSent }:
           </div>
         </div>
 
-        {/* Body — layout horizontal 2 columnas en desktop, vertical en móvil.
-            COL IZQUIERDA: formulario (datos cliente + extras + adjuntos)
-            COL DERECHA:  preview / editor del correo
-            Esto evita el scroll vertical largo que tenía antes. */}
-        <div className="grid grid-cols-1 lg:grid-cols-[1fr_1.1fr] gap-5 px-5 pb-5 pt-2">
+        {/* Body — layout horizontal con formulario angosto y preview elástico.
+            COL IZQUIERDA (320px fijo): formulario (4-5 filas compactas)
+            COL DERECHA (1fr elástico): preview/editor — el protagonista visual.
+            En móvil (< lg) vuelve a columna única. */}
+        <div className="grid grid-cols-1 lg:grid-cols-[320px_1fr] gap-5 px-5 pb-5 pt-2">
 
           {/* ═══════════════ COLUMNA IZQUIERDA — FORMULARIO ═══════════════ */}
           <div className="space-y-4">
@@ -782,25 +782,42 @@ export function FollowUpEmailModal({ asesorName, asesorEmail, onClose, onSent }:
           ) : (
             /* VISTA PREVIA del correo renderizado — alto contraste para
                que el texto NO se confunda con el fondo del modal.
-               Fondo blanco puro en light / azul oscuro puro en dark,
-               borde naranja sutil para separar visualmente del contenedor. */
+               El bloque del ASUNTO se destaca como una "card" prominente
+               para que sea lo primero que el asesor identifique. */
             <div
-              className="rounded-lg border-2 border-[#F7941D]/25 bg-white dark:bg-[#0a1628] p-5 max-h-[480px] overflow-y-auto shadow-sm"
+              className="rounded-lg border-2 border-[#F7941D]/25 bg-white dark:bg-[#0a1628] max-h-[560px] overflow-y-auto shadow-sm"
               style={{
                 boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.04)',
               }}
             >
-              {/* Cabecera estilo cliente de correo: chip "DE" / "ASUNTO" */}
-              <div className="border-b-2 border-gray-200 dark:border-gray-700 pb-2.5 mb-3.5">
-                <p className="text-[10px] font-bold uppercase tracking-widest text-[#F7941D] mb-1">
-                  Asunto del correo
-                </p>
-                <p className="text-sm font-semibold text-[#1B3A5C] dark:text-white leading-snug">
-                  {previewSubject}
-                </p>
-              </div>
+              {/* Cabecera ASUNTO — card prominente con fondo naranja sutil,
+                  icono y tipografía amplia. Es lo primero que se lee. */}
               <div
-                className="text-sm text-[#1B3A5C] dark:text-gray-100 leading-relaxed font-medium"
+                className="px-5 py-4 border-b-2 border-[#F7941D]/30 flex items-start gap-3"
+                style={{
+                  background:
+                    'linear-gradient(135deg, rgba(247,148,29,0.10) 0%, rgba(247,148,29,0.02) 100%)',
+                }}
+              >
+                <div className="w-9 h-9 rounded-lg bg-[#F7941D]/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#F7941D" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="2" y="4" width="20" height="16" rx="2" />
+                    <path d="m22 7-10 5L2 7" />
+                  </svg>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#F7941D] mb-1">
+                    Asunto del correo
+                  </p>
+                  <p className="text-base font-bold text-[#1B3A5C] dark:text-white leading-snug break-words">
+                    {previewSubject}
+                  </p>
+                </div>
+              </div>
+
+              {/* CUERPO del correo — el área que más espacio ocupa */}
+              <div
+                className="px-5 py-5 text-sm text-[#1B3A5C] dark:text-gray-100 leading-relaxed font-medium"
                 style={{ wordBreak: 'break-word' }}
                 dangerouslySetInnerHTML={{ __html: previewHtml }}
               />

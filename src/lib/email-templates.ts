@@ -127,12 +127,13 @@ export const EMAIL_TEMPLATES: EmailTemplate[] = [
     label: 'Seguimiento general',
     icon: '👋',
     description: 'Cliente con quien ya conversaste — confirmar interés',
-    subject: 'Seguimiento — Windmar Home',
+    subject: 'Seguimiento de nuestra conversación — Windmar Home',
     htmlBody: wrap(`
       <p>Estimado/a <strong>{{name}}</strong>,</p>
-      <p>Espero que se encuentre muy bien. Le escribo de <strong>Windmar Home</strong> para retomar la conversación que tuvimos y saber si sigue interesado/a en avanzar.</p>
-      <p>Quedo atento/a a cualquier duda que tenga. Si me indica el horario que le resulte cómodo, con gusto le doy seguimiento personal.</p>
-      <p>Gracias por su tiempo y consideración.</p>
+      <p>Espero que se encuentre muy bien. Le escribo de parte de <strong>Windmar Home</strong> para dar continuidad a la conversación que tuvimos recientemente.</p>
+      <p>Mi interés es asegurarme de que cuente con toda la información necesaria para tomar la mejor decisión y resolver cualquier duda que haya quedado pendiente. Sabemos que decisiones como esta requieren su tiempo y nuestro acompañamiento, por lo que quiero ponerme a su entera disposición.</p>
+      <p>Si me comparte el horario que le resulte más cómodo, con gusto coordino una llamada o me acerco con la información que necesite. También puede responder este correo con cualquier pregunta — estaré atento/a a sus comentarios.</p>
+      <p>Le agradezco mucho su tiempo y consideración. Quedo a la espera de sus noticias.</p>
     `),
   },
 
@@ -142,15 +143,16 @@ export const EMAIL_TEMPLATES: EmailTemplate[] = [
     label: 'Pedir documentos',
     icon: '📄',
     description: 'Solicitar documentos al cliente — editable según necesidad',
-    subject: 'Documentos para tu propuesta — Windmar Home',
+    subject: 'Documentos requeridos para su propuesta — Windmar Home',
     htmlBody: wrap(`
       <p>Estimado/a <strong>{{name}}</strong>,</p>
-      <p>Para poder armar una propuesta hecha a la medida de su hogar, necesito que me haga llegar:</p>
+      <p>Reciba un cordial saludo de mi parte. Como conversamos, para poder armar una propuesta hecha a la medida de su hogar y sus necesidades reales, necesitaré que me haga llegar la siguiente documentación:</p>
       <div style="margin: 14px 0; padding: 14px 18px; background-color: #fff7ed; border-left: 4px solid #F7941D; border-radius: 4px;">
         <p style="margin: 0; font-size: 14px; color: #1B3A5C; white-space: pre-line;">{{documents}}</p>
       </div>
-      <p>Puede responder directamente a este correo adjuntando los documentos en formato foto o PDF. Yo me encargo del resto.</p>
-      <p>Quedo pendiente.</p>
+      <p>Puede responder directamente a este correo adjuntando los documentos en formato foto o PDF — lo que le resulte más cómodo. Una vez los reciba, en cuestión de horas tendré lista una propuesta detallada para usted.</p>
+      <p>Si tiene alguna duda sobre los documentos requeridos o necesita ayuda para conseguirlos, no dude en escribirme o llamarme. Estoy a su disposición.</p>
+      <p>Le agradezco de antemano su tiempo y colaboración. Quedo pendiente de sus documentos.</p>
     `),
     extraFields: [
       {
@@ -170,12 +172,13 @@ export const EMAIL_TEMPLATES: EmailTemplate[] = [
     label: 'No contestó la llamada',
     icon: '📞',
     description: 'Intentaste llamar — abre la puerta para que él decida horario',
-    subject: 'Intenté comunicarme contigo — Windmar Home',
+    subject: 'Intenté comunicarme con usted — Windmar Home',
     htmlBody: wrap(`
       <p>Estimado/a <strong>{{name}}</strong>,</p>
-      <p>Le escribo porque <strong>traté de comunicarme</strong> con usted por teléfono y no pude alcanzarle. Entiendo que su tiempo es valioso, así que prefiero que sea usted quien me indique cuándo le queda mejor para conversar.</p>
-      <p>Puede responder a este correo con un horario que le funcione, o llamarme de regreso cuando lo prefiera.</p>
-      <p>Muchas gracias por su atención.</p>
+      <p>Espero que se encuentre muy bien. Le escribo porque <strong>intenté comunicarme</strong> con usted por teléfono en días recientes y no pude alcanzarle. Sé que el día a día es bastante ocupado, por lo que prefiero respetar su tiempo y que sea usted quien me indique el momento que le resulte más conveniente para conversar.</p>
+      <p>Quiero comentarle que sigo a su entera disposición para resolver cualquier duda, ampliar la información que conversamos o avanzar con los siguientes pasos si así lo decide.</p>
+      <p>Puede responder a este correo con el horario que le funcione mejor (mañana, tarde o noche) o llamarme de regreso cuando lo prefiera. También puede escribirme directamente sus preguntas y le respondo a la mayor brevedad posible.</p>
+      <p>Muchas gracias por su atención y disculpe la insistencia. Quedo atento/a a sus noticias.</p>
     `),
   },
 
@@ -188,15 +191,16 @@ export const EMAIL_TEMPLATES: EmailTemplate[] = [
     subject: 'Confirmación de visita técnica — Windmar Home',
     htmlBody: wrap(`
       <p>Estimado/a <strong>{{name}}</strong>,</p>
-      <p>Le confirmo su <strong>visita técnica</strong> con nuestro equipo de Windmar Home para los siguientes datos:</p>
+      <p>Reciba un cordial saludo. Le escribo para confirmar formalmente su <strong>visita técnica</strong> con nuestro equipo especializado de Windmar Home, programada con los siguientes datos:</p>
       <div style="margin: 16px 0; padding: 16px 20px; background-color: #fff7ed; border: 1px solid #F7941D; border-radius: 6px;">
         <p style="margin: 0 0 6px 0; font-size: 14px;">📅 <strong>Fecha:</strong> {{date}}</p>
         <p style="margin: 0 0 6px 0; font-size: 14px;">🕐 <strong>Hora:</strong> {{time}}</p>
         <p style="margin: 0; font-size: 14px;">👤 <strong>Consultor asignado:</strong> {{consultant}}</p>
       </div>
-      <p>Nuestro técnico realizará una inspección de su hogar para preparar la propuesta más precisa posible. La visita toma aproximadamente 30 a 45 minutos.</p>
-      <p>Si necesita <strong>reagendar</strong>, por favor avíseme con anticipación y lo coordinamos sin problema.</p>
-      <p>¡Nos vemos pronto!</p>
+      <p>Durante la visita, nuestro técnico realizará una inspección detallada de su hogar para preparar la propuesta más precisa y ajustada a su realidad. El proceso toma aproximadamente <strong>30 a 45 minutos</strong> y no requiere ninguna preparación de su parte — solo que esté presente para recibirnos y resolver dudas que puedan surgir en el sitio.</p>
+      <p>Le pido amablemente que tenga a la mano cualquier documento del hogar (factura LUMA reciente, copia de la escritura si aplica) por si el técnico necesita verificar algún detalle adicional.</p>
+      <p>Si por algún motivo necesita <strong>reagendar</strong>, por favor avíseme con la mayor anticipación posible y reorganizamos sin inconvenientes. Mi compromiso es que la visita sea lo más cómoda y eficiente para usted.</p>
+      <p>¡Quedo a sus órdenes y nos vemos pronto!</p>
     `),
     extraFields: [
       { key: 'date', label: 'Fecha de la visita', type: 'date', required: true },
@@ -221,10 +225,11 @@ export const EMAIL_TEMPLATES: EmailTemplate[] = [
     subject: '{{documentName}} — Windmar Home',
     htmlBody: wrap(`
       <p>Estimado/a <strong>{{name}}</strong>,</p>
-      <p>Reciba un cordial saludo de parte de <strong>Windmar Home</strong>.</p>
-      <p>Por medio de la presente le hago llegar el documento que conversamos: <strong>{{documentName}}</strong>.</p>
-      <p>Le agradezco que revise el contenido adjunto cuando le sea posible. Quedo a su entera disposición para cualquier consulta, aclaración o ajuste que considere necesario realizar.</p>
-      <p>Será un verdadero gusto atenderle. Le agradezco profundamente su confianza y el tiempo que dedica a esta gestión.</p>
+      <p>Reciba un cordial saludo de mi parte y de todo el equipo de <strong>Windmar Home</strong>. Espero que se encuentre usted y su familia muy bien.</p>
+      <p>Por medio de la presente, y según lo conversado, le hago llegar adjunto el documento que solicitó: <strong>{{documentName}}</strong>. He preparado cada detalle con cuidado para que pueda revisarlo con calma y absoluta claridad.</p>
+      <p>Le agradezco mucho si puede revisarlo cuando le resulte conveniente. Por favor tómese el tiempo que necesite — entiendo que decisiones de esta naturaleza merecen un análisis a fondo, y para eso estamos: para acompañarle en el proceso.</p>
+      <p>Quedo a su entera disposición para aclarar cualquier consulta, hacer los ajustes que considere necesarios o profundizar en cualquier punto que requiera más detalle. Cualquier comentario que pueda ayudarnos a refinar la propuesta es bienvenido.</p>
+      <p>Será un verdadero gusto continuar atendiéndole. Le agradezco profundamente su confianza y el tiempo que dedica a esta gestión.</p>
       <p>Sin otro particular por el momento, quedo atento/a a sus comentarios.</p>
       <p><strong>Atentamente,</strong></p>
     `),
@@ -249,14 +254,16 @@ export const EMAIL_TEMPLATES: EmailTemplate[] = [
     subject: '¡Bienvenido/a a la familia Windmar Home!',
     htmlBody: wrap(`
       <p>Estimado/a <strong>{{name}}</strong>,</p>
-      <p>¡Le damos la bienvenida a la familia <strong>Windmar Home</strong>! 🎉</p>
-      <p>Es un gusto que confíe en nosotros para esta solución. Llevamos <strong>22 años iluminando hogares en Puerto Rico</strong> y estamos comprometidos con que su experiencia sea excelente de principio a fin.</p>
+      <p>¡Le damos la más cordial bienvenida a la familia <strong>Windmar Home</strong>! 🎉</p>
+      <p>Es un verdadero honor que haya confiado en nosotros para esta importante decisión. Llevamos <strong>22 años iluminando hogares en Puerto Rico</strong>, y nuestro compromiso es que su experiencia con nosotros sea excelente desde el primer día hasta muchos años después de la instalación.</p>
       <div style="margin: 16px 0; padding: 16px 20px; background-color: #fff7ed; border: 1px solid #F7941D; border-radius: 6px;">
         <p style="margin: 0 0 6px 0; font-size: 14px;">🏠 <strong>Producto adquirido:</strong> {{product}}</p>
         <p style="margin: 0; font-size: 14px;">👤 <strong>Consultor asignado:</strong> {{consultant}}</p>
       </div>
-      <p>El consultor asignado será su punto de contacto directo durante todo el proceso. No dude en escribirle o llamarle ante cualquier consulta — estamos para servirle.</p>
-      <p>¡Gracias por elegir Windmar Home!</p>
+      <p>El consultor que le hemos asignado será su <strong>punto de contacto directo</strong> durante todo el proceso: desde la coordinación de la instalación, hasta el seguimiento post-venta y cualquier consulta que pueda surgirle en el futuro. No dude en escribirle o llamarle directamente para cualquier necesidad — su rol es asegurarse de que usted esté completamente satisfecho/a en cada etapa.</p>
+      <p>En los próximos días recibirá comunicaciones con los siguientes pasos del proceso, así como detalles importantes sobre su instalación. Le recomendamos mantener este correo a la mano como referencia.</p>
+      <p>Una vez más, gracias por elegir Windmar Home. Estamos emocionados de poder acompañarle en este paso tan importante para usted y su hogar.</p>
+      <p>¡Bienvenido/a a la familia!</p>
     `),
     extraFields: [
       {
