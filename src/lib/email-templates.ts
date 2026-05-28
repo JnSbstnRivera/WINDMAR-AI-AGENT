@@ -79,7 +79,7 @@ export interface EmailExtraField {
   /** Label visible al asesor */
   label: string;
   /** Tipo de input a renderizar en el modal */
-  type: 'text' | 'textarea' | 'date' | 'time';
+  type: 'text' | 'textarea' | 'date' | 'time' | 'select';
   /** Placeholder del input */
   placeholder?: string;
   /** Valor por defecto (precarga el input) */
@@ -88,6 +88,8 @@ export interface EmailExtraField {
   required?: boolean;
   /** Si true, el input ocupa toda la fila del grid (no se aparea con otro al lado) */
   fullWidth?: boolean;
+  /** Opciones para type='select' — el value se guarda, el label se muestra */
+  options?: Array<{ value: string; label: string }>;
 }
 
 export interface EmailTemplate {
@@ -105,6 +107,9 @@ export interface EmailTemplate {
   htmlBody: string;
   /** Campos adicionales que esta plantilla requiere */
   extraFields?: EmailExtraField[];
+  /** Si true, no permite enviar sin al menos un archivo adjunto.
+      Útil para plantillas tipo "cotización" donde el PDF es esencial. */
+  requiresAttachment?: boolean;
 }
 
 // ════════════════════════════════════════
@@ -163,6 +168,200 @@ function wrap(innerHtml: string): string {
       ${innerHtml}
     </div>
   `.trim();
+}
+
+// ════════════════════════════════════════
+// CATÁLOGO DE PRODUCTOS PARA COTIZACIONES
+// ════════════════════════════════════════
+// Cada producto define los beneficios y garantías que se inyectan en
+// el cuerpo del correo de cotización. NUNCA contienen precios (REGLA
+// SUPREMA) — los precios viven exclusivamente en el PDF que el asesor
+// adjunta, generado por el cotizador oficial.
+
+export interface QuoteProduct {
+  id: string;
+  label: string;
+  /** Texto que se inserta en "su <producto>" — formato continuo de párrafo */
+  productPhrase: string;
+  beneficios: string[];
+  garantias: string[];
+}
+
+export const QUOTE_PRODUCTS: QuoteProduct[] = [
+  {
+    id: 'solar_loan',
+    label: '☀️ Sistema Solar (Placas) — Loan',
+    productPhrase: 'sistema solar fotovoltaico con financiamiento Loan',
+    beneficios: [
+      'Reduce o elimina su factura mensual de LUMA',
+      'Crédito federal ITC del 30% sobre el costo del sistema',
+      'Producción de energía durante 25 a 30 años (vida útil de los paneles)',
+      'Aumenta el valor de mercado de su propiedad',
+      'Mantenimiento mínimo y operación silenciosa',
+    ],
+    garantias: [
+      '25 años en paneles solares',
+      '12 años en el inversor',
+      '10 años en la instalación profesional Windmar',
+    ],
+  },
+  {
+    id: 'solar_lease',
+    label: '☀️ Sistema Solar (Placas) — Lease',
+    productPhrase: 'sistema solar fotovoltaico con plan Lease (cero pago inicial)',
+    beneficios: [
+      'Cero pago inicial — sistema instalado sin desembolso de su parte',
+      'Pago mensual fijo y predecible durante todo el contrato',
+      'Mantenimiento integral incluido durante la vida del plan',
+      'Reduce su factura de LUMA desde el primer día',
+      'Sin riesgo de fluctuaciones en costos de electricidad',
+    ],
+    garantias: [
+      'Mantenimiento integral durante toda la vida del contrato',
+      'Reemplazo de componentes defectuosos sin costo',
+      '10 años en la instalación profesional Windmar',
+    ],
+  },
+  {
+    id: 'solar_bateria_loan',
+    label: '☀️🔋 Sistema Solar + Batería — Loan',
+    productPhrase: 'sistema solar + batería de respaldo con financiamiento Loan',
+    beneficios: [
+      'Elimina o reduce drásticamente su factura de LUMA',
+      'Respaldo eléctrico continuo durante apagones y mantenimientos',
+      'Crédito federal ITC del 30% sobre el sistema completo (paneles + batería)',
+      'Producción de energía 25 a 30 años + autonomía con la batería',
+      'Independencia parcial de la red eléctrica',
+    ],
+    garantias: [
+      '25 años en paneles solares',
+      '12 años en el inversor',
+      '10 años en la batería',
+      '10 años en la instalación profesional Windmar',
+    ],
+  },
+  {
+    id: 'solar_bateria_lease',
+    label: '☀️🔋 Sistema Solar + Batería — Lease',
+    productPhrase: 'sistema solar + batería con plan Lease (cero pago inicial)',
+    beneficios: [
+      'Cero pago inicial para el sistema completo (paneles y batería)',
+      'Pago mensual fijo que incluye la batería de respaldo',
+      'Tranquilidad durante apagones sin desembolso adicional',
+      'Mantenimiento integral del sistema incluido',
+      'Estabilidad: sin sorpresas en su factura mensual',
+    ],
+    garantias: [
+      'Mantenimiento integral del sistema completo durante el contrato',
+      'Reemplazo de componentes defectuosos sin costo',
+      '10 años en la instalación profesional Windmar',
+    ],
+  },
+  {
+    id: 'bateria',
+    label: '🔋 Batería de respaldo',
+    productPhrase: 'batería de respaldo eléctrico para su hogar',
+    beneficios: [
+      'Respaldo continuo de energía durante apagones',
+      'Protección de electrodomésticos contra fluctuaciones de voltaje',
+      'Operación silenciosa y carga inteligente automática',
+      'Sin necesidad de combustibles ni mantenimiento mecánico (a diferencia de plantas)',
+      'Sistema escalable si en el futuro decide añadir paneles solares',
+    ],
+    garantias: [
+      '10 años en la batería',
+      '10 años en la instalación profesional Windmar',
+      'Soporte técnico continuo',
+    ],
+  },
+  {
+    id: 'anker',
+    label: '⚡ Anker (batería portable)',
+    productPhrase: 'Anker — batería portable de respaldo',
+    beneficios: [
+      'Respaldo móvil para sus dispositivos esenciales',
+      'Carga rápida y eficiente con tecnología avanzada',
+      'Diseño compacto y ligero — fácil de transportar',
+      'Ideal para emergencias, viajes y trabajo en exteriores',
+      'Múltiples puertos de salida (AC, USB-C, USB-A)',
+    ],
+    garantias: [
+      '5 años de garantía oficial Anker',
+      'Soporte técnico Windmar incluido',
+    ],
+  },
+  {
+    id: 'cisterna',
+    label: '🚰 Cisterna de respaldo de agua',
+    productPhrase: 'cisterna de respaldo de agua para su hogar',
+    beneficios: [
+      'Reserva continua de agua durante interrupciones del servicio',
+      'Múltiples capacidades disponibles según su consumo (Ecowater 500 / Hércules 600)',
+      'Bomba automática incluida que activa el suministro sin intervención',
+      'Material durable certificado para uso potable',
+      'Instalación profesional incluida con conexión a su sistema actual',
+    ],
+    garantias: [
+      '10 años en tanque Ecowater 500 / 5 años en Hércules 600',
+      '2 años en la bomba',
+      '1 año en la instalación Windmar',
+    ],
+  },
+  {
+    id: 'calentador',
+    label: '☀️♨️ Calentador solar',
+    productPhrase: 'calentador solar de agua',
+    beneficios: [
+      'Reduce hasta el 100% del consumo eléctrico de su calentador',
+      'Agua caliente continua aprovechando la energía del sol',
+      'Ahorro mensual desde el primer día de instalación',
+      'Energía limpia, sin emisiones contaminantes',
+      'Vida útil de 15 a 20 años con mantenimiento adecuado',
+    ],
+    garantias: [
+      '10 años en tanque y colectores solares',
+      '5 años en accesorios y componentes',
+      '1 año en la instalación profesional Windmar',
+    ],
+  },
+  {
+    id: 'reverse_osmosis',
+    label: '💧 Reverse Osmosis',
+    productPhrase: 'sistema de filtración por ósmosis inversa',
+    beneficios: [
+      'Elimina más del 99% de contaminantes, sodio, cloro, plomo y microorganismos',
+      'Agua de calidad embotellada directamente de su grifo',
+      'Ahorro significativo vs comprar agua embotellada continuamente',
+      'Mejora el sabor, claridad y olor del agua',
+      'Instalación bajo el fregadero — no ocupa espacio en su cocina',
+    ],
+    garantias: [
+      '5 años en el sistema',
+      '1 año en filtros (con servicio de cambio recomendado)',
+      'Servicio técnico continuo Windmar',
+    ],
+  },
+  {
+    id: 'purificador',
+    label: '💧 Purificador de agua',
+    productPhrase: 'sistema de purificación de agua',
+    beneficios: [
+      'Mejora notablemente el sabor, olor y claridad del agua',
+      'Reduce cloro, sedimentos y partículas',
+      'Filtros de larga duración con mantenimiento simple',
+      'Instalación profesional incluida',
+      'Económico vs sistemas de ósmosis inversa, ideal como primera mejora',
+    ],
+    garantias: [
+      '3 años en el sistema',
+      '1 año en filtros',
+      'Soporte técnico continuo Windmar',
+    ],
+  },
+];
+
+export function findQuoteProduct(id: string): QuoteProduct | null {
+  return QUOTE_PRODUCTS.find((p) => p.id === id) || null;
 }
 
 export const EMAIL_TEMPLATES: EmailTemplate[] = [
@@ -290,7 +489,49 @@ export const EMAIL_TEMPLATES: EmailTemplate[] = [
     ],
   },
 
-  // ─── 6. Bienvenida (producto + consultor) ─────────────────────────
+  // ─── 6. Enviar cotización (PDF adjunto + beneficios/garantías dinámicos) ─
+  {
+    id: 'send_quote',
+    label: 'Enviar cotización',
+    icon: '🧾',
+    description: 'Cotización formal con PDF adjunto · beneficios y garantías según producto',
+    subject: 'Cotización · {{quoteProductLabel}} — Windmar Home',
+    requiresAttachment: true,
+    htmlBody: wrap(`
+      <p>Estimado/a <strong>{{name}}</strong>,</p>
+      <p>Reciba un cordial saludo de mi parte y de todo el equipo de <strong>Windmar Home</strong>. Como acordamos en nuestra conversación, le adjunto la cotización detallada para su <strong>{{quoteProductPhrase}}</strong>.</p>
+
+      <div style="margin: 16px 0; padding: 16px 20px; background-color: #fff7ed; border-left: 4px solid #F7941D; border-radius: 4px;">
+        <p style="margin: 0 0 8px 0; font-size: 13px; font-weight: bold; color: #F7941D; letter-spacing: 0.05em;">▸ BENEFICIOS PRINCIPALES</p>
+        <p style="margin: 0; font-size: 14px; color: #1B3A5C; white-space: pre-line; line-height: 1.7;">{{quoteBeneficios}}</p>
+      </div>
+
+      <div style="margin: 16px 0; padding: 16px 20px; background-color: #f0f9ff; border-left: 4px solid #0EA5E9; border-radius: 4px;">
+        <p style="margin: 0 0 8px 0; font-size: 13px; font-weight: bold; color: #0EA5E9; letter-spacing: 0.05em;">▸ GARANTÍAS INCLUIDAS</p>
+        <p style="margin: 0; font-size: 14px; color: #1B3A5C; white-space: pre-line; line-height: 1.7;">{{quoteGarantias}}</p>
+      </div>
+
+      <p>Le agradezco mucho que revise el <strong>documento PDF adjunto</strong>, donde encontrará los precios específicos de su propuesta y los términos completos.</p>
+
+      <p>Como con todo lo que hacemos en Windmar, mi compromiso es que se sienta acompañado/a en cada paso del proceso. Si tiene cualquier consulta sobre los números, los plazos o algún detalle técnico, escríbame o llámeme — con gusto le explico personalmente.</p>
+
+      <p>Sin otro particular por el momento, quedo atento/a a sus comentarios.</p>
+
+      <p><strong>Atentamente,</strong></p>
+    `),
+    extraFields: [
+      {
+        key: 'product',
+        label: 'Producto cotizado',
+        type: 'select',
+        required: true,
+        fullWidth: true,
+        options: QUOTE_PRODUCTS.map((p) => ({ value: p.id, label: p.label })),
+      },
+    ],
+  },
+
+  // ─── 7. Bienvenida (producto + consultor) ─────────────────────────
   {
     id: 'welcome',
     label: 'Bienvenida',
@@ -370,6 +611,30 @@ export function renderTemplate(
       } else {
         allVars[field.key] = raw;
       }
+    }
+  }
+
+  // ── Hook especial para plantilla de COTIZACIÓN ──
+  // Resuelve el producto elegido en el dropdown y inyecta:
+  //   {{quoteProductLabel}}  → "☀️ Sistema Solar (Placas) — Loan"
+  //   {{quoteProductPhrase}} → "sistema solar fotovoltaico con financiamiento Loan"
+  //   {{quoteBeneficios}}    → lista con bullets (texto plano con \n)
+  //   {{quoteGarantias}}     → lista con checkmarks
+  // El replacer escapa y convierte \n a <br>, así que los bullets se ven bien.
+  if (template.id === 'send_quote') {
+    const productId = vars.extras?.product || '';
+    const product = findQuoteProduct(productId);
+    if (product) {
+      allVars.quoteProductLabel = product.label;
+      allVars.quoteProductPhrase = product.productPhrase;
+      allVars.quoteBeneficios = product.beneficios.map((b) => `• ${b}`).join('\n');
+      allVars.quoteGarantias = product.garantias.map((g) => `✓ ${g}`).join('\n');
+    } else {
+      // Producto no seleccionado — placeholders vacíos para que el preview se vea
+      allVars.quoteProductLabel = '[selecciona el producto]';
+      allVars.quoteProductPhrase = '[producto cotizado]';
+      allVars.quoteBeneficios = '[Selecciona un producto para ver sus beneficios]';
+      allVars.quoteGarantias = '[Selecciona un producto para ver sus garantías]';
     }
   }
 

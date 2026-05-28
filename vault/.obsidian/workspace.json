@@ -34,6 +34,16 @@
               "icon": "lucide-file",
               "title": "04 - Esquema Supabase"
             }
+          },
+          {
+            "id": "83c89cda3d8cd091",
+            "type": "leaf",
+            "state": {
+              "type": "graph",
+              "state": {},
+              "icon": "lucide-git-fork",
+              "title": "Vista gráfica"
+            }
           }
         ],
         "currentTab": 1
@@ -200,8 +210,8 @@
   },
   "active": "6eff4f7fa6f2a700",
   "lastOpenFiles": [
-    "05 - SYSTEM_PROMPT.md",
     "04 - Esquema Supabase.md",
+    "05 - SYSTEM_PROMPT.md",
     "10 - Easter eggs.md",
     "02 - Arquitectura.md",
     "06 - REGLA SUPREMA.md",

@@ -59,6 +59,15 @@ const TEMPLATE_ICONS: Record<string, JSX.Element> = {
       <polygon points="22 2 15 22 11 13 2 9 22 2" />
     </svg>
   ),
+  // file-dollar / receipt — cotización (factura/recibo con número)
+  send_quote: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={ICON_STROKE} strokeLinecap="round" strokeLinejoin="round">
+      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+      <polyline points="14 2 14 8 20 8" />
+      <line x1="12" y1="18" x2="12" y2="12" />
+      <line x1="9" y1="15" x2="15" y2="15" />
+    </svg>
+  ),
   // sparkles — bienvenida (sutil, no fiesta)
   welcome: (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={ICON_STROKE} strokeLinecap="round" strokeLinejoin="round">
@@ -208,11 +217,17 @@ export function FollowUpEmailModal({ asesorName, asesorEmail, asesorCargo, onClo
 
   const isCustom = customBody !== null;
 
+  // Algunas plantillas requieren PDF adjunto obligatorio (ej. cotización)
+  const attachmentRequired = template.requiresAttachment === true;
+  const hasAttachment = attachments.length > 0;
+  const attachmentOk = !attachmentRequired || hasAttachment;
+
   // Si está en modo personalizado, no exigimos los campos extra (ya horneados)
   const canSubmit =
     name.trim().length >= 2 &&
     /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()) &&
     (isCustom ? customBody!.trim().length > 0 : extrasValid) &&
+    attachmentOk &&
     status !== 'sending';
 
   // Render del preview en vivo
@@ -685,6 +700,18 @@ export function FollowUpEmailModal({ asesorName, asesorEmail, asesorCargo, onClo
             <p className="text-[10px] text-gray-400 italic">
               PDF, JPG o PNG · máx 3MB por archivo · 4MB total
             </p>
+
+            {/* Aviso si la plantilla REQUIERE adjunto y no hay ninguno */}
+            {attachmentRequired && !hasAttachment && (
+              <div className="rounded-md bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 px-2.5 py-2 text-[11px] text-amber-700 dark:text-amber-300 flex items-start gap-1.5">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0 mt-0.5">
+                  <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+                  <line x1="12" y1="9" x2="12" y2="13" />
+                  <line x1="12" y1="17" x2="12.01" y2="17" />
+                </svg>
+                <span><strong>Adjunta el PDF de la cotización</strong> antes de enviar. Esta plantilla requiere el documento con los precios.</span>
+              </div>
+            )}
           </div>
 
           </div>
@@ -950,6 +977,29 @@ function ExtraFieldInput({
           rows={3}
           className={commonClass + ' resize-y min-h-[80px]'}
         />
+      </div>
+    );
+  }
+
+  if (field.type === 'select') {
+    return (
+      <div className={wrapperClass}>
+        {labelEl}
+        <select
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          disabled={disabled}
+          className={commonClass + ' cursor-pointer'}
+        >
+          <option value="" disabled>
+            {field.placeholder || 'Selecciona una opción...'}
+          </option>
+          {(field.options || []).map((opt) => (
+            <option key={opt.value} value={opt.value}>
+              {opt.label}
+            </option>
+          ))}
+        </select>
       </div>
     );
   }

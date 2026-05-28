@@ -127,6 +127,15 @@ export async function POST(req: Request) {
     }
   }
 
+  // Validar PDF adjunto obligatorio si la plantilla lo requiere
+  // (ej. cotizaciones — el cuerpo del correo refiere al PDF adjunto).
+  if (template.requiresAttachment && attachments.length === 0) {
+    return NextResponse.json(
+      { error: 'Esta plantilla requiere adjuntar al menos un archivo (PDF de la cotización).' },
+      { status: 400 }
+    );
+  }
+
   // Datos del asesor para la firma — formal_name del SSO de Microsoft
   const userExt = session.user as unknown as {
     formalName?: string | null;
