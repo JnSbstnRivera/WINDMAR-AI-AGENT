@@ -11,7 +11,16 @@ interface Props {
   onComplete: () => void;     // se llama cuando termina el onboarding
 }
 
-const DEPARTAMENTOS = ['Telemercadeo', 'Ventas', 'Vass', 'Calidad'];
+// La opción "Otro" abre un input de texto libre para departamentos que no
+// están en la lista predefinida (útil para otras áreas o departamentos nuevos).
+const DEPARTAMENTOS = ['Telemercadeo', 'Ventas', 'Vass', 'Calidad', 'Otro'];
+
+// Sanitiza el departamento custom: solo letras, espacios y algunos especiales
+function isValidDepartamentoCustom(d: string): boolean {
+  const t = d.trim();
+  if (t.length < 2 || t.length > 40) return false;
+  return /^[A-Za-zÁÉÍÓÚáéíóúÑñÜü0-9\s&\-/.]+$/.test(t);
+}
 const ROLES: Array<{
   value: string;
   label: string;
@@ -48,13 +57,19 @@ export function OnboardingModal({
   const { update } = useSession();
   const [displayName, setDisplayName] = useState(initialDisplayName);
   const [departamento, setDepartamento] = useState('');
+  // Si elige "Otro" en el select, este input captura el valor real
+  const [otroDepartamento, setOtroDepartamento] = useState('');
   const [rol, setRol] = useState('Asesor');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [showSuccess, setShowSuccess] = useState(false);
 
   const nameOk = isValidDisplayName(displayName);
-  const formValid = nameOk && departamento && rol;
+  // Resuelve el departamento "real" — si es "Otro", usa el campo de texto libre
+  const departamentoFinal =
+    departamento === 'Otro' ? otroDepartamento.trim() : departamento;
+  const otroOk = departamento !== 'Otro' || isValidDepartamentoCustom(otroDepartamento);
+  const formValid = nameOk && !!departamentoFinal && otroOk && rol;
   const finalName = capitalizeName(displayName);
 
   // Detectar si el asesor cambió el nombre del default
@@ -72,7 +87,7 @@ export function OnboardingModal({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           display_name: finalName,
-          departamento,
+          departamento: departamentoFinal,
           rol,
         }),
       });
@@ -88,7 +103,7 @@ export function OnboardingModal({
       // Actualizar JWT directamente con los datos nuevos (más confiable que re-leer DB)
       await update({
         displayName: finalName,
-        departamento,
+        departamento: departamentoFinal,
         rol,
         onboardedAt: data.onboarded_at,
       });
@@ -121,7 +136,7 @@ export function OnboardingModal({
             Te llamaré <span className="font-bold text-[#F7941D]">{finalName}</span> desde ahora.
           </p>
           <p className="text-sm text-gray-500 dark:text-gray-500 mb-6">
-            Bienvenido al equipo de <span className="font-semibold">{departamento}</span>
+            Bienvenido al equipo de <span className="font-semibold">{departamentoFinal}</span>
           </p>
           <div className="flex items-center justify-center gap-2">
             <span className="w-2 h-2 rounded-full bg-[#F7941D]" style={{ animation: 'dotBounce 1.2s ease-in-out 0s infinite' }} />
@@ -228,10 +243,35 @@ export function OnboardingModal({
               </option>
               {DEPARTAMENTOS.map((d) => (
                 <option key={d} value={d}>
-                  {d}
+                  {d === 'Otro' ? 'Otro (especificar)' : d}
                 </option>
               ))}
             </select>
+
+            {/* Campo libre para asesores de áreas no listadas — aparece solo
+                cuando se elige "Otro" en el select */}
+            {departamento === 'Otro' && (
+              <div className="mt-2 ad-anim-in">
+                <input
+                  type="text"
+                  value={otroDepartamento}
+                  onChange={(e) => setOtroDepartamento(e.target.value)}
+                  placeholder="Ej: Marketing, RRHH, Operaciones..."
+                  maxLength={40}
+                  required
+                  autoFocus
+                  className="w-full border-2 border-[#F7941D]/60 dark:border-[#F7941D]/40 dark:bg-[#1e293b] dark:text-gray-100 dark:placeholder-gray-500 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-[#F7941D] transition-colors"
+                />
+                {otroDepartamento.length > 0 && !isValidDepartamentoCustom(otroDepartamento) && (
+                  <p className="text-[11px] text-red-500 mt-1">
+                    Entre 2 y 40 caracteres, letras y números
+                  </p>
+                )}
+                <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-1.5 italic">
+                  ⓘ Escribe el nombre de tu área tal cual quieres que aparezca en tu firma
+                </p>
+              </div>
+            )}
           </div>
 
           {/* Rol con descripciones */}

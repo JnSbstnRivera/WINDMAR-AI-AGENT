@@ -16,8 +16,15 @@ interface Props {
   onSaved: () => void;
 }
 
-const DEPARTAMENTOS = ['Telemercadeo', 'Ventas', 'Vass', 'Calidad'];
+// La opción "Otro" abre un input libre para departamentos no listados
+const DEPARTAMENTOS = ['Telemercadeo', 'Ventas', 'Vass', 'Calidad', 'Otro'];
 const ROLES = ['Asesor', 'Líder', 'Channel', 'Project M'];
+
+function isValidDepartamentoCustom(d: string): boolean {
+  const t = d.trim();
+  if (t.length < 2 || t.length > 40) return false;
+  return /^[A-Za-zÁÉÍÓÚáéíóúÑñÜü0-9\s&\-/.]+$/.test(t);
+}
 
 function isValidDisplayName(name: string): boolean {
   const trimmed = name.trim();
@@ -32,14 +39,26 @@ function capitalizeName(name: string): string {
 export function ProfileModal({ user, onClose, onSaved }: Props) {
   const { update } = useSession();
   const [displayName, setDisplayName] = useState(user.displayName ?? '');
-  const [departamento, setDepartamento] = useState(user.departamento ?? '');
+  // Si el depto guardado NO está en la lista estándar, lo tratamos como "Otro"
+  // y el valor real va en otroDepartamento (para que aparezca en el input editable).
+  const isInList = !!user.departamento && DEPARTAMENTOS.includes(user.departamento);
+  const [departamento, setDepartamento] = useState(
+    user.departamento ? (isInList ? user.departamento : 'Otro') : ''
+  );
+  const [otroDepartamento, setOtroDepartamento] = useState(
+    user.departamento && !isInList ? user.departamento : ''
+  );
   const [rol, setRol] = useState(user.rol ?? '');
   const [loading, setLoading] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState('');
 
   const nameOk = isValidDisplayName(displayName);
-  const formValid = nameOk && departamento && rol;
+  // Resuelve el departamento real
+  const departamentoFinal =
+    departamento === 'Otro' ? otroDepartamento.trim() : departamento;
+  const otroOk = departamento !== 'Otro' || isValidDepartamentoCustom(otroDepartamento);
+  const formValid = nameOk && !!departamentoFinal && otroOk && rol;
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
@@ -52,7 +71,7 @@ export function ProfileModal({ user, onClose, onSaved }: Props) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           display_name: capitalizeName(displayName),
-          departamento,
+          departamento: departamentoFinal,
           rol,
         }),
       });
@@ -62,7 +81,7 @@ export function ProfileModal({ user, onClose, onSaved }: Props) {
         // Pasar datos directos al JWT para que el callback los use SIN re-consultar DB
         await update({
           displayName: capitalizeName(displayName),
-          departamento,
+          departamento: departamentoFinal,
           rol,
         });
         setSaved(true);
@@ -136,6 +155,9 @@ export function ProfileModal({ user, onClose, onSaved }: Props) {
             )}
           </div>
 
+          {/* Departamento + Rol en grid 2-cols; cuando se elige "Otro" en
+              departamento, aparece debajo un input full-width para escribir
+              el área libremente. */}
           <div className="grid grid-cols-2 gap-2">
             <div>
               <label className="text-xs font-medium text-gray-600 dark:text-gray-400 block mb-1">Departamento</label>
@@ -146,7 +168,11 @@ export function ProfileModal({ user, onClose, onSaved }: Props) {
                 className="w-full border border-gray-300 dark:border-gray-600 dark:bg-[#1e293b] dark:text-gray-100 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-[#F7941D] transition-colors cursor-pointer"
               >
                 <option value="" disabled>Selecciona</option>
-                {DEPARTAMENTOS.map(d => <option key={d} value={d}>{d}</option>)}
+                {DEPARTAMENTOS.map(d => (
+                  <option key={d} value={d}>
+                    {d === 'Otro' ? 'Otro (especificar)' : d}
+                  </option>
+                ))}
               </select>
             </div>
             <div>
@@ -162,6 +188,33 @@ export function ProfileModal({ user, onClose, onSaved }: Props) {
               </select>
             </div>
           </div>
+
+          {/* Input libre para departamentos no listados — aparece solo si "Otro" */}
+          {departamento === 'Otro' && (
+            <div>
+              <label className="text-xs font-medium text-gray-600 dark:text-gray-400 block mb-1">
+                Nombre de tu área
+              </label>
+              <input
+                type="text"
+                value={otroDepartamento}
+                onChange={(e) => setOtroDepartamento(e.target.value)}
+                placeholder="Ej: Marketing, RRHH, Operaciones..."
+                maxLength={40}
+                required
+                autoFocus
+                className="w-full border border-[#F7941D]/60 dark:border-[#F7941D]/40 dark:bg-[#1e293b] dark:text-gray-100 dark:placeholder-gray-500 rounded-xl px-4 py-2 text-sm focus:outline-none focus:border-[#F7941D] transition-colors"
+              />
+              {otroDepartamento.length > 0 && !isValidDepartamentoCustom(otroDepartamento) && (
+                <p className="text-[11px] text-red-500 mt-1">
+                  Entre 2 y 40 caracteres, letras y números
+                </p>
+              )}
+              <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-1 italic">
+                Aparecerá en tu firma de correo
+              </p>
+            </div>
+          )}
 
           {error && (
             <p className="text-xs text-red-500 bg-red-50 dark:bg-red-900/20 px-3 py-2 rounded-lg">{error}</p>
