@@ -245,7 +245,9 @@ export function Sidebar({ conversations, activeId, onSelect, onNew, onDelete, on
         </div>
       )}
 
-      <div className="overflow-y-auto p-2 max-h-[35%] flex-shrink-0">
+      {/* Lista de conversaciones — toma el espacio flexible disponible
+          (antes era max-h-[35%], ahora flex-1 para que el Tip quede compacto). */}
+      <div className="flex-1 min-h-0 overflow-y-auto p-2">
         {conversations.length === 0 ? (
           <p className="text-xs text-gray-400 dark:text-gray-500 text-center mt-3 px-2">
             Sin conversaciones aún
@@ -280,27 +282,27 @@ export function Sidebar({ conversations, activeId, onSelect, onNew, onDelete, on
         )}
       </div>
 
-      <div className="flex-1 flex flex-col min-h-0 px-4 py-4 border-t border-[#b8cfe8] dark:border-white/[0.08] overflow-hidden">
-        <div className="flex items-center gap-1.5 mb-3 flex-shrink-0">
+      {/* TIP DEL DÍA — bloque compacto con altura fija (no flex-1).
+          Se oculta en pantallas de altura ≤640px (móviles pequeños en
+          landscape, donde el sidebar ya está apretado) vía CSS. */}
+      <div className="sidebar-tip-block flex-shrink-0 px-3 py-3 border-t border-[#b8cfe8] dark:border-white/[0.08]">
+        <div className="flex items-center gap-1.5 mb-1.5">
           <span className="text-sm">💡</span>
-          <span className="text-xs font-bold uppercase tracking-widest text-[#F7941D]">
+          <span className="text-[10px] font-bold uppercase tracking-widest text-[#F7941D]">
             Tip del día
           </span>
         </div>
 
-        <div className="flex-1 flex items-center min-h-0 overflow-hidden">
-          <p
-            key={tipIndex}
-            className="text-[14px] leading-relaxed text-[#1B3A5C] dark:text-gray-200 italic font-medium"
-            style={{
-              animation: 'fadeInTip 0.5s ease-in-out',
-            }}
-          >
-            &quot;{SALES_TIPS[tipIndex]}&quot;
-          </p>
-        </div>
+        <p
+          key={tipIndex}
+          className="text-[12px] leading-snug text-[#1B3A5C] dark:text-gray-200 italic font-medium line-clamp-3"
+          style={{ animation: 'fadeInTip 0.5s ease-in-out' }}
+          title={SALES_TIPS[tipIndex]}
+        >
+          &quot;{SALES_TIPS[tipIndex]}&quot;
+        </p>
 
-        <div className="flex items-center justify-center gap-1 mt-2 flex-shrink-0">
+        <div className="flex items-center justify-center gap-1 mt-2">
           {SALES_TIPS.slice(0, 5).map((_, i) => {
             const groupIdx = Math.floor((tipIndex / SALES_TIPS.length) * 5);
             return (
@@ -317,7 +319,12 @@ export function Sidebar({ conversations, activeId, onSelect, onNew, onDelete, on
         <style>{`
           @keyframes fadeInTip {
             from { opacity: 0; transform: translateY(4px); }
-            to { opacity: 1; transform: translateY(0); }
+            to   { opacity: 1; transform: translateY(0); }
+          }
+          /* En pantallas de altura muy reducida, ocultamos el tip para
+             que la lista de conversaciones tenga prioridad y no se rompa. */
+          @media (max-height: 640px) {
+            .sidebar-tip-block { display: none; }
           }
         `}</style>
       </div>
