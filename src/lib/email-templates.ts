@@ -34,6 +34,45 @@ const LOGO_URL = `${HOST_URL}/email-assets/windmar-logo.gif`;
 // Teléfono corporativo común (extensión es por asesor — futuro)
 const PHONE = '787-395-7766';
 
+/**
+ * Construye el "cargo" de la firma según el rol y departamento del asesor.
+ *
+ * Reglas:
+ *   Asesor + Ventas       → "Asesor de soluciones / Ventas"
+ *   Asesor + Telemercadeo → "Asesor de soluciones / Telemercadeo"
+ *   Líder  + Ventas       → "Líder de Ventas"
+ *   Líder  + VASS         → "Líder de VASS"
+ *   Channel + X           → "Channel - X"
+ *   Project M + X         → "Project Manager - X"
+ *   (sin depto)           → solo el rol o "Asesor de soluciones"
+ */
+export function buildAsesorCargo(rol: string | null, departamento: string | null): string {
+  const r = (rol || '').toLowerCase().trim();
+  const d = (departamento || '').trim();
+
+  // Líder de [Depto] — el departamento es parte del título
+  if (r === 'líder' || r === 'lider') {
+    return d ? `Líder de ${d}` : 'Líder';
+  }
+
+  // Channel / Project Manager — con guion al depto
+  if (r === 'channel') {
+    return d ? `Channel - ${d}` : 'Channel';
+  }
+  if (r === 'project m' || r === 'project manager' || r === 'projectm') {
+    return d ? `Project Manager - ${d}` : 'Project Manager';
+  }
+
+  // Asesor (default) — "de soluciones / [Depto]"
+  if (!r || r === 'asesor') {
+    return d ? `Asesor de soluciones / ${d}` : 'Asesor de soluciones';
+  }
+
+  // Otros roles no contemplados: usa rol tal cual + depto
+  const rolCap = (rol || '').charAt(0).toUpperCase() + (rol || '').slice(1).toLowerCase();
+  return d ? `${rolCap} / ${d}` : rolCap;
+}
+
 export interface EmailExtraField {
   /** Identificador único — se usa como placeholder {{key}} en la plantilla */
   key: string;
@@ -75,9 +114,15 @@ export interface EmailTemplate {
 // HTML table para compatibilidad máxima con Outlook/Gmail/Apple Mail.
 // Las imágenes apuntan a /email-assets/ del deploy (URLs absolutas para que
 // se carguen también cuando el correo se abre desde otro cliente).
-function buildSignature(asesorName: string, asesorEmail: string, asesorExt?: string): string {
+function buildSignature(
+  asesorName: string,
+  asesorEmail: string,
+  asesorCargo: string,
+  asesorExt?: string
+): string {
   const safeName = escapeHtml(asesorName);
   const safeEmail = escapeHtml(asesorEmail);
+  const safeCargo = escapeHtml(asesorCargo || 'Asesor de soluciones');
   const phoneLine = asesorExt
     ? `${PHONE} <strong>Ext. ${escapeHtml(asesorExt)}</strong>`
     : PHONE;
@@ -93,7 +138,7 @@ function buildSignature(asesorName: string, asesorEmail: string, asesorExt?: str
             ${safeName}
           </p>
           <p style="margin: 0 0 6px 0; font-size: 13px; color: #6b7280; font-style: italic;">
-            Asesor de soluciones
+            ${safeCargo}
           </p>
           <p style="margin: 0 0 2px 0; font-size: 13px; font-weight: bold; color: #F7941D;">
             Windmar Group
@@ -301,6 +346,8 @@ export function renderTemplate(
     name: string;
     asesorName: string;
     asesorEmail: string;
+    /** Cargo formateado (ej. "Asesor de soluciones / Ventas") */
+    asesorCargo?: string;
     /** Extensión telefónica del asesor — opcional, se agrega "Ext. {ext}" en firma */
     asesorExt?: string;
     extras?: Record<string, string>;
@@ -336,7 +383,12 @@ export function renderTemplate(
 
   // Construir firma con valores reales (no placeholders) — la firma maneja
   // su propio escape internamente para preservar las URLs de imágenes.
-  const signature = buildSignature(vars.asesorName, vars.asesorEmail, vars.asesorExt);
+  const signature = buildSignature(
+    vars.asesorName,
+    vars.asesorEmail,
+    vars.asesorCargo || 'Asesor de soluciones',
+    vars.asesorExt
+  );
 
   // El htmlBody renderizado + la firma, todo dentro del wrap div del template.
   // Para inyectar la firma DENTRO del wrap (no después), reemplazamos el </div>
@@ -406,6 +458,7 @@ export function renderCustomEmail(vars: {
   bodyText: string;
   asesorName: string;
   asesorEmail: string;
+  asesorCargo?: string;
   asesorExt?: string;
 }): { subject: string; html: string } {
   // Texto plano → párrafos HTML (doble salto = nuevo párrafo, salto simple = <br>)
@@ -416,7 +469,12 @@ export function renderCustomEmail(vars: {
     .map((p) => `<p style="margin: 0 0 12px 0;">${escapeHtml(p).replace(/\n/g, '<br>')}</p>`)
     .join('\n');
 
-  const signature = buildSignature(vars.asesorName, vars.asesorEmail, vars.asesorExt);
+  const signature = buildSignature(
+    vars.asesorName,
+    vars.asesorEmail,
+    vars.asesorCargo || 'Asesor de soluciones',
+    vars.asesorExt
+  );
   const html = `
     <div style="font-family: Arial, Helvetica, sans-serif; font-size: 14px; color: #1B3A5C; line-height: 1.65; max-width: 600px;">
       ${paragraphs}

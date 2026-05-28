@@ -12,6 +12,7 @@ import { WindmarInvaders } from './WindmarInvaders';
 import { WindmarSnake } from './WindmarSnake';
 import { WindmarPong } from './WindmarPong';
 import { FollowUpEmailModal } from './FollowUpEmailModal';
+import { buildAsesorCargo } from '@/lib/email-templates';
 import { SUNBOT_ART, TEMBLOR_TEXT, ABOUT_TEXT } from '@/lib/easter-eggs';
 import { useInactivityLogout } from '@/hooks/useInactivityLogout';
 import type { Message, Conversation, ToolRef, QualityMeta } from '@/types';
@@ -180,6 +181,8 @@ export function ChatApp({ user, onSignOut }: Props) {
 
   const displayName = user.displayName || user.email.split('@')[0].split('.')[0];
   const capDisplayName = displayName ? displayName.charAt(0).toUpperCase() + displayName.slice(1) : 'asesor';
+  // Cargo formateado para la firma del correo (ej: "Asesor de soluciones / Ventas")
+  const asesorCargo = buildAsesorCargo(user.rol, user.departamento);
 
   useEffect(() => {
     try {
@@ -961,6 +964,7 @@ export function ChatApp({ user, onSignOut }: Props) {
               <FollowUpEmailModal
                 asesorName={user.formalName || capDisplayName}
                 asesorEmail={user.email}
+                asesorCargo={asesorCargo}
                 onClose={() => setFollowUpOpen(false)}
                 onSent={(to, name, templateLabel) =>
                   insertStaticReply(
@@ -989,6 +993,7 @@ export function ChatApp({ user, onSignOut }: Props) {
               <FollowUpEmailModal
                 asesorName={user.formalName || capDisplayName}
                 asesorEmail={user.email}
+                asesorCargo={asesorCargo}
                 onClose={() => setFollowUpOpen(false)}
                 onSent={(to, name, templateLabel) =>
                   insertStaticReply(

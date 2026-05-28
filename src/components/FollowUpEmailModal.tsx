@@ -76,6 +76,8 @@ interface Props {
   asesorName: string;
   /** Correo corporativo del asesor — para la firma */
   asesorEmail: string;
+  /** Cargo formateado del asesor (ej: "Asesor de soluciones / Ventas") */
+  asesorCargo?: string;
   /** Cierra el modal sin enviar */
   onClose: () => void;
   /** Callback cuando el correo se envió exitosamente */
@@ -111,7 +113,7 @@ const EXT_STORAGE_KEY = 'wh-asesor-extension';
  *  4. Preview se actualiza en vivo
  *  5. POST /api/email/send con { to, name, templateId, extras }
  */
-export function FollowUpEmailModal({ asesorName, asesorEmail, onClose, onSent }: Props) {
+export function FollowUpEmailModal({ asesorName, asesorEmail, asesorCargo, onClose, onSent }: Props) {
   const [templateId, setTemplateId] = useState<string>(EMAIL_TEMPLATES[0].id);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -224,12 +226,14 @@ export function FollowUpEmailModal({ asesorName, asesorEmail, onClose, onSent }:
         bodyText: customBody!,
         asesorName: previewAsesor,
         asesorEmail: previewEmail,
+        asesorCargo: asesorCargo,
         asesorExt: asesorExt || undefined,
       })
     : renderTemplate(template, {
         name: previewName,
         asesorName: previewAsesor,
         asesorEmail: previewEmail,
+        asesorCargo: asesorCargo,
         asesorExt: asesorExt || undefined,
         extras,
       });
@@ -527,8 +531,10 @@ export function FollowUpEmailModal({ asesorName, asesorEmail, onClose, onSent }:
               overflow-y-auto solo de esta columna (si el form crece mucho
               con extras o muchos adjuntos); en uso normal no scrollea. */}
           <div className="space-y-4 min-h-0 overflow-y-auto pr-1">
-          {/* Inputs base */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          {/* Inputs base — cada campo en su propia fila (apilados verticalmente)
+              para mayor claridad. En la columna de 320px, esto da más aire
+              al input y se lee mejor el label. */}
+          <div className="space-y-3">
             <div>
               <label className="block text-xs font-semibold text-[#1B3A5C] dark:text-gray-300 mb-1.5 uppercase tracking-wider">
                 Nombre del cliente
@@ -582,13 +588,15 @@ export function FollowUpEmailModal({ asesorName, asesorEmail, onClose, onSent }:
           </div>
 
           {/* Campos extra dinámicos por plantilla — se ocultan en modo edición
-              porque sus valores ya quedaron horneados en el texto personalizado */}
+              porque sus valores ya quedaron horneados en el texto personalizado.
+              Cada campo en su propia fila (apilados verticalmente) para
+              consistencia con el resto del formulario. */}
           {!isCustom && template.extraFields && template.extraFields.length > 0 && (
             <div className="space-y-3 p-3.5 rounded-lg bg-[#F7941D]/5 border border-[#F7941D]/20">
               <p className="text-[10px] uppercase tracking-wider font-semibold text-[#F7941D]">
                 ✨ Detalles para esta plantilla
               </p>
-              <div className={template.extraFields.length > 1 ? 'grid grid-cols-1 md:grid-cols-2 gap-3' : ''}>
+              <div className="space-y-3">
                 {template.extraFields.map((field) => (
                   <ExtraFieldInput
                     key={field.key}

@@ -1,6 +1,11 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@/auth';
-import { findTemplate, renderTemplate, renderCustomEmail } from '@/lib/email-templates';
+import {
+  findTemplate,
+  renderTemplate,
+  renderCustomEmail,
+  buildAsesorCargo,
+} from '@/lib/email-templates';
 
 /**
  * POST /api/email/send
@@ -126,6 +131,8 @@ export async function POST(req: Request) {
   const userExt = session.user as unknown as {
     formalName?: string | null;
     displayName?: string | null;
+    rol?: string | null;
+    departamento?: string | null;
   };
   const asesorName =
     userExt.formalName ||
@@ -133,6 +140,9 @@ export async function POST(req: Request) {
     session.user.name ||
     session.user.email.split('@')[0];
   const asesorEmail = session.user.email;
+  // Cargo formateado según rol + departamento del asesor en user_roles
+  // Ej: "Asesor de soluciones / Ventas" o "Líder de VASS"
+  const asesorCargo = buildAsesorCargo(userExt.rol ?? null, userExt.departamento ?? null);
 
   // Renderizar: cuerpo personalizado del asesor O plantilla normal.
   // En ambos casos la firma corporativa se agrega automáticamente.
@@ -142,12 +152,14 @@ export async function POST(req: Request) {
         bodyText: customBody,
         asesorName,
         asesorEmail,
+        asesorCargo,
         asesorExt: asesorExt || undefined,
       })
     : renderTemplate(template, {
         name,
         asesorName,
         asesorEmail,
+        asesorCargo,
         asesorExt: asesorExt || undefined,
         extras,
       });
