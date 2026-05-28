@@ -361,7 +361,7 @@ export function FollowUpEmailModal({ asesorName, asesorEmail, onClose, onSent }:
       }}
     >
       <div
-        className="relative w-full max-w-2xl bg-white dark:bg-[#0f1c2e] rounded-2xl shadow-2xl border-2 border-[#F7941D]/40 overflow-hidden my-auto"
+        className="relative w-full max-w-5xl bg-white dark:bg-[#0f1c2e] rounded-2xl shadow-2xl border-2 border-[#F7941D]/40 overflow-hidden my-auto"
         style={{
           boxShadow: '0 0 40px rgba(247, 148, 29, 0.3), 0 25px 50px rgba(0, 0, 0, 0.5)',
         }}
@@ -513,8 +513,14 @@ export function FollowUpEmailModal({ asesorName, asesorEmail, onClose, onSent }:
           </div>
         </div>
 
-        {/* Body */}
-        <div className="px-5 pb-5 pt-2 space-y-4">
+        {/* Body — layout horizontal 2 columnas en desktop, vertical en móvil.
+            COL IZQUIERDA: formulario (datos cliente + extras + adjuntos)
+            COL DERECHA:  preview / editor del correo
+            Esto evita el scroll vertical largo que tenía antes. */}
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_1.1fr] gap-5 px-5 pb-5 pt-2">
+
+          {/* ═══════════════ COLUMNA IZQUIERDA — FORMULARIO ═══════════════ */}
+          <div className="space-y-4">
           {/* Inputs base */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div>
@@ -667,6 +673,10 @@ export function FollowUpEmailModal({ asesorName, asesorEmail, onClose, onSent }:
             </p>
           </div>
 
+          </div>
+          {/* ═══════════════ COLUMNA DERECHA — PREVIEW / EDITOR ═══════════════ */}
+          <div className="space-y-3 lg:border-l lg:border-gray-200 lg:dark:border-gray-700 lg:pl-5">
+
           {/* Barra de acciones del preview: vista previa ↔ editar */}
           <div className="flex items-center justify-between">
             <div className="text-[10px] uppercase tracking-wider text-gray-500 dark:text-gray-400 font-semibold flex items-center gap-1.5">
@@ -770,13 +780,28 @@ export function FollowUpEmailModal({ asesorName, asesorEmail, onClose, onSent }:
               </div>
             </div>
           ) : (
-            /* VISTA PREVIA del correo renderizado */
-            <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-[#0a1628]/50 p-4 max-h-80 overflow-y-auto">
-              <p className="font-semibold text-xs text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-gray-700 pb-1.5 mb-2">
-                Asunto: {previewSubject}
-              </p>
+            /* VISTA PREVIA del correo renderizado — alto contraste para
+               que el texto NO se confunda con el fondo del modal.
+               Fondo blanco puro en light / azul oscuro puro en dark,
+               borde naranja sutil para separar visualmente del contenedor. */
+            <div
+              className="rounded-lg border-2 border-[#F7941D]/25 bg-white dark:bg-[#0a1628] p-5 max-h-[480px] overflow-y-auto shadow-sm"
+              style={{
+                boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.04)',
+              }}
+            >
+              {/* Cabecera estilo cliente de correo: chip "DE" / "ASUNTO" */}
+              <div className="border-b-2 border-gray-200 dark:border-gray-700 pb-2.5 mb-3.5">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-[#F7941D] mb-1">
+                  Asunto del correo
+                </p>
+                <p className="text-sm font-semibold text-[#1B3A5C] dark:text-white leading-snug">
+                  {previewSubject}
+                </p>
+              </div>
               <div
-                className="text-[13px] text-[#1B3A5C] dark:text-gray-200 leading-relaxed"
+                className="text-sm text-[#1B3A5C] dark:text-gray-100 leading-relaxed font-medium"
+                style={{ wordBreak: 'break-word' }}
                 dangerouslySetInnerHTML={{ __html: previewHtml }}
               />
             </div>
@@ -798,6 +823,9 @@ export function FollowUpEmailModal({ asesorName, asesorEmail, onClose, onSent }:
               ¡Correo enviado! Revisa tu carpeta Enviados.
             </div>
           )}
+
+          </div>
+          {/* ═══════════════ FIN COLUMNAS ═══════════════ */}
         </div>
 
         {/* Footer */}
