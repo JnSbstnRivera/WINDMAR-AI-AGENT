@@ -162,9 +162,11 @@ function buildSignature(
 
 // Wrap común — solo div container. La FIRMA se agrega en renderTemplate()
 // porque necesita valores reales (no placeholders) para escapar bien.
+// Color #1f2937 (gray-800) — casi negro, alto contraste en modo claro,
+// reemplaza el navy #1B3A5C anterior que se veía "azul claro" en blanco.
 function wrap(innerHtml: string): string {
   return `
-    <div style="font-family: Arial, Helvetica, sans-serif; font-size: 14px; color: #1B3A5C; line-height: 1.65; max-width: 600px;">
+    <div style="font-family: Arial, Helvetica, sans-serif; font-size: 14.5px; color: #1f2937; line-height: 1.7; max-width: 600px;">
       ${innerHtml}
     </div>
   `.trim();
@@ -189,105 +191,95 @@ export interface QuoteProduct {
 
 export const QUOTE_PRODUCTS: QuoteProduct[] = [
   {
-    id: 'solar_loan',
-    label: '☀️ Sistema Solar (Placas) — Loan',
-    productPhrase: 'sistema solar fotovoltaico con financiamiento Loan',
+    id: 'placas_loan',
+    label: '☀️ Placas (Loan)',
+    productPhrase: 'instalación de placas solares con financiamiento Loan',
     beneficios: [
-      'Reduce o elimina su factura mensual de LUMA',
-      'Crédito federal ITC del 30% sobre el costo del sistema',
-      'Producción de energía durante 25 a 30 años (vida útil de los paneles)',
-      'Aumenta el valor de mercado de su propiedad',
-      'Mantenimiento mínimo y operación silenciosa',
+      '⚡ Reduce o elimina por completo su factura mensual de LUMA',
+      '💰 Crédito federal ITC del 30% que recupera parte de su inversión',
+      '📅 Producción de energía estable durante 25 a 30 años',
+      '📈 Aumenta el valor de mercado de su propiedad inmediatamente',
+      '🌍 Energía limpia que reduce su huella de carbono',
+      '🔧 Operación silenciosa y prácticamente sin mantenimiento',
     ],
     garantias: [
-      '25 años en paneles solares',
-      '12 años en el inversor',
-      '10 años en la instalación profesional Windmar',
+      '🛡️ 25 años en paneles solares',
+      '🛡️ 12 años en el inversor',
+      '🛡️ 10 años en instalación profesional Windmar',
+      '🙌 Soporte técnico directo con nuestro equipo certificado',
     ],
   },
   {
-    id: 'solar_lease',
-    label: '☀️ Sistema Solar (Placas) — Lease',
-    productPhrase: 'sistema solar fotovoltaico con plan Lease (cero pago inicial)',
+    id: 'powerwall2_loan',
+    label: '🔋 Power Wall 2 (Loan)',
+    productPhrase: 'batería Power Wall 2 con financiamiento Loan',
     beneficios: [
-      'Cero pago inicial — sistema instalado sin desembolso de su parte',
-      'Pago mensual fijo y predecible durante todo el contrato',
-      'Mantenimiento integral incluido durante la vida del plan',
-      'Reduce su factura de LUMA desde el primer día',
-      'Sin riesgo de fluctuaciones en costos de electricidad',
+      '⚡ Respaldo eléctrico continuo durante apagones y mantenimientos',
+      '🏠 Protege sus electrodomésticos contra fluctuaciones de voltaje',
+      '🔇 Operación 100% silenciosa — sin combustibles ni motor',
+      '📱 Monitoreo inteligente desde su celular en tiempo real',
+      '🔄 Sistema escalable: puede añadir paneles solares más adelante',
+      '🌿 Sin emisiones, sin ruido, sin olores',
     ],
     garantias: [
-      'Mantenimiento integral durante toda la vida del contrato',
-      'Reemplazo de componentes defectuosos sin costo',
-      '10 años en la instalación profesional Windmar',
+      '🛡️ 10 años en la batería Power Wall 2',
+      '🛡️ 10 años en instalación profesional Windmar',
+      '🙌 Soporte técnico continuo de por vida',
     ],
   },
   {
-    id: 'solar_bateria_loan',
-    label: '☀️🔋 Sistema Solar + Batería — Loan',
-    productPhrase: 'sistema solar + batería de respaldo con financiamiento Loan',
+    id: 'powerwall3_loan',
+    label: '🔋 Power Wall 3 (Loan)',
+    productPhrase: 'batería Power Wall 3 con financiamiento Loan',
     beneficios: [
-      'Elimina o reduce drásticamente su factura de LUMA',
-      'Respaldo eléctrico continuo durante apagones y mantenimientos',
-      'Crédito federal ITC del 30% sobre el sistema completo (paneles + batería)',
-      'Producción de energía 25 a 30 años + autonomía con la batería',
-      'Independencia parcial de la red eléctrica',
+      '⚡ Mayor capacidad de respaldo que el Power Wall 2 (la última generación)',
+      '🏠 Mantiene su hogar funcionando durante apagones prolongados',
+      '🔇 Operación silenciosa con tecnología de última generación',
+      '📱 App de monitoreo avanzada con métricas en tiempo real',
+      '🔄 Compatible con futura expansión solar fotovoltaica',
+      '⚙️ Inversor integrado de alta eficiencia',
     ],
     garantias: [
-      '25 años en paneles solares',
-      '12 años en el inversor',
-      '10 años en la batería',
-      '10 años en la instalación profesional Windmar',
+      '🛡️ 10 años en la batería Power Wall 3',
+      '🛡️ 10 años en instalación profesional Windmar',
+      '🙌 Soporte técnico continuo con nuestro equipo',
     ],
   },
   {
-    id: 'solar_bateria_lease',
-    label: '☀️🔋 Sistema Solar + Batería — Lease',
-    productPhrase: 'sistema solar + batería con plan Lease (cero pago inicial)',
+    id: 'placas_powerwall3_lease',
+    label: '☀️🔋 Placas + Power Wall 3 (Lease)',
+    productPhrase: 'sistema completo de Placas + Power Wall 3 con plan Lease (cero pago inicial)',
     beneficios: [
-      'Cero pago inicial para el sistema completo (paneles y batería)',
-      'Pago mensual fijo que incluye la batería de respaldo',
-      'Tranquilidad durante apagones sin desembolso adicional',
-      'Mantenimiento integral del sistema incluido',
-      'Estabilidad: sin sorpresas en su factura mensual',
+      '✨ Cero pago inicial — sistema completo instalado sin desembolso',
+      '💵 Pago mensual fijo predecible durante todo el contrato',
+      '⚡ Respaldo eléctrico continuo + producción solar diaria',
+      '🛠️ Mantenimiento integral del sistema incluido sin costo extra',
+      '📅 Estabilidad por años — sin sorpresas en su factura',
+      '🌍 Energía limpia desde el primer día sin inversión inicial',
+      '🏠 Protección completa de su hogar contra apagones',
     ],
     garantias: [
-      'Mantenimiento integral del sistema completo durante el contrato',
-      'Reemplazo de componentes defectuosos sin costo',
-      '10 años en la instalación profesional Windmar',
-    ],
-  },
-  {
-    id: 'bateria',
-    label: '🔋 Batería de respaldo',
-    productPhrase: 'batería de respaldo eléctrico para su hogar',
-    beneficios: [
-      'Respaldo continuo de energía durante apagones',
-      'Protección de electrodomésticos contra fluctuaciones de voltaje',
-      'Operación silenciosa y carga inteligente automática',
-      'Sin necesidad de combustibles ni mantenimiento mecánico (a diferencia de plantas)',
-      'Sistema escalable si en el futuro decide añadir paneles solares',
-    ],
-    garantias: [
-      '10 años en la batería',
-      '10 años en la instalación profesional Windmar',
-      'Soporte técnico continuo',
+      '🛡️ Mantenimiento integral del sistema durante todo el contrato',
+      '🛡️ Reemplazo de componentes defectuosos sin costo',
+      '🛡️ 10 años en instalación profesional Windmar',
+      '🙌 Soporte técnico continuo de por vida',
     ],
   },
   {
     id: 'anker',
     label: '⚡ Anker (batería portable)',
-    productPhrase: 'Anker — batería portable de respaldo',
+    productPhrase: 'batería portable Anker para respaldo móvil',
     beneficios: [
-      'Respaldo móvil para sus dispositivos esenciales',
-      'Carga rápida y eficiente con tecnología avanzada',
-      'Diseño compacto y ligero — fácil de transportar',
-      'Ideal para emergencias, viajes y trabajo en exteriores',
-      'Múltiples puertos de salida (AC, USB-C, USB-A)',
+      '🎒 Respaldo móvil — se mueve con usted a donde lo necesite',
+      '🔌 Múltiples puertos de salida (AC, USB-C, USB-A) para todos sus equipos',
+      '⚡ Carga rápida con tecnología de última generación',
+      '📦 Diseño compacto y ligero — ideal para emergencias y viajes',
+      '🌞 Compatible con carga solar para autonomía total',
+      '💡 Pantalla LED clara con estado de carga en tiempo real',
     ],
     garantias: [
-      '5 años de garantía oficial Anker',
-      'Soporte técnico Windmar incluido',
+      '🛡️ 5 años de garantía oficial Anker',
+      '🙌 Soporte técnico Windmar incluido',
     ],
   },
   {
@@ -295,16 +287,18 @@ export const QUOTE_PRODUCTS: QuoteProduct[] = [
     label: '🚰 Cisterna de respaldo de agua',
     productPhrase: 'cisterna de respaldo de agua para su hogar',
     beneficios: [
-      'Reserva continua de agua durante interrupciones del servicio',
-      'Múltiples capacidades disponibles según su consumo (Ecowater 500 / Hércules 600)',
-      'Bomba automática incluida que activa el suministro sin intervención',
-      'Material durable certificado para uso potable',
-      'Instalación profesional incluida con conexión a su sistema actual',
+      '💧 Reserva continua de agua durante interrupciones del servicio',
+      '🏠 Tranquilidad sabiendo que su familia nunca se quedará sin agua',
+      '⚙️ Bomba automática incluida que activa el suministro sin intervención',
+      '📏 Múltiples capacidades disponibles (Ecowater 500 / Hércules 600)',
+      '✅ Material durable certificado para uso potable',
+      '🔧 Instalación profesional incluida con conexión a su sistema actual',
     ],
     garantias: [
-      '10 años en tanque Ecowater 500 / 5 años en Hércules 600',
-      '2 años en la bomba',
-      '1 año en la instalación Windmar',
+      '🛡️ 10 años en tanque Ecowater 500 (5 años en Hércules 600)',
+      '🛡️ 2 años en la bomba',
+      '🛡️ 1 año en la instalación profesional Windmar',
+      '🙌 Soporte técnico continuo',
     ],
   },
   {
@@ -312,16 +306,18 @@ export const QUOTE_PRODUCTS: QuoteProduct[] = [
     label: '☀️♨️ Calentador solar',
     productPhrase: 'calentador solar de agua',
     beneficios: [
-      'Reduce hasta el 100% del consumo eléctrico de su calentador',
-      'Agua caliente continua aprovechando la energía del sol',
-      'Ahorro mensual desde el primer día de instalación',
-      'Energía limpia, sin emisiones contaminantes',
-      'Vida útil de 15 a 20 años con mantenimiento adecuado',
+      '☀️ Reduce hasta el 100% del consumo eléctrico de su calentador',
+      '🚿 Agua caliente continua aprovechando la energía del sol',
+      '💰 Ahorro mensual visible desde el primer día de instalación',
+      '🌿 Energía limpia, sin emisiones contaminantes',
+      '📅 Vida útil de 15 a 20 años con mantenimiento adecuado',
+      '🏠 Aumenta el valor y eficiencia de su propiedad',
     ],
     garantias: [
-      '10 años en tanque y colectores solares',
-      '5 años en accesorios y componentes',
-      '1 año en la instalación profesional Windmar',
+      '🛡️ 10 años en tanque y colectores solares',
+      '🛡️ 5 años en accesorios y componentes',
+      '🛡️ 1 año en instalación profesional Windmar',
+      '🙌 Soporte técnico continuo con nuestro equipo',
     ],
   },
   {
@@ -329,33 +325,37 @@ export const QUOTE_PRODUCTS: QuoteProduct[] = [
     label: '💧 Reverse Osmosis',
     productPhrase: 'sistema de filtración por ósmosis inversa',
     beneficios: [
-      'Elimina más del 99% de contaminantes, sodio, cloro, plomo y microorganismos',
-      'Agua de calidad embotellada directamente de su grifo',
-      'Ahorro significativo vs comprar agua embotellada continuamente',
-      'Mejora el sabor, claridad y olor del agua',
-      'Instalación bajo el fregadero — no ocupa espacio en su cocina',
+      '💧 Elimina más del 99% de contaminantes, sodio, cloro, plomo y microorganismos',
+      '🥤 Agua de calidad embotellada directamente de su grifo',
+      '💰 Ahorro significativo vs comprar agua embotellada cada semana',
+      '👃 Mejora dramáticamente el sabor, claridad y olor del agua',
+      '🏠 Instalación bajo el fregadero — no ocupa espacio en su cocina',
+      '👨‍👩‍👧‍👦 Agua segura para toda la familia, incluyendo bebés',
     ],
     garantias: [
-      '5 años en el sistema',
-      '1 año en filtros (con servicio de cambio recomendado)',
-      'Servicio técnico continuo Windmar',
+      '🛡️ 5 años en el sistema',
+      '🛡️ 1 año en filtros (con servicio de cambio recomendado)',
+      '🙌 Servicio técnico continuo Windmar',
     ],
   },
   {
-    id: 'purificador',
-    label: '💧 Purificador de agua',
-    productPhrase: 'sistema de purificación de agua',
+    id: 'suavizador_poe',
+    label: '💧 Suavizador POE',
+    productPhrase: 'suavizador de agua POE (Point of Entry — agua suave para toda la casa)',
     beneficios: [
-      'Mejora notablemente el sabor, olor y claridad del agua',
-      'Reduce cloro, sedimentos y partículas',
-      'Filtros de larga duración con mantenimiento simple',
-      'Instalación profesional incluida',
-      'Económico vs sistemas de ósmosis inversa, ideal como primera mejora',
+      '💎 Elimina la dureza del agua (calcio y magnesio) en toda su casa',
+      '🚿 Protege tuberías, calentador, lavadora y todos sus equipos del sarro',
+      '🧼 El jabón y shampoo crean mejor espuma y rinden más',
+      '✨ Reduce manchas en grifería, vidrios, platos y ropa',
+      '🛁 Su piel y cabello notarán la diferencia inmediatamente',
+      '⏳ Prolonga la vida útil de electrodomésticos significativamente',
+      '🏠 Trata TODA el agua del hogar desde el punto de entrada',
     ],
     garantias: [
-      '3 años en el sistema',
-      '1 año en filtros',
-      'Soporte técnico continuo Windmar',
+      '🛡️ 10 años en el tanque del suavizador',
+      '🛡️ 5 años en la válvula de control',
+      '🛡️ 1 año en instalación profesional Windmar',
+      '🙌 Soporte técnico continuo y reabastecimiento de sal',
     ],
   },
 ];
@@ -495,27 +495,53 @@ export const EMAIL_TEMPLATES: EmailTemplate[] = [
     label: 'Enviar cotización',
     icon: '🧾',
     description: 'Cotización formal con PDF adjunto · beneficios y garantías según producto',
-    subject: 'Cotización · {{quoteProductLabel}} — Windmar Home',
+    subject: '☀️ Cotización · {{quoteProductLabel}} — Windmar Home',
     requiresAttachment: true,
     htmlBody: wrap(`
-      <p>Estimado/a <strong>{{name}}</strong>,</p>
-      <p>Reciba un cordial saludo de mi parte y de todo el equipo de <strong>Windmar Home</strong>. Como acordamos en nuestra conversación, le adjunto la cotización detallada para su <strong>{{quoteProductPhrase}}</strong>.</p>
+      <p>Estimado/a <strong>{{name}}</strong>, 👋</p>
 
-      <div style="margin: 16px 0; padding: 16px 20px; background-color: #fff7ed; border-left: 4px solid #F7941D; border-radius: 4px;">
-        <p style="margin: 0 0 8px 0; font-size: 13px; font-weight: bold; color: #F7941D; letter-spacing: 0.05em;">▸ BENEFICIOS PRINCIPALES</p>
-        <p style="margin: 0; font-size: 14px; color: #1B3A5C; white-space: pre-line; line-height: 1.7;">{{quoteBeneficios}}</p>
+      <p>Reciba un cordial saludo de mi parte y de todo el equipo de <strong style="color:#F7941D;">Windmar Home</strong> ☀️ Como acordamos en nuestra conversación, le envío con muchísimo gusto la cotización detallada para su <strong>{{quoteProductPhrase}}</strong>.</p>
+
+      <p>Sabemos que decisiones como esta requieren confianza, claridad y un buen acompañamiento — y para eso estamos. 🤝</p>
+
+      <!-- ────────── POR QUÉ WINDMAR ────────── -->
+      <div style="margin: 22px 0; padding: 18px 22px; background-color: #fff7ed; border: 2px solid #F7941D; border-radius: 10px;">
+        <p style="margin: 0 0 10px 0; font-size: 14px; font-weight: bold; color: #F7941D; letter-spacing: 0.06em; text-transform: uppercase;">
+          🌟 ¿Por qué elegir Windmar Home?
+        </p>
+        <p style="margin: 0; font-size: 14px; color: #1f2937; line-height: 1.75;">
+          Llevamos <strong>22 años iluminando hogares en Puerto Rico 🇵🇷</strong> con instalaciones realizadas por <strong>nuestro propio equipo certificado</strong> — no subcontratamos. Cuando elige a Windmar, no compra solo un producto: compra <strong>tranquilidad</strong>, soporte técnico real, <strong>garantías que respaldamos personalmente</strong> y un consultor que estará disponible mucho después de la instalación. ✨
+        </p>
       </div>
 
-      <div style="margin: 16px 0; padding: 16px 20px; background-color: #f0f9ff; border-left: 4px solid #0EA5E9; border-radius: 4px;">
-        <p style="margin: 0 0 8px 0; font-size: 13px; font-weight: bold; color: #0EA5E9; letter-spacing: 0.05em;">▸ GARANTÍAS INCLUIDAS</p>
-        <p style="margin: 0; font-size: 14px; color: #1B3A5C; white-space: pre-line; line-height: 1.7;">{{quoteGarantias}}</p>
+      <!-- ────────── BENEFICIOS ────────── -->
+      <div style="margin: 18px 0; padding: 18px 22px; background-color: #fff7ed; border-left: 5px solid #F7941D; border-radius: 6px;">
+        <p style="margin: 0 0 10px 0; font-size: 14px; font-weight: bold; color: #F7941D; letter-spacing: 0.05em;">
+          ✨ BENEFICIOS PRINCIPALES
+        </p>
+        <p style="margin: 0; font-size: 14px; color: #1f2937; white-space: pre-line; line-height: 1.85;">{{quoteBeneficios}}</p>
       </div>
 
-      <p>Le agradezco mucho que revise el <strong>documento PDF adjunto</strong>, donde encontrará los precios específicos de su propuesta y los términos completos.</p>
+      <!-- ────────── GARANTÍAS ────────── -->
+      <div style="margin: 18px 0; padding: 18px 22px; background-color: #ecfdf5; border-left: 5px solid #10b981; border-radius: 6px;">
+        <p style="margin: 0 0 10px 0; font-size: 14px; font-weight: bold; color: #059669; letter-spacing: 0.05em;">
+          🛡️ GARANTÍAS INCLUIDAS
+        </p>
+        <p style="margin: 0; font-size: 14px; color: #1f2937; white-space: pre-line; line-height: 1.85;">{{quoteGarantias}}</p>
+      </div>
 
-      <p>Como con todo lo que hacemos en Windmar, mi compromiso es que se sienta acompañado/a en cada paso del proceso. Si tiene cualquier consulta sobre los números, los plazos o algún detalle técnico, escríbame o llámeme — con gusto le explico personalmente.</p>
+      <p>📎 Le agradezco mucho que revise el <strong>documento PDF adjunto</strong>, donde encontrará los precios específicos, los términos completos y todos los detalles técnicos de su propuesta personalizada.</p>
 
-      <p>Sin otro particular por el momento, quedo atento/a a sus comentarios.</p>
+      <p>💬 Si tiene cualquier consulta sobre los números, los plazos, el proceso de instalación o algún detalle técnico, <strong>escríbame o llámeme cuando guste</strong> — con muchísimo gusto le explico todo personalmente. Mi compromiso es que tome la mejor decisión, sin presión y con toda la información en sus manos.</p>
+
+      <!-- ────────── CIERRE PERSUASIVO ────────── -->
+      <div style="margin: 22px 0; padding: 16px 20px; background: linear-gradient(135deg, #fff7ed 0%, #fef3c7 100%); border-radius: 8px; text-align: center;">
+        <p style="margin: 0; font-size: 15px; color: #1f2937; font-weight: 600; line-height: 1.6;">
+          🏠 Hagamos de su hogar el más <strong style="color:#F7941D;">eficiente, seguro y valioso</strong> del vecindario. ☀️
+        </p>
+      </div>
+
+      <p>Sin otro particular por el momento, quedo atento/a a sus comentarios y a la mejor decisión para usted y su familia. ¡Gracias por considerarnos! 🙏</p>
 
       <p><strong>Atentamente,</strong></p>
     `),
@@ -741,7 +767,7 @@ export function renderCustomEmail(vars: {
     vars.asesorExt
   );
   const html = `
-    <div style="font-family: Arial, Helvetica, sans-serif; font-size: 14px; color: #1B3A5C; line-height: 1.65; max-width: 600px;">
+    <div style="font-family: Arial, Helvetica, sans-serif; font-size: 14.5px; color: #1f2937; line-height: 1.7; max-width: 600px;">
       ${paragraphs}
       ${signature}
     </div>
