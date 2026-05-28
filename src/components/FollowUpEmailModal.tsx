@@ -361,13 +361,13 @@ export function FollowUpEmailModal({ asesorName, asesorEmail, onClose, onSent }:
       }}
     >
       <div
-        className="relative w-full max-w-5xl bg-white dark:bg-[#0f1c2e] rounded-2xl shadow-2xl border-2 border-[#F7941D]/40 overflow-hidden my-auto"
+        className="relative w-full max-w-7xl max-h-[92vh] flex flex-col bg-white dark:bg-[#0f1c2e] rounded-2xl shadow-2xl border-2 border-[#F7941D]/40 overflow-hidden my-auto"
         style={{
           boxShadow: '0 0 40px rgba(247, 148, 29, 0.3), 0 25px 50px rgba(0, 0, 0, 0.5)',
         }}
       >
-        {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-[#F7941D]/20 bg-gradient-to-r from-[#F7941D]/10 to-transparent">
+        {/* Header — siempre visible (flex-shrink-0) */}
+        <div className="flex-shrink-0 flex items-center justify-between px-5 py-4 border-b border-[#F7941D]/20 bg-gradient-to-r from-[#F7941D]/10 to-transparent">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-full bg-[#F7941D]/20 flex items-center justify-center">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#F7941D" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
@@ -397,8 +397,9 @@ export function FollowUpEmailModal({ asesorName, asesorEmail, onClose, onSent }:
           </button>
         </div>
 
-        {/* Selector de plantillas — dropdown transparente con iconos vector */}
-        <div className="px-5 pt-4 pb-2">
+        {/* Selector de plantillas — dropdown transparente con iconos vector
+            (flex-shrink-0 para que NO se haga scroll de esta sección) */}
+        <div className="flex-shrink-0 px-5 pt-4 pb-2">
           <label className="block text-xs font-semibold text-[#1B3A5C] dark:text-gray-300 mb-2 uppercase tracking-wider">
             Elige una plantilla
           </label>
@@ -516,8 +517,10 @@ export function FollowUpEmailModal({ asesorName, asesorEmail, onClose, onSent }:
         {/* Body — layout horizontal con formulario angosto y preview elástico.
             COL IZQUIERDA (320px fijo): formulario (4-5 filas compactas)
             COL DERECHA (1fr elástico): preview/editor — el protagonista visual.
-            En móvil (< lg) vuelve a columna única. */}
-        <div className="grid grid-cols-1 lg:grid-cols-[320px_1fr] gap-5 px-5 pb-5 pt-2">
+            En móvil (< lg) vuelve a columna única.
+            flex-1 + overflow-y-auto: si el contenido excede la altura del
+            viewport, solo este bloque hace scroll (header/footer quedan fijos). */}
+        <div className="flex-1 min-h-0 overflow-y-auto grid grid-cols-1 lg:grid-cols-[320px_1fr] gap-5 px-5 pb-5 pt-2">
 
           {/* ═══════════════ COLUMNA IZQUIERDA — FORMULARIO ═══════════════ */}
           <div className="space-y-4">
@@ -845,8 +848,8 @@ export function FollowUpEmailModal({ asesorName, asesorEmail, onClose, onSent }:
           {/* ═══════════════ FIN COLUMNAS ═══════════════ */}
         </div>
 
-        {/* Footer */}
-        <div className="px-5 py-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-[#0a1628]/30">
+        {/* Footer — siempre visible con el botón de envío (flex-shrink-0) */}
+        <div className="flex-shrink-0 px-5 py-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-[#0a1628]/30">
           <button
             onClick={handleSubmit}
             disabled={!canSubmit}
