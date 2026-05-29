@@ -42,11 +42,30 @@ export async function GET(req: Request) {
   } catch (err) {
     const msg = err instanceof Error ? err.message : 'Error consultando Zoho';
     console.error('[zoho/client]', msg);
-    // Distingue error de config vs error de red
+    // Distingue error de config vs error de auth vs error de red
     if (msg.includes('variables de entorno')) {
       return NextResponse.json(
         { error: 'Zoho no está configurado en este deploy. Contacta al admin.' },
         { status: 503 }
+      );
+    }
+    // Errores típicos de OAuth para que el asesor entienda
+    if (msg.includes('invalid_code') || msg.includes('refresh')) {
+      return NextResponse.json(
+        {
+          error: 'El refresh_token de Zoho es inválido o expiró. Genera uno nuevo en api-console.zoho.com',
+          detail: msg,
+        },
+        { status: 401 }
+      );
+    }
+    if (msg.includes('invalid_client')) {
+      return NextResponse.json(
+        {
+          error: 'El Client ID/Secret de Zoho no coincide con el refresh_token. Verifica que sean del mismo App Registration.',
+          detail: msg,
+        },
+        { status: 401 }
       );
     }
     return NextResponse.json({ error: msg }, { status: 502 });

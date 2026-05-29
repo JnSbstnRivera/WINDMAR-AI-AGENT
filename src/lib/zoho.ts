@@ -58,12 +58,24 @@ async function getAccessToken(): Promise<string> {
 
   if (!res.ok) {
     const text = await res.text().catch(() => '');
+    console.error('[zoho] refresh fallo HTTP', res.status, text);
     throw new Error(`Zoho rechazó el refresh (${res.status}): ${text.slice(0, 200)}`);
   }
 
-  const json = (await res.json()) as { access_token?: string; expires_in?: number };
+  const json = (await res.json()) as {
+    access_token?: string;
+    expires_in?: number;
+    error?: string;
+    error_description?: string;
+  };
+
   if (!json.access_token) {
-    throw new Error('Respuesta de Zoho sin access_token');
+    // Zoho devuelve 200 OK incluso con errores — el error está en el body.
+    // Loguear TODO para diagnosticar (sin exponer las credenciales).
+    console.error('[zoho] refresh sin access_token. Body:', JSON.stringify(json));
+    const reason = json.error || 'unknown';
+    const detail = json.error_description ? ` — ${json.error_description}` : '';
+    throw new Error(`Zoho rechazó el refresh: ${reason}${detail}`);
   }
 
   svcToken = json.access_token;
