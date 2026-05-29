@@ -13,12 +13,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "10 - Easter eggs.md",
+                "file": "00 🌞 MOC.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "10 - Easter eggs"
+              "title": "00 🌞 MOC"
             }
           },
           {
@@ -46,7 +46,7 @@
             }
           }
         ],
-        "currentTab": 1
+        "currentTab": 2
       }
     ],
     "direction": "vertical"
@@ -208,16 +208,19 @@
       "bases:Crear nueva base": false
     }
   },
-  "active": "6eff4f7fa6f2a700",
+  "active": "83c89cda3d8cd091",
   "lastOpenFiles": [
-    "04 - Esquema Supabase.md",
-    "05 - SYSTEM_PROMPT.md",
-    "10 - Easter eggs.md",
-    "02 - Arquitectura.md",
-    "06 - REGLA SUPREMA.md",
     "00 🌞 MOC.md",
+    "99 - Glosario.md",
     "16 - Roadmap.md",
+    "14 - Deploy.md",
+    "11 - Dashboard admin.md",
+    "10 - Easter eggs.md",
+    "07 - Features.md",
     "01 - Visión y propósito.md",
-    "99 - Glosario.md"
+    "05 - SYSTEM_PROMPT.md",
+    "02 - Arquitectura.md",
+    "04 - Esquema Supabase.md",
+    "06 - REGLA SUPREMA.md"
   ]
 }

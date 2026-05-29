@@ -13,6 +13,8 @@ import { WindmarSnake } from './WindmarSnake';
 import { WindmarPong } from './WindmarPong';
 import { FollowUpEmailModal } from './FollowUpEmailModal';
 import { buildAsesorCargo } from '@/lib/email-templates';
+import { ClientCard } from './ClientCard';
+import type { ZohoClientFull } from '@/lib/zoho';
 import { SUNBOT_ART, TEMBLOR_TEXT, ABOUT_TEXT } from '@/lib/easter-eggs';
 import { useInactivityLogout } from '@/hooks/useInactivityLogout';
 import type { Message, Conversation, ToolRef, QualityMeta } from '@/types';
@@ -94,6 +96,10 @@ export function ChatApp({ user, onSignOut }: Props) {
   const [snakeOpen, setSnakeOpen] = useState(false);
   const [pongOpen, setPongOpen] = useState(false);
   const [followUpOpen, setFollowUpOpen] = useState(false);
+  // Resultado de búsqueda en Zoho — null = cerrado / ZohoClientFull = card visible
+  const [zohoClient, setZohoClient] = useState<ZohoClientFull | null>(null);
+  const [zohoLoading, setZohoLoading] = useState(false);
+  const [zohoError, setZohoError] = useState<string | null>(null);
 
   // AbortController para poder cortar el fetch del streaming desde el botón "detener".
   // Lo guardamos en ref para que persista entre renders sin disparar re-renders.
@@ -446,6 +452,33 @@ export function ChatApp({ user, onSignOut }: Props) {
     });
   }
 
+  /**
+   * Busca un cliente en Zoho CRM y abre el ClientCard inline.
+   * Acepta email, teléfono o nombre como query.
+   */
+  async function searchZohoClient(query: string) {
+    setZohoError(null);
+    setZohoLoading(true);
+    setZohoClient(null);
+    try {
+      const res = await fetch(`/api/zoho/client?q=${encodeURIComponent(query)}`);
+      const data = await res.json();
+      if (!res.ok) {
+        setZohoError(data.error || 'Error consultando Zoho');
+        return;
+      }
+      if (!data.found) {
+        setZohoError(data.message || `No se encontró "${query}" en Zoho`);
+        return;
+      }
+      setZohoClient(data as ZohoClientFull);
+    } catch {
+      setZohoError('Error de conexión con Zoho');
+    } finally {
+      setZohoLoading(false);
+    }
+  }
+
   async function sendMessage(text: string) {
     if (!text.trim() || isStreaming) return;
 
@@ -480,6 +513,18 @@ export function ChatApp({ user, onSignOut }: Props) {
       cmd === '/followup'
     ) {
       setFollowUpOpen(true);
+      return;
+    }
+
+    // Comando Zoho: /cliente {email|teléfono|nombre}
+    // Busca el cliente en Zoho CRM y muestra ClientCard con coach IA.
+    if (cmd.startsWith('/cliente ') || cmd.startsWith('/zoho ')) {
+      const query = text.trim().split(/\s+/).slice(1).join(' ');
+      if (!query || query.length < 3) {
+        setZohoError('Escribe el comando seguido del email, teléfono o nombre. Ej: /cliente maria@correo.com');
+        return;
+      }
+      searchZohoClient(query);
       return;
     }
     // Respuestas estáticas (insertadas como mensaje del asistente, sin LLM)
@@ -960,6 +1005,45 @@ export function ChatApp({ user, onSignOut }: Props) {
             {invadersOpen && <WindmarInvaders onClose={() => setInvadersOpen(false)} />}
             {snakeOpen && <WindmarSnake onClose={() => setSnakeOpen(false)} />}
             {pongOpen && <WindmarPong onClose={() => setPongOpen(false)} />}
+            {/* Estado loading de Zoho (skeleton naranja) */}
+            {zohoLoading && (
+              <div className="mx-auto my-3 max-w-[860px] w-full rounded-xl border-2 border-orange-500/40 px-5 py-6 text-center" style={{ background: '#0a1628', color: '#F7941D' }}>
+                <div className="flex items-center justify-center gap-2 text-sm">
+                  <svg className="animate-spin" width="18" height="18" viewBox="0 0 24 24" fill="none">
+                    <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" strokeOpacity="0.25" />
+                    <path d="M22 12a10 10 0 0 1-10 10" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+                  </svg>
+                  Buscando en Zoho CRM…
+                </div>
+              </div>
+            )}
+            {/* Error de Zoho */}
+            {zohoError && !zohoLoading && (
+              <div className="mx-auto my-3 max-w-[860px] w-full rounded-xl border-2 border-red-500/40 px-5 py-3 text-sm flex items-center justify-between gap-3" style={{ background: '#0a1628', color: '#fecaca' }}>
+                <span>⚠️ {zohoError}</span>
+                <button onClick={() => setZohoError(null)} className="text-gray-400 hover:text-white cursor-pointer flex-shrink-0">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                    <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+                  </svg>
+                </button>
+              </div>
+            )}
+            {/* Card de cliente con coach IA */}
+            {zohoClient && (
+              <div className="relative">
+                <button
+                  onClick={() => setZohoClient(null)}
+                  className="absolute top-2 right-2 z-10 text-gray-400 hover:text-white p-1.5 rounded-md hover:bg-white/10 cursor-pointer"
+                  aria-label="Cerrar"
+                  title="Cerrar tarjeta de cliente"
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                    <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+                  </svg>
+                </button>
+                <ClientCard client={zohoClient} />
+              </div>
+            )}
             {followUpOpen && (
               <FollowUpEmailModal
                 asesorName={user.formalName || capDisplayName}
@@ -989,6 +1073,45 @@ export function ChatApp({ user, onSignOut }: Props) {
             {invadersOpen && <WindmarInvaders onClose={() => setInvadersOpen(false)} />}
             {snakeOpen && <WindmarSnake onClose={() => setSnakeOpen(false)} />}
             {pongOpen && <WindmarPong onClose={() => setPongOpen(false)} />}
+            {/* Estado loading de Zoho (skeleton naranja) */}
+            {zohoLoading && (
+              <div className="mx-auto my-3 max-w-[860px] w-full rounded-xl border-2 border-orange-500/40 px-5 py-6 text-center" style={{ background: '#0a1628', color: '#F7941D' }}>
+                <div className="flex items-center justify-center gap-2 text-sm">
+                  <svg className="animate-spin" width="18" height="18" viewBox="0 0 24 24" fill="none">
+                    <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" strokeOpacity="0.25" />
+                    <path d="M22 12a10 10 0 0 1-10 10" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+                  </svg>
+                  Buscando en Zoho CRM…
+                </div>
+              </div>
+            )}
+            {/* Error de Zoho */}
+            {zohoError && !zohoLoading && (
+              <div className="mx-auto my-3 max-w-[860px] w-full rounded-xl border-2 border-red-500/40 px-5 py-3 text-sm flex items-center justify-between gap-3" style={{ background: '#0a1628', color: '#fecaca' }}>
+                <span>⚠️ {zohoError}</span>
+                <button onClick={() => setZohoError(null)} className="text-gray-400 hover:text-white cursor-pointer flex-shrink-0">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                    <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+                  </svg>
+                </button>
+              </div>
+            )}
+            {/* Card de cliente con coach IA */}
+            {zohoClient && (
+              <div className="relative">
+                <button
+                  onClick={() => setZohoClient(null)}
+                  className="absolute top-2 right-2 z-10 text-gray-400 hover:text-white p-1.5 rounded-md hover:bg-white/10 cursor-pointer"
+                  aria-label="Cerrar"
+                  title="Cerrar tarjeta de cliente"
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                    <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+                  </svg>
+                </button>
+                <ClientCard client={zohoClient} />
+              </div>
+            )}
             {followUpOpen && (
               <FollowUpEmailModal
                 asesorName={user.formalName || capDisplayName}
