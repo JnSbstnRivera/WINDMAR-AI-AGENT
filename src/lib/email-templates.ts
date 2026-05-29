@@ -108,6 +108,9 @@ export interface EmailTemplate {
   subject: string;
   /** Body HTML con placeholders */
   htmlBody: string;
+  /** Título grande que aparece en el header del correo (al lado del logo).
+      Puede tener placeholders {{...}}. Ej: "COTIZACIÓN SOLAR LOAN" */
+  headerTitle?: string;
   /** Campos adicionales que esta plantilla requiere */
   extraFields?: EmailExtraField[];
   /** Si true, no permite enviar sin al menos un archivo adjunto.
@@ -163,37 +166,60 @@ function buildSignature(
   `.trim();
 }
 
-// Banner con el logo Windmar Home al inicio de cada correo.
-// Compacto: padding mínimo + sin margin-bottom (la separación la da el
-// primer <p> con su margin-top reseteado en el wrap()).
-function buildHeaderBanner(): string {
+// Banner con el logo Windmar Home + título grande + subtítulo.
+// Layout horizontal estilo "cotizador profesional":
+//   [LOGO]  │  TÍTULO DEL CORREO
+//           │  WINDMAR HOME PROFESSIONAL
+//
+// Si no se pasa título, fallback al banner antiguo (solo logo centrado).
+function buildHeaderBanner(title?: string): string {
+  // Sin título → logo solo centrado (fallback)
+  if (!title || !title.trim()) {
+    return `
+      <table cellpadding="0" cellspacing="0" border="0" width="100%" style="margin: 0 0 4px 0; border-bottom: 2px solid rgba(247,148,29,0.25);">
+        <tr>
+          <td align="center" style="padding: 4px 0 8px 0;">
+            <img src="${HEADER_LOGO_URL}" alt="Windmar Home" width="180" style="display: block; border: 0; max-width: 180px; height: auto;" />
+          </td>
+        </tr>
+      </table>
+    `.trim();
+  }
+
+  // Con título → layout horizontal con logo pequeño + separador + textos
+  const safeTitle = escapeHtml(title.trim().toUpperCase());
   return `
-    <table cellpadding="0" cellspacing="0" border="0" width="100%" style="margin: 0 0 4px 0; border-bottom: 2px solid rgba(247,148,29,0.25);">
+    <table cellpadding="0" cellspacing="0" border="0" width="100%" style="margin: 0 0 10px 0; border-bottom: 2px solid rgba(247,148,29,0.25);">
       <tr>
-        <td align="center" style="padding: 4px 0 8px 0;">
-          <img src="${HEADER_LOGO_URL}" alt="Windmar Home" width="180" style="display: block; border: 0; max-width: 180px; height: auto;" />
+        <td width="80" align="center" valign="middle" style="padding: 6px 12px 8px 0;">
+          <img src="${HEADER_LOGO_URL}" alt="Windmar Home" width="64" style="display: block; border: 0; max-width: 64px; height: auto;" />
+        </td>
+        <td width="2" style="background-color: rgba(247,148,29,0.5); padding: 0; font-size: 0; line-height: 0;">&nbsp;</td>
+        <td valign="middle" style="padding: 6px 0 8px 14px;">
+          <p style="margin: 0; font-size: 19px; font-weight: bold; color: #1B3A5C; letter-spacing: 0.5px; line-height: 1.2; font-family: Arial, Helvetica, sans-serif;">
+            ${safeTitle}
+          </p>
+          <p style="margin: 4px 0 0 0; font-size: 10px; color: #F7941D; letter-spacing: 2.5px; font-weight: 600; font-family: Arial, Helvetica, sans-serif;">
+            WINDMAR HOME PROFESSIONAL
+          </p>
         </td>
       </tr>
     </table>
   `.trim();
 }
 
-// Wrap común — solo div container. La FIRMA se agrega en renderTemplate()
-// porque necesita valores reales (no placeholders) para escapar bien.
-// Color #1f2937 (gray-800) — casi negro, alto contraste en modo claro.
-//
-// IMPORTANTE: el primer <p> después del banner se le pone margin-top
-// reducido inline para que arranque pegado al separador naranja del logo.
+// Wrap común — solo div container. Banner y firma se inyectan después en
+// renderTemplate(), cuando ya tenemos los placeholders resueltos (el
+// headerTitle puede contener {{...}}). El primer <p> recibe margin-top
+// reducido para arrancar pegado al separador del banner.
 function wrap(innerHtml: string): string {
-  // Inyectar style inline al primer <p> que aparece tras el banner para
-  // matar su margin-top default del navegador (~16px). El resto queda igual.
   const innerCompact = innerHtml.replace(
     /^(\s*)<p(\s|>)/,
     '$1<p style="margin: 6px 0 14px 0;"$2'
   );
   return `
     <div style="font-family: Arial, Helvetica, sans-serif; font-size: 14.5px; color: #1f2937; line-height: 1.7; max-width: 600px;">
-      ${buildHeaderBanner()}
+      <!--BANNER_PLACEHOLDER-->
       ${innerCompact}
     </div>
   `.trim();
@@ -399,6 +425,7 @@ export const EMAIL_TEMPLATES: EmailTemplate[] = [
     icon: '👋',
     description: 'Cliente con quien ya conversaste — confirmar interés',
     subject: 'Seguimiento de nuestra conversación — Windmar Home',
+    headerTitle: 'Seguimiento',
     htmlBody: wrap(`
       <p>Estimado/a <strong>{{name}}</strong>,</p>
       <p>Espero que se encuentre muy bien. Le escribo de parte de <strong>Windmar Home</strong> para dar continuidad a la conversación que tuvimos recientemente.</p>
@@ -415,6 +442,7 @@ export const EMAIL_TEMPLATES: EmailTemplate[] = [
     icon: '📄',
     description: 'Solicitar documentos al cliente — editable según necesidad',
     subject: 'Documentos requeridos para su propuesta — Windmar Home',
+    headerTitle: 'Solicitud de documentos',
     htmlBody: wrap(`
       <p>Estimado/a <strong>{{name}}</strong>,</p>
       <p>Reciba un cordial saludo de mi parte. Como conversamos, para poder armar una propuesta hecha a la medida de su hogar y sus necesidades reales, necesitaré que me haga llegar la siguiente documentación:</p>
@@ -444,6 +472,7 @@ export const EMAIL_TEMPLATES: EmailTemplate[] = [
     icon: '📞',
     description: 'Intentaste llamar — abre la puerta para que él decida horario',
     subject: 'Intenté comunicarme con usted — Windmar Home',
+    headerTitle: 'Seguimiento telefónico',
     htmlBody: wrap(`
       <p>Estimado/a <strong>{{name}}</strong>,</p>
       <p>Espero que se encuentre muy bien. Le escribo porque <strong>intenté comunicarme</strong> con usted por teléfono en días recientes y no pude alcanzarle. Sé que el día a día es bastante ocupado, por lo que prefiero respetar su tiempo y que sea usted quien me indique el momento que le resulte más conveniente para conversar.</p>
@@ -460,6 +489,7 @@ export const EMAIL_TEMPLATES: EmailTemplate[] = [
     icon: '📅',
     description: 'Confirmar visita técnica con fecha, hora y consultor',
     subject: 'Confirmación de visita técnica — Windmar Home',
+    headerTitle: 'Visita técnica',
     htmlBody: wrap(`
       <p>Estimado/a <strong>{{name}}</strong>,</p>
       <p>Reciba un cordial saludo. Le escribo para confirmar formalmente su <strong>visita técnica</strong> con nuestro equipo especializado de Windmar Home, programada con los siguientes datos:</p>
@@ -494,6 +524,7 @@ export const EMAIL_TEMPLATES: EmailTemplate[] = [
     icon: '📎',
     description: 'Envío formal de cotización, copia de contrato, estudio técnico, etc.',
     subject: '{{documentName}} — Windmar Home',
+    headerTitle: '{{documentName}}',
     htmlBody: wrap(`
       <p>Estimado/a <strong>{{name}}</strong>,</p>
       <p>Reciba un cordial saludo de mi parte y de todo el equipo de <strong>Windmar Home</strong>. Espero que se encuentre usted y su familia muy bien.</p>
@@ -523,6 +554,7 @@ export const EMAIL_TEMPLATES: EmailTemplate[] = [
     icon: '🧾',
     description: 'Cotización formal con PDF adjunto · beneficios y garantías según producto',
     subject: 'Cotización · {{quoteProductLabel}} — Windmar Home',
+    headerTitle: 'Cotización {{quoteProductLabel}}',
     requiresAttachment: true,
     htmlBody: wrap(`
       <p>Estimado/a <strong>{{name}}</strong>,</p>
@@ -591,6 +623,7 @@ export const EMAIL_TEMPLATES: EmailTemplate[] = [
     icon: '🎉',
     description: 'Bienvenida al cliente nuevo — informar producto y consultor',
     subject: '¡Bienvenido/a a la familia Windmar Home!',
+    headerTitle: 'Bienvenido a la familia',
     htmlBody: wrap(`
       <p>Estimado/a <strong>{{name}}</strong>,</p>
       <p>¡Le damos la más cordial bienvenida a la familia <strong>Windmar Home</strong>! 🎉</p>
@@ -724,9 +757,18 @@ export function renderTemplate(
     ? bodyHtml.replace(closeDivRegex, `${signature}</div>`)
     : `${bodyHtml}\n${signature}`;
 
+  // Inyectar el banner del header con el título YA resuelto (placeholders
+  // como {{quoteProductLabel}} ya están aplicados por replaceAll).
+  // El title viene de template.headerTitle — si no existe, banner solo logo.
+  const resolvedTitle = template.headerTitle
+    ? replaceAll(template.headerTitle).replace(/<[^>]+>/g, '') // sin HTML escapado
+    : '';
+  const banner = buildHeaderBanner(resolvedTitle || undefined);
+  const finalHtml = htmlWithSignature.replace('<!--BANNER_PLACEHOLDER-->', banner);
+
   return {
     subject: replaceAll(template.subject),
-    html: htmlWithSignature,
+    html: finalHtml,
   };
 }
 
@@ -785,6 +827,8 @@ export function renderCustomEmail(vars: {
   asesorEmail: string;
   asesorCargo?: string;
   asesorExt?: string;
+  /** Título grande del header (ej "COTIZACIÓN SOLAR LOAN") — opcional */
+  headerTitle?: string;
 }): { subject: string; html: string } {
   // Texto plano → párrafos HTML (doble salto = nuevo párrafo, salto simple = <br>)
   // El primer párrafo arranca con margin-top: 6px (cerca del banner).
@@ -808,7 +852,7 @@ export function renderCustomEmail(vars: {
   );
   const html = `
     <div style="font-family: Arial, Helvetica, sans-serif; font-size: 14.5px; color: #1f2937; line-height: 1.7; max-width: 600px;">
-      ${buildHeaderBanner()}
+      ${buildHeaderBanner(vars.headerTitle)}
       ${paragraphs}
       ${signature}
     </div>
