@@ -164,14 +164,14 @@ function buildSignature(
 }
 
 // Banner con el logo Windmar Home al inicio de cada correo.
-// Centrado, padding agradable, separador sutil naranja debajo.
-// Hace que el correo no luzca vacío y refuerza el branding.
+// Compacto: padding mínimo + sin margin-bottom (la separación la da el
+// primer <p> con su margin-top reseteado en el wrap()).
 function buildHeaderBanner(): string {
   return `
-    <table cellpadding="0" cellspacing="0" border="0" width="100%" style="margin-bottom: 24px; border-bottom: 2px solid rgba(247,148,29,0.25);">
+    <table cellpadding="0" cellspacing="0" border="0" width="100%" style="margin: 0 0 4px 0; border-bottom: 2px solid rgba(247,148,29,0.25);">
       <tr>
-        <td align="center" style="padding: 18px 0 22px 0;">
-          <img src="${HEADER_LOGO_URL}" alt="Windmar Home" width="220" style="display: block; border: 0; max-width: 220px; height: auto;" />
+        <td align="center" style="padding: 4px 0 8px 0;">
+          <img src="${HEADER_LOGO_URL}" alt="Windmar Home" width="180" style="display: block; border: 0; max-width: 180px; height: auto;" />
         </td>
       </tr>
     </table>
@@ -180,13 +180,21 @@ function buildHeaderBanner(): string {
 
 // Wrap común — solo div container. La FIRMA se agrega en renderTemplate()
 // porque necesita valores reales (no placeholders) para escapar bien.
-// Color #1f2937 (gray-800) — casi negro, alto contraste en modo claro,
-// reemplaza el navy #1B3A5C anterior que se veía "azul claro" en blanco.
+// Color #1f2937 (gray-800) — casi negro, alto contraste en modo claro.
+//
+// IMPORTANTE: el primer <p> después del banner se le pone margin-top
+// reducido inline para que arranque pegado al separador naranja del logo.
 function wrap(innerHtml: string): string {
+  // Inyectar style inline al primer <p> que aparece tras el banner para
+  // matar su margin-top default del navegador (~16px). El resto queda igual.
+  const innerCompact = innerHtml.replace(
+    /^(\s*)<p(\s|>)/,
+    '$1<p style="margin: 6px 0 14px 0;"$2'
+  );
   return `
     <div style="font-family: Arial, Helvetica, sans-serif; font-size: 14.5px; color: #1f2937; line-height: 1.7; max-width: 600px;">
       ${buildHeaderBanner()}
-      ${innerHtml}
+      ${innerCompact}
     </div>
   `.trim();
 }
@@ -779,11 +787,17 @@ export function renderCustomEmail(vars: {
   asesorExt?: string;
 }): { subject: string; html: string } {
   // Texto plano → párrafos HTML (doble salto = nuevo párrafo, salto simple = <br>)
-  const paragraphs = vars.bodyText
+  // El primer párrafo arranca con margin-top: 6px (cerca del banner).
+  // El resto: 0 0 12px 0 (sin top, solo separación abajo).
+  const paragraphsArr = vars.bodyText
     .split(/\n\n+/)
     .map((p) => p.trim())
-    .filter(Boolean)
-    .map((p) => `<p style="margin: 0 0 12px 0;">${escapeHtml(p).replace(/\n/g, '<br>')}</p>`)
+    .filter(Boolean);
+  const paragraphs = paragraphsArr
+    .map((p, i) => {
+      const margin = i === 0 ? '6px 0 12px 0' : '0 0 12px 0';
+      return `<p style="margin: ${margin};">${escapeHtml(p).replace(/\n/g, '<br>')}</p>`;
+    })
     .join('\n');
 
   const signature = buildSignature(
