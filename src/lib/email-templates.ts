@@ -186,8 +186,11 @@ function buildHeaderBanner(title?: string): string {
     `.trim();
   }
 
-  // Con título → layout horizontal con logo pequeño + separador + textos
-  const safeTitle = escapeHtml(title.trim().toUpperCase());
+  // Con título → layout horizontal con logo pequeño + separador + textos.
+  // El título se preserva en su forma natural (no se fuerza UPPERCASE)
+  // porque ahora son títulos conversacionales que se ven mejor en
+  // mayúscula inicial (ej. "¿Sigues interesado en energía de la buena?").
+  const safeTitle = escapeHtml(title.trim());
   return `
     <table cellpadding="0" cellspacing="0" border="0" width="100%" style="margin: 0 0 10px 0; border-bottom: 2px solid rgba(247,148,29,0.25);">
       <tr>
@@ -196,7 +199,7 @@ function buildHeaderBanner(title?: string): string {
         </td>
         <td width="2" style="background-color: rgba(247,148,29,0.5); padding: 0; font-size: 0; line-height: 0;">&nbsp;</td>
         <td valign="middle" style="padding: 6px 0 8px 14px;">
-          <p style="margin: 0; font-size: 19px; font-weight: bold; color: #1B3A5C; letter-spacing: 0.5px; line-height: 1.2; font-family: Arial, Helvetica, sans-serif;">
+          <p style="margin: 0; font-size: 18px; font-weight: bold; color: #1B3A5C; line-height: 1.25; font-family: Arial, Helvetica, sans-serif;">
             ${safeTitle}
           </p>
           <p style="margin: 4px 0 0 0; font-size: 10px; color: #F7941D; letter-spacing: 2.5px; font-weight: 600; font-family: Arial, Helvetica, sans-serif;">
@@ -424,8 +427,8 @@ export const EMAIL_TEMPLATES: EmailTemplate[] = [
     label: 'Seguimiento general',
     icon: '👋',
     description: 'Cliente con quien ya conversaste — confirmar interés',
-    subject: 'Seguimiento de nuestra conversación — Windmar Home',
-    headerTitle: 'Seguimiento',
+    subject: '¿Sigues pensando en tu hogar más eficiente? — Windmar Home',
+    headerTitle: '¿Sigues interesado en energía de la buena?',
     htmlBody: wrap(`
       <p>Estimado/a <strong>{{name}}</strong>,</p>
       <p>Espero que se encuentre muy bien. Le escribo de parte de <strong>Windmar Home</strong> para dar continuidad a la conversación que tuvimos recientemente.</p>
@@ -441,8 +444,8 @@ export const EMAIL_TEMPLATES: EmailTemplate[] = [
     label: 'Pedir documentos',
     icon: '📄',
     description: 'Solicitar documentos al cliente — editable según necesidad',
-    subject: 'Documentos requeridos para su propuesta — Windmar Home',
-    headerTitle: 'Solicitud de documentos',
+    subject: 'Solo unos detalles más para tu propuesta — Windmar Home',
+    headerTitle: 'Solo nos faltan unos detalles',
     htmlBody: wrap(`
       <p>Estimado/a <strong>{{name}}</strong>,</p>
       <p>Reciba un cordial saludo de mi parte. Como conversamos, para poder armar una propuesta hecha a la medida de su hogar y sus necesidades reales, necesitaré que me haga llegar la siguiente documentación:</p>
@@ -471,8 +474,8 @@ export const EMAIL_TEMPLATES: EmailTemplate[] = [
     label: 'No contestó la llamada',
     icon: '📞',
     description: 'Intentaste llamar — abre la puerta para que él decida horario',
-    subject: 'Intenté comunicarme con usted — Windmar Home',
-    headerTitle: 'Seguimiento telefónico',
+    subject: 'Te llamé y no te alcancé — Windmar Home',
+    headerTitle: 'No te alcancé por teléfono',
     htmlBody: wrap(`
       <p>Estimado/a <strong>{{name}}</strong>,</p>
       <p>Espero que se encuentre muy bien. Le escribo porque <strong>intenté comunicarme</strong> con usted por teléfono en días recientes y no pude alcanzarle. Sé que el día a día es bastante ocupado, por lo que prefiero respetar su tiempo y que sea usted quien me indique el momento que le resulte más conveniente para conversar.</p>
@@ -488,8 +491,8 @@ export const EMAIL_TEMPLATES: EmailTemplate[] = [
     label: 'Confirmar cita técnica',
     icon: '📅',
     description: 'Confirmar visita técnica con fecha, hora y consultor',
-    subject: 'Confirmación de visita técnica — Windmar Home',
-    headerTitle: 'Visita técnica',
+    subject: 'Tu visita técnica está confirmada — Windmar Home',
+    headerTitle: 'Nuestro técnico va para allá',
     htmlBody: wrap(`
       <p>Estimado/a <strong>{{name}}</strong>,</p>
       <p>Reciba un cordial saludo. Le escribo para confirmar formalmente su <strong>visita técnica</strong> con nuestro equipo especializado de Windmar Home, programada con los siguientes datos:</p>
@@ -523,8 +526,8 @@ export const EMAIL_TEMPLATES: EmailTemplate[] = [
     label: 'Enviar documento',
     icon: '📎',
     description: 'Envío formal de cotización, copia de contrato, estudio técnico, etc.',
-    subject: '{{documentName}} — Windmar Home',
-    headerTitle: '{{documentName}}',
+    subject: 'Aquí está tu {{documentName}} — Windmar Home',
+    headerTitle: 'Tu {{documentName}}',
     htmlBody: wrap(`
       <p>Estimado/a <strong>{{name}}</strong>,</p>
       <p>Reciba un cordial saludo de mi parte y de todo el equipo de <strong>Windmar Home</strong>. Espero que se encuentre usted y su familia muy bien.</p>
@@ -553,8 +556,8 @@ export const EMAIL_TEMPLATES: EmailTemplate[] = [
     label: 'Enviar cotización',
     icon: '🧾',
     description: 'Cotización formal con PDF adjunto · beneficios y garantías según producto',
-    subject: 'Cotización · {{quoteProductLabel}} — Windmar Home',
-    headerTitle: 'Cotización {{quoteProductLabel}}',
+    subject: 'Tu cotización personalizada · {{quoteProductLabel}} — Windmar Home',
+    headerTitle: 'Tu cotización · {{quoteProductLabel}}',
     requiresAttachment: true,
     htmlBody: wrap(`
       <p>Estimado/a <strong>{{name}}</strong>,</p>
@@ -622,8 +625,8 @@ export const EMAIL_TEMPLATES: EmailTemplate[] = [
     label: 'Bienvenida',
     icon: '🎉',
     description: 'Bienvenida al cliente nuevo — informar producto y consultor',
-    subject: '¡Bienvenido/a a la familia Windmar Home!',
-    headerTitle: 'Bienvenido a la familia',
+    subject: 'Bienvenido a la familia del sol — Windmar Home',
+    headerTitle: 'Bienvenido a la familia del sol',
     htmlBody: wrap(`
       <p>Estimado/a <strong>{{name}}</strong>,</p>
       <p>¡Le damos la más cordial bienvenida a la familia <strong>Windmar Home</strong>! 🎉</p>
