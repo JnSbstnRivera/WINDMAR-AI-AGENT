@@ -92,11 +92,13 @@ async function zohoFetch(path: string): Promise<unknown> {
 
 export interface ZohoLead {
   id: string;
+  leadNumber: string | null;      // Lead # visible en Zoho (ej. "LD-000123")
   fullName: string;
   email: string | null;
   phone: string | null;
   mobile: string | null;
   address: string | null;
+  zipCode: string | null;
   stage: string | null;           // Hot/Warm/Cold/etc
   owner: string | null;           // consultor/owner asignado
   ownerEmail: string | null;
@@ -109,7 +111,9 @@ export interface ZohoDeal {
   id: string;
   name: string;
   stage: string | null;           // Closed Won / Negotiation / etc.
-  productName: string | null;     // producto cotizado
+  productName: string | null;     // producto cotizado (Deal_Name suele tenerlo)
+  amount: string | null;          // monto formateado "$12,500.00" o null
+  contactName: string | null;     // cliente asociado (Contact_Name del Deal)
   owner: string | null;
   closingDate: string | null;
   createdAt: string | null;
@@ -153,25 +157,40 @@ export function detectQueryType(query: string): 'email' | 'phone' | 'name' {
   return 'name';
 }
 
+// Campos que pedimos a Zoho — minimizar payload (Zoho devuelve TODO si no
+// especificas). Lista probada en NOTAS-VENTAS-VASS.
+const LEAD_FIELDS =
+  'Full_Name,First_Name,Last_Name,Phone,Mobile,Email,Lead_Status,Owner,Street,City,State,Zip_Code,Created_Time,Lead_Number';
+const DEAL_FIELDS =
+  'Deal_Name,Amount,Stage,Closing_Date,Contact_Name,Owner,Created_Time';
+
+/**
+ * Construye el path de búsqueda usando los parámetros NATIVOS de Zoho.
+ * Mucho más rápido y robusto que el modo "criteria" — ya probado en VASS.
+ *
+ *   email  → ?email=jose@correo.com    (búsqueda exacta)
+ *   phone  → ?phone=7875551234         (solo dígitos, contains)
+ *   name   → ?word=Maria               (full-text search)
+ */
+function buildSearchPath(module: 'Leads' | 'Deals', query: string, limit: number): string {
+  const fields = module === 'Leads' ? LEAD_FIELDS : DEAL_FIELDS;
+  const digits = (query || '').replace(/\D/g, '');
+
+  if (query.includes('@')) {
+    return `/${module}/search?email=${encodeURIComponent(query)}&fields=${fields}&per_page=${limit}`;
+  }
+  if (digits.length >= 7) {
+    return `/${module}/search?phone=${encodeURIComponent(digits)}&fields=${fields}&per_page=${limit}`;
+  }
+  return `/${module}/search?word=${encodeURIComponent(query)}&fields=${fields}&per_page=${limit}`;
+}
+
 /**
  * Busca un lead por criterio (email | phone | name).
  * Devuelve el primer match (Zoho search ya ordena por relevancia).
  */
 export async function searchLead(query: string): Promise<ZohoLead | null> {
-  const type = detectQueryType(query);
-  let criteria = '';
-
-  if (type === 'email') {
-    criteria = `(Email:equals:${encodeURIComponent(query)})`;
-  } else if (type === 'phone') {
-    const digits = normalizePhone(query) || '';
-    // Zoho a veces guarda con guiones, a veces sin. Buscamos en Mobile Y Phone.
-    criteria = `((Mobile:contains:${digits})or(Phone:contains:${digits}))`;
-  } else {
-    criteria = `(Last_Name:contains:${encodeURIComponent(query)})`;
-  }
-
-  const result = (await zohoFetch(`/Leads/search?criteria=${criteria}`)) as {
+  const result = (await zohoFetch(buildSearchPath('Leads', query, 10))) as {
     data?: ZohoLeadRaw[];
   };
 
@@ -184,23 +203,11 @@ export async function searchLead(query: string): Promise<ZohoLead | null> {
  * Útil para el panel lateral con búsqueda visual.
  */
 export async function searchLeads(query: string, limit = 10): Promise<ZohoLead[]> {
-  const type = detectQueryType(query);
-  let criteria = '';
-
-  if (type === 'email') {
-    criteria = `(Email:equals:${encodeURIComponent(query)})`;
-  } else if (type === 'phone') {
-    const digits = normalizePhone(query) || '';
-    criteria = `((Mobile:contains:${digits})or(Phone:contains:${digits}))`;
-  } else {
-    criteria = `(Last_Name:contains:${encodeURIComponent(query)})`;
-  }
-
-  const result = (await zohoFetch(`/Leads/search?criteria=${criteria}&per_page=${limit}`)) as {
+  const result = (await zohoFetch(buildSearchPath('Leads', query, limit))) as {
     data?: ZohoLeadRaw[];
   };
 
-  return (result.data || []).slice(0, limit).map(mapLead);
+  return (result.data || []).map(mapLead);
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -209,15 +216,28 @@ export async function searchLeads(query: string, limit = 10): Promise<ZohoLead[]
 
 /**
  * Obtiene los deals (contratos/cotizaciones) asociados a un lead.
+ *
+ * En Zoho los deals NO siempre tienen Lead_Id (cuando el lead se convierte
+ * a contacto, queda asociado vía Contact_Name). La estrategia más robusta
+ * es buscar por la MISMA query del lead (email/teléfono/nombre) usando los
+ * parámetros nativos de Zoho, igual que hace NOTAS-VENTAS-VASS.
  */
-export async function getDealsByLead(leadId: string): Promise<ZohoDeal[]> {
-  // En Zoho, los deals se relacionan via Lead_Id o Contact_Id.
-  // Buscamos por Lead_Id (donde se guarda el lead original).
-  const result = (await zohoFetch(
-    `/Deals/search?criteria=(Lead_Id:equals:${leadId})&per_page=20`
-  )) as { data?: ZohoDealRaw[] };
+export async function getDealsByQuery(query: string): Promise<ZohoDeal[]> {
+  try {
+    const result = (await zohoFetch(buildSearchPath('Deals', query, 20))) as {
+      data?: ZohoDealRaw[];
+    };
+    return (result.data || []).map(mapDeal);
+  } catch {
+    // Si la búsqueda de deals falla (sin permisos / sin matches), devolvemos vacío
+    return [];
+  }
+}
 
-  return (result.data || []).map(mapDeal);
+/** Alias de compatibilidad — algunos lugares aún la llamaban así */
+export async function getDealsByLead(_leadId: string, query?: string): Promise<ZohoDeal[]> {
+  if (!query) return [];
+  return getDealsByQuery(query);
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -230,10 +250,11 @@ export async function getDealsByLead(leadId: string): Promise<ZohoDeal[]> {
  * Devuelve null si no se encontró el cliente.
  */
 export async function getClientFull(query: string): Promise<ZohoClientFull | null> {
-  const lead = await searchLead(query);
+  // Buscamos lead y deals EN PARALELO con la misma query — más rápido.
+  // Los deals se asocian al cliente final (Contact), no al lead original,
+  // por eso buscamos con la misma query (email/teléfono/nombre).
+  const [lead, deals] = await Promise.all([searchLead(query), getDealsByQuery(query)]);
   if (!lead) return null;
-
-  const deals = await getDealsByLead(lead.id);
 
   // Construir resumen útil para el coach
   const dealsAbiertos = deals.filter(
@@ -271,9 +292,10 @@ export async function getClientFull(query: string): Promise<ZohoClientFull | nul
 // MAPPERS — convierten respuesta raw de Zoho a tipos públicos
 // ═══════════════════════════════════════════════════════════════════
 
-// Tipos "raw" — la respuesta de Zoho tiene MUCHAS campos, solo extraemos los útiles
+// Tipos "raw" — la respuesta de Zoho tiene MUCHOS campos, solo extraemos los útiles
 interface ZohoLeadRaw {
   id: string;
+  Lead_Number?: string;
   Full_Name?: string;
   First_Name?: string;
   Last_Name?: string;
@@ -283,6 +305,7 @@ interface ZohoLeadRaw {
   Street?: string;
   City?: string;
   State?: string;
+  Zip_Code?: string;
   Lead_Status?: string;
   Owner?: { name?: string; email?: string };
   Created_Time?: string;
@@ -293,8 +316,9 @@ interface ZohoLeadRaw {
 interface ZohoDealRaw {
   id: string;
   Deal_Name?: string;
+  Amount?: number | string;
   Stage?: string;
-  Product_Name?: string;
+  Contact_Name?: { name?: string };
   Owner?: { name?: string };
   Closing_Date?: string;
   Created_Time?: string;
@@ -305,15 +329,18 @@ function mapLead(raw: ZohoLeadRaw): ZohoLead {
     raw.Full_Name ||
     [raw.First_Name, raw.Last_Name].filter(Boolean).join(' ').trim() ||
     'Sin nombre';
-  const address = [raw.Street, raw.City, raw.State].filter(Boolean).join(', ') || null;
+  const address =
+    [raw.Street, raw.City, raw.State, raw.Zip_Code].filter(Boolean).join(', ') || null;
 
   return {
     id: raw.id,
+    leadNumber: raw.Lead_Number || null,
     fullName,
     email: raw.Email || null,
     phone: raw.Phone || null,
     mobile: raw.Mobile || null,
     address,
+    zipCode: raw.Zip_Code || null,
     stage: raw.Lead_Status || null,
     owner: raw.Owner?.name || null,
     ownerEmail: raw.Owner?.email || null,
@@ -324,11 +351,21 @@ function mapLead(raw: ZohoLeadRaw): ZohoLead {
 }
 
 function mapDeal(raw: ZohoDealRaw): ZohoDeal {
+  // Amount viene como número en Zoho — lo formateamos con $ y miles
+  const amount =
+    typeof raw.Amount === 'number'
+      ? `$${raw.Amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+      : raw.Amount
+      ? String(raw.Amount)
+      : null;
+
   return {
     id: raw.id,
     name: raw.Deal_Name || 'Sin nombre',
     stage: raw.Stage || null,
-    productName: raw.Product_Name || null,
+    productName: raw.Deal_Name || null, // En Zoho el "producto" suele estar en el nombre del deal
+    amount,
+    contactName: raw.Contact_Name?.name || null,
     owner: raw.Owner?.name || null,
     closingDate: raw.Closing_Date || null,
     createdAt: raw.Created_Time || null,
