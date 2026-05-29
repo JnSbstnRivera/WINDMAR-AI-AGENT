@@ -161,10 +161,14 @@ export function normalizePhone(input: string): string | null {
   return digits;
 }
 
-/** Detecta si una query es email, teléfono o nombre */
-export function detectQueryType(query: string): 'email' | 'phone' | 'name' {
+/** Detecta si una query es email, teléfono, Lead# o nombre */
+export type QueryType = 'email' | 'phone' | 'leadNumber' | 'name';
+
+export function detectQueryType(query: string): QueryType {
   const trimmed = query.trim();
   if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) return 'email';
+  // Lead numbers en Zoho suelen tener prefijo LD-XXXXXX o LE-XXXXXX
+  if (/^(LD|LE)[-_]?\d+$/i.test(trimmed)) return 'leadNumber';
   if (normalizePhone(trimmed)) return 'phone';
   return 'name';
 }
@@ -180,18 +184,24 @@ const DEAL_FIELDS =
  * Construye el path de búsqueda usando los parámetros NATIVOS de Zoho.
  * Mucho más rápido y robusto que el modo "criteria" — ya probado en VASS.
  *
- *   email  → ?email=jose@correo.com    (búsqueda exacta)
- *   phone  → ?phone=7875551234         (solo dígitos, contains)
- *   name   → ?word=Maria               (full-text search)
+ *   email       → ?email=jose@correo.com      (exacta)
+ *   phone       → ?phone=7875551234           (solo dígitos, contains)
+ *   leadNumber  → ?criteria=(Lead_Number:equals:LD-000123) (exacta)
+ *   name        → ?word=Maria                 (full-text)
  */
 function buildSearchPath(module: 'Leads' | 'Deals', query: string, limit: number): string {
   const fields = module === 'Leads' ? LEAD_FIELDS : DEAL_FIELDS;
+  const type = detectQueryType(query);
   const digits = (query || '').replace(/\D/g, '');
 
-  if (query.includes('@')) {
+  if (type === 'email') {
     return `/${module}/search?email=${encodeURIComponent(query)}&fields=${fields}&per_page=${limit}`;
   }
-  if (digits.length >= 7) {
+  if (type === 'leadNumber' && module === 'Leads') {
+    // Lead Number es campo exacto en Zoho — usa criteria con :equals:
+    return `/${module}/search?criteria=(Lead_Number:equals:${encodeURIComponent(query)})&fields=${fields}&per_page=${limit}`;
+  }
+  if (type === 'phone' || digits.length >= 7) {
     return `/${module}/search?phone=${encodeURIComponent(digits)}&fields=${fields}&per_page=${limit}`;
   }
   return `/${module}/search?word=${encodeURIComponent(query)}&fields=${fields}&per_page=${limit}`;

@@ -130,6 +130,10 @@ export function FollowUpEmailModal({ asesorName, asesorEmail, asesorCargo, onClo
   const [asesorExt, setAsesorExt] = useState<string>('');
   const [attachments, setAttachments] = useState<AttachmentFile[]>([]);
   const [attachError, setAttachError] = useState<string | null>(null);
+  // Auto-completado desde Zoho (opcional)
+  const [zohoLookup, setZohoLookup] = useState<string>('');
+  const [zohoLookupLoading, setZohoLookupLoading] = useState(false);
+  const [zohoLookupMsg, setZohoLookupMsg] = useState<{ type: 'success' | 'error' | 'info'; text: string } | null>(null);
   // Edición personalizada del texto (para clientes especiales).
   // customBody = null → usar plantilla. string → texto editado por el asesor.
   const [editMode, setEditMode] = useState(false);
@@ -272,6 +276,60 @@ export function FollowUpEmailModal({ asesorName, asesorEmail, asesorCargo, onClo
     setCustomBody(null);
     setCustomSubject('');
     setEditMode(false);
+  }
+
+  /**
+   * Busca un cliente en Zoho y auto-completa nombre + correo del formulario.
+   * Acepta email, teléfono o Lead Number (LD-XXXXXX).
+   * Si encuentra múltiples, usa el primero. Mensaje sutil indica qué pasó.
+   */
+  async function lookupZohoAndFill() {
+    const q = zohoLookup.trim();
+    if (q.length < 3) {
+      setZohoLookupMsg({ type: 'error', text: 'Escribe al menos 3 caracteres' });
+      return;
+    }
+    setZohoLookupLoading(true);
+    setZohoLookupMsg(null);
+    try {
+      const res = await fetch(`/api/zoho/search?q=${encodeURIComponent(q)}`);
+      const data = await res.json();
+      if (!res.ok) {
+        setZohoLookupMsg({ type: 'error', text: data.error || 'Error consultando Zoho' });
+        return;
+      }
+      if (data.mode === 'none') {
+        setZohoLookupMsg({ type: 'info', text: 'No se encontró en Zoho — llena manualmente' });
+        return;
+      }
+      // single → cliente directo. list → tomamos el primero (el modal es para envío rápido)
+      let leadName = '';
+      let leadEmail = '';
+      if (data.mode === 'single') {
+        leadName = data.client.lead.fullName;
+        leadEmail = data.client.lead.email || '';
+      } else if (data.mode === 'list' && data.leads.length > 0) {
+        leadName = data.leads[0].fullName;
+        leadEmail = data.leads[0].email || '';
+      }
+      if (leadName) setName(leadName);
+      if (leadEmail) setEmail(leadEmail);
+      if (!leadEmail) {
+        setZohoLookupMsg({
+          type: 'info',
+          text: `Encontrado "${leadName}" pero sin correo — llénalo manualmente`,
+        });
+      } else {
+        setZohoLookupMsg({
+          type: 'success',
+          text: `✓ Auto-completado desde Zoho: ${leadName}`,
+        });
+      }
+    } catch {
+      setZohoLookupMsg({ type: 'error', text: 'Error de conexión con Zoho' });
+    } finally {
+      setZohoLookupLoading(false);
+    }
   }
 
   // Procesa archivos seleccionados: valida tipo/tamaño y los convierte a base64
@@ -546,6 +604,63 @@ export function FollowUpEmailModal({ asesorName, asesorEmail, asesorCargo, onClo
               overflow-y-auto solo de esta columna (si el form crece mucho
               con extras o muchos adjuntos); en uso normal no scrollea. */}
           <div className="space-y-4 min-h-0 overflow-y-auto pr-1">
+          {/* ────── BÚSQUEDA RÁPIDA EN ZOHO (OPCIONAL) ──────
+              Si el asesor llena este campo y presiona Buscar, los campos
+              Nombre/Correo se auto-completan desde Zoho. Si lo deja vacío,
+              el modal funciona igual que siempre (llenado manual). */}
+          <div className="rounded-lg border border-dashed border-[#F7941D]/40 bg-[#F7941D]/5 p-3 space-y-2">
+            <label className="block text-[10px] font-bold text-[#F7941D] uppercase tracking-widest">
+              🔍 Auto-completar desde Zoho (opcional)
+            </label>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={zohoLookup}
+                onChange={(e) => setZohoLookup(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    lookupZohoAndFill();
+                  }
+                }}
+                disabled={disabled || zohoLookupLoading}
+                placeholder="Lead#, email o teléfono…"
+                className="flex-1 px-3 py-2 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-[#0a1628] text-[#1B3A5C] dark:text-white text-xs focus:outline-none focus:ring-2 focus:ring-[#F7941D]/50 focus:border-[#F7941D] transition-all disabled:opacity-50"
+              />
+              <button
+                type="button"
+                onClick={lookupZohoAndFill}
+                disabled={disabled || zohoLookupLoading || zohoLookup.trim().length < 3}
+                className="px-3 py-2 rounded-md bg-[#F7941D] hover:bg-[#e8830d] text-white text-xs font-semibold transition-colors disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer whitespace-nowrap"
+              >
+                {zohoLookupLoading ? (
+                  <svg className="animate-spin" width="13" height="13" viewBox="0 0 24 24" fill="none">
+                    <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" strokeOpacity="0.25" />
+                    <path d="M22 12a10 10 0 0 1-10 10" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+                  </svg>
+                ) : (
+                  'Buscar'
+                )}
+              </button>
+            </div>
+            {zohoLookupMsg && (
+              <p
+                className={`text-[10px] ${
+                  zohoLookupMsg.type === 'success'
+                    ? 'text-emerald-600 dark:text-emerald-400'
+                    : zohoLookupMsg.type === 'error'
+                    ? 'text-red-600 dark:text-red-400'
+                    : 'text-gray-500 dark:text-gray-400 italic'
+                }`}
+              >
+                {zohoLookupMsg.text}
+              </p>
+            )}
+            <p className="text-[9px] text-gray-400 dark:text-gray-500 italic">
+              Deja vacío si vas a llenar Nombre y Correo manualmente
+            </p>
+          </div>
+
           {/* Inputs base — cada campo en su propia fila (apilados verticalmente)
               para mayor claridad. En la columna de 320px, esto da más aire
               al input y se lee mejor el label. */}

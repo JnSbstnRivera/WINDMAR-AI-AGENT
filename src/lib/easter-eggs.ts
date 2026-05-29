@@ -96,7 +96,7 @@ Hecho por Juan Sebastián Rivera · 2026
 
 **Comandos disponibles:**
 - \`/@\` · \`/seguimiento\` · \`/correos\` — envía correo de seguimiento al cliente 📧
-- \`/cliente {email|teléfono|nombre}\` — busca cliente en Zoho + coach IA 🔍
+- \`/zoho {email|teléfono|nombre|Lead#}\` — busca cliente en Zoho + coach IA 🔍 (alias: \`/cliente\`, \`/lead\`)
 - \`/sunbot\` — saludo del SUN BOT
 - \`/temblor\` — protocolo sísmico PR
 - \`/snake\` — mini-juego serpiente

@@ -14,7 +14,8 @@ import { WindmarPong } from './WindmarPong';
 import { FollowUpEmailModal } from './FollowUpEmailModal';
 import { buildAsesorCargo } from '@/lib/email-templates';
 import { ClientCard } from './ClientCard';
-import type { ZohoClientFull } from '@/lib/zoho';
+import { ClientList } from './ClientList';
+import type { ZohoClientFull, ZohoLead } from '@/lib/zoho';
 import { SUNBOT_ART, TEMBLOR_TEXT, ABOUT_TEXT } from '@/lib/easter-eggs';
 import { useInactivityLogout } from '@/hooks/useInactivityLogout';
 import type { Message, Conversation, ToolRef, QualityMeta } from '@/types';
@@ -96,8 +97,9 @@ export function ChatApp({ user, onSignOut }: Props) {
   const [snakeOpen, setSnakeOpen] = useState(false);
   const [pongOpen, setPongOpen] = useState(false);
   const [followUpOpen, setFollowUpOpen] = useState(false);
-  // Resultado de búsqueda en Zoho — null = cerrado / ZohoClientFull = card visible
+  // Resultado de búsqueda en Zoho
   const [zohoClient, setZohoClient] = useState<ZohoClientFull | null>(null);
+  const [zohoLeads, setZohoLeads] = useState<ZohoLead[] | null>(null);
   const [zohoLoading, setZohoLoading] = useState(false);
   const [zohoError, setZohoError] = useState<string | null>(null);
 
@@ -453,30 +455,58 @@ export function ChatApp({ user, onSignOut }: Props) {
   }
 
   /**
-   * Busca un cliente en Zoho CRM y abre el ClientCard inline.
-   * Acepta email, teléfono o nombre como query.
+   * Busca cliente/leads en Zoho CRM.
+   * Acepta email, teléfono, Lead Number (LD-000123) o nombre.
+   *
+   * Modos del endpoint:
+   *   - single → 1 cliente con datos completos → abre ClientCard
+   *   - list   → varios leads → abre ClientList para que elija
+   *   - none   → sin matches → mensaje en banner amarillo
    */
   async function searchZohoClient(query: string) {
     setZohoError(null);
     setZohoLoading(true);
     setZohoClient(null);
+    setZohoLeads(null);
     try {
-      const res = await fetch(`/api/zoho/client?q=${encodeURIComponent(query)}`);
+      const res = await fetch(`/api/zoho/search?q=${encodeURIComponent(query)}`);
       const data = await res.json();
       if (!res.ok) {
         setZohoError(data.error || 'Error consultando Zoho');
         return;
       }
-      if (!data.found) {
+      if (data.mode === 'none') {
         setZohoError(data.message || `No se encontró "${query}" en Zoho`);
         return;
       }
-      setZohoClient(data as ZohoClientFull);
+      if (data.mode === 'list') {
+        setZohoLeads(data.leads as ZohoLead[]);
+        return;
+      }
+      if (data.mode === 'single') {
+        setZohoClient(data.client as ZohoClientFull);
+        return;
+      }
     } catch {
       setZohoError('Error de conexión con Zoho');
     } finally {
       setZohoLoading(false);
     }
+  }
+
+  /**
+   * Cuando el asesor elige un lead de la lista (ClientList), buscamos sus
+   * datos completos por email (más confiable que por id).
+   */
+  async function openLeadFromList(lead: ZohoLead) {
+    setZohoLeads(null);
+    // Preferimos email, sino el teléfono, sino el lead number
+    const query = lead.email || lead.mobile || lead.phone || lead.leadNumber || '';
+    if (!query) {
+      setZohoError('No se pudo abrir el cliente — sin email ni teléfono');
+      return;
+    }
+    await searchZohoClient(query);
   }
 
   async function sendMessage(text: string) {
@@ -516,12 +546,21 @@ export function ChatApp({ user, onSignOut }: Props) {
       return;
     }
 
-    // Comando Zoho: /cliente {email|teléfono|nombre}
-    // Busca el cliente en Zoho CRM y muestra ClientCard con coach IA.
-    if (cmd.startsWith('/cliente ') || cmd.startsWith('/zoho ')) {
+    // Comando Zoho: /zoho {email|teléfono|nombre|Lead#}
+    // Case-insensitive: /ZOHO, /Zoho, /zoho funcionan igual
+    // Alias /cliente por compatibilidad. /lead también.
+    // Búsqueda inteligente:
+    //   - 1 match (email exacto / Lead#) → abre card con coach IA
+    //   - Varios matches (teléfono / nombre) → muestra lista clickeable
+    const cmdLower = cmd.toLowerCase();
+    if (
+      cmdLower.startsWith('/zoho ') ||
+      cmdLower.startsWith('/cliente ') ||
+      cmdLower.startsWith('/lead ')
+    ) {
       const query = text.trim().split(/\s+/).slice(1).join(' ');
       if (!query || query.length < 3) {
-        setZohoError('Escribe el comando seguido del email, teléfono o nombre. Ej: /cliente maria@correo.com');
+        setZohoError('Escribe el comando seguido del email, teléfono, nombre o Lead#. Ej: /zoho maria@correo.com');
         return;
       }
       searchZohoClient(query);
@@ -1028,7 +1067,15 @@ export function ChatApp({ user, onSignOut }: Props) {
                 </button>
               </div>
             )}
-            {/* Card de cliente con coach IA */}
+            {/* Lista de múltiples leads (varios resultados) */}
+            {zohoLeads && (
+              <ClientList
+                leads={zohoLeads}
+                onSelectLead={openLeadFromList}
+                onClose={() => setZohoLeads(null)}
+              />
+            )}
+            {/* Card de cliente con coach IA (1 resultado) */}
             {zohoClient && (
               <div className="relative">
                 <button
@@ -1096,7 +1143,15 @@ export function ChatApp({ user, onSignOut }: Props) {
                 </button>
               </div>
             )}
-            {/* Card de cliente con coach IA */}
+            {/* Lista de múltiples leads (varios resultados) */}
+            {zohoLeads && (
+              <ClientList
+                leads={zohoLeads}
+                onSelectLead={openLeadFromList}
+                onClose={() => setZohoLeads(null)}
+              />
+            )}
+            {/* Card de cliente con coach IA (1 resultado) */}
             {zohoClient && (
               <div className="relative">
                 <button
