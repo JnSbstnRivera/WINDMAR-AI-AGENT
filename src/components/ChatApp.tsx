@@ -509,6 +509,45 @@ export function ChatApp({ user, onSignOut }: Props) {
     await searchZohoClient(query);
   }
 
+  /**
+   * Calcula la distancia Levenshtein entre dos strings (cuántas ediciones
+   * mínimas separan a una palabra de la otra). Usado para sugerir el
+   * comando más parecido cuando el asesor escribe algo como `/sanke`.
+   */
+  function levenshtein(a: string, b: string): number {
+    const m = a.length, n = b.length;
+    if (m === 0) return n;
+    if (n === 0) return m;
+    const dp: number[][] = Array.from({ length: m + 1 }, () => Array(n + 1).fill(0));
+    for (let i = 0; i <= m; i++) dp[i][0] = i;
+    for (let j = 0; j <= n; j++) dp[0][j] = j;
+    for (let i = 1; i <= m; i++) {
+      for (let j = 1; j <= n; j++) {
+        const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+        dp[i][j] = Math.min(
+          dp[i - 1][j] + 1,
+          dp[i][j - 1] + 1,
+          dp[i - 1][j - 1] + cost
+        );
+      }
+    }
+    return dp[m][n];
+  }
+
+  /**
+   * Encuentra el comando más cercano al input del asesor.
+   * Devuelve null si la distancia es muy grande (sería confuso sugerirlo).
+   */
+  function findClosestCommand(input: string, commands: string[]): string | null {
+    let best: { cmd: string; dist: number } | null = null;
+    for (const cmd of commands) {
+      const dist = levenshtein(input.toLowerCase(), cmd.toLowerCase());
+      if (!best || dist < best.dist) best = { cmd, dist };
+    }
+    // Solo sugerimos si la distancia es razonable (max 3 ediciones)
+    return best && best.dist <= 3 ? best.cmd : null;
+  }
+
   async function sendMessage(text: string) {
     if (!text.trim() || isStreaming) return;
 
@@ -564,6 +603,28 @@ export function ChatApp({ user, onSignOut }: Props) {
         return;
       }
       searchZohoClient(query);
+      return;
+    }
+
+    // ──────────────────────────────────────────────────────────────────
+    // FALLBACK COMANDO DESCONOCIDO — si el mensaje empieza con `/` pero
+    // no matcheó ninguno arriba, NO lo mandamos al LLM (evita que el bot
+    // alucine herramientas inexistentes como hizo con `/sanke`).
+    // En su lugar, mostramos un mensaje claro y sugerimos el comando más
+    // parecido por distancia Levenshtein simple.
+    // ──────────────────────────────────────────────────────────────────
+    if (cmd.startsWith('/') && !cmd.includes(' ')) {
+      const knownCommands = [
+        '/invaders', '/juego', '/space', '/play',
+        '/snake', '/serpiente',
+        '/pong',
+        '/@', '/seguimiento', '/correos', '/correo', '/email', '/followup',
+        '/zoho', '/cliente', '/lead',
+        '/sunbot', '/temblor', '/sobre',
+      ];
+      const suggestion = findClosestCommand(cmd, knownCommands);
+      const reply = `🤔 No reconocí el comando **\`${text.trim()}\`**.\n\n${suggestion ? `¿Quizá quisiste decir **\`${suggestion}\`**?\n\n` : ''}Escribe \`/sobre\` para ver todos los comandos disponibles.`;
+      insertStaticReply(reply);
       return;
     }
     // Respuestas estáticas (insertadas como mensaje del asistente, sin LLM)
@@ -635,7 +696,16 @@ export function ChatApp({ user, onSignOut }: Props) {
     setIsStreaming(true);
 
     try {
+      // Si convId no se encuentra en el state local, algo está raro
+      // (probablemente la conversación se borró entre el "send" y este punto).
+      // Loguear para diagnosticar pero NO bloquear el envío — el mensaje
+      // del usuario igual se manda al LLM (sin historial = sin contexto).
       const currentConv = conversations.find((c) => c.id === convId);
+      if (!currentConv && convId) {
+        console.warn(
+          `[sendMessage] convId ${convId} no encontrado en state. Posible race condition con borrado de conversación.`
+        );
+      }
       const history = (currentConv?.messages ?? []).slice(-10).map((m) => ({
         role: m.role,
         content: m.content,

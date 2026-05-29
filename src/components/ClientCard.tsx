@@ -44,7 +44,11 @@ export function ClientCard({ client }: Props) {
     return () => {
       cancel = true;
     };
-  }, [client]);
+    // Dependemos del ID del lead (primitivo) — evita re-fetch si el padre
+    // re-renderiza y pasa un objeto client con referencia nueva pero datos
+    // iguales. Sin esto, podía haber duplicado de calls a /api/zoho/coach.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [client.lead.id]);
 
   const { lead, deals, summary } = client;
   const initials = lead.fullName

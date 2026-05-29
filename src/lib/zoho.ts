@@ -84,18 +84,31 @@ async function getAccessToken(): Promise<string> {
   return svcToken;
 }
 
-// ─── Helper para fetch a Zoho con auth ───────────────────────────────
-async function zohoFetch(path: string): Promise<unknown> {
+// ─── Helper para fetch a Zoho con auth + TIMEOUT ───────────────────
+// Timeout de 10s para no hacer hang del chat completo si Zoho responde lento.
+async function zohoFetch(path: string, timeoutMs = 10_000): Promise<unknown> {
   const token = await getAccessToken();
-  const res = await fetch(`${API_V2}${path}`, {
-    headers: { Authorization: `Zoho-oauthtoken ${token}` },
-  });
-  if (res.status === 204) return { data: [] }; // sin resultados
-  if (!res.ok) {
-    const text = await res.text().catch(() => '');
-    throw new Error(`Zoho error ${res.status} en ${path}: ${text.slice(0, 200)}`);
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const res = await fetch(`${API_V2}${path}`, {
+      headers: { Authorization: `Zoho-oauthtoken ${token}` },
+      signal: controller.signal,
+    });
+    if (res.status === 204) return { data: [] }; // sin resultados
+    if (!res.ok) {
+      const text = await res.text().catch(() => '');
+      throw new Error(`Zoho error ${res.status} en ${path}: ${text.slice(0, 200)}`);
+    }
+    return res.json();
+  } catch (err) {
+    if (err instanceof Error && err.name === 'AbortError') {
+      throw new Error(`Zoho timeout (${timeoutMs / 1000}s) en ${path}`);
+    }
+    throw err;
+  } finally {
+    clearTimeout(timeoutId);
   }
-  return res.json();
 }
 
 // ═══════════════════════════════════════════════════════════════════
