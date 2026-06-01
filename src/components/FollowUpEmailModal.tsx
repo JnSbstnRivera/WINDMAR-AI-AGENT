@@ -68,13 +68,6 @@ const TEMPLATE_ICONS: Record<string, JSX.Element> = {
       <line x1="9" y1="15" x2="15" y2="15" />
     </svg>
   ),
-  // home / casa con techo — cotización Roofing
-  send_roofing_quote: (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={ICON_STROKE} strokeLinecap="round" strokeLinejoin="round">
-      <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
-      <polyline points="9 22 9 12 15 12 15 22" />
-    </svg>
-  ),
   // sparkles — bienvenida (sutil, no fiesta)
   welcome: (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={ICON_STROKE} strokeLinecap="round" strokeLinejoin="round">
