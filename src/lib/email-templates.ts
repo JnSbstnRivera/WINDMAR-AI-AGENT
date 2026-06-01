@@ -619,7 +619,131 @@ export const EMAIL_TEMPLATES: EmailTemplate[] = [
     ],
   },
 
-  // ─── 7. Bienvenida (producto + consultor) ─────────────────────────
+  // ─── 7. Cotización Roofing — comparativa Silver/Gold/Platinum ────
+  // Plantilla especializada: SIEMPRE muestra los 3 sellados comparados
+  // + las ventajas del coating Gardner Gibson + garantía de por vida.
+  // El asesor solo adjunta el PDF con los precios específicos.
+  {
+    id: 'send_roofing_quote',
+    label: '🏠 Cotización Roofing (3 sellados)',
+    icon: '🏠',
+    description: 'Cotización Roofing con comparativa Silver / Gold / Platinum',
+    subject: 'Tu cotización Roofing · Comparativa de sellados — Windmar Home',
+    headerTitle: 'Tu cotización de Roofing',
+    requiresAttachment: true,
+    htmlBody: wrap(`
+      <p>Estimado/a <strong>{{name}}</strong>,</p>
+
+      <p>Reciba un cordial saludo de mi parte y de todo el equipo de <strong style="color:#F7941D;">Windmar Home</strong>. Como conversamos, le envío con muchísimo gusto la cotización detallada de su <strong>Roofing</strong>, junto con la comparativa de los tres planes de sellado que ofrecemos.</p>
+
+      <!-- ────────── POR QUÉ WINDMAR ROOFING ────────── -->
+      <div style="margin: 22px 0; padding: 18px 22px; background-color: #fff7ed; border: 2px solid #F7941D; border-radius: 10px;">
+        <p style="margin: 0 0 10px 0; font-size: 14px; font-weight: bold; color: #F7941D; letter-spacing: 0.06em; text-transform: uppercase;">
+          ¿Por qué nuestro Roofing es distinto?
+        </p>
+        <p style="margin: 0 0 8px 0; font-size: 14px; color: #1f2937; line-height: 1.75;">
+          Trabajamos con <strong>Gardner Gibson</strong>, manufacturero certificado americano (Tampa, Florida) con más de 100 años en el mercado. Su tecnología de <strong>coating líquido</strong> forma una membrana continua sin uniones, queda blanca para reflejar el calor y resiste el clima extremo de Puerto Rico.
+        </p>
+        <p style="margin: 0; font-size: 14px; color: #1f2937; line-height: 1.75;">
+          Y lo más importante: nuestras instalaciones son hechas por <strong>brigadas Windmar certificadas</strong> directamente — no subcontratamos. Cuando elige a Windmar, lo respaldamos con nuestro nombre.
+        </p>
+      </div>
+
+      <!-- ────────── TABLA COMPARATIVA 3 SELLADOS ────────── -->
+      <p style="margin: 20px 0 10px 0; font-size: 14px; font-weight: bold; color: #1B3A5C; letter-spacing: 0.05em; text-transform: uppercase;">
+        Comparativa de los 3 sellados
+      </p>
+
+      <table cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse: collapse; margin-bottom: 18px;">
+        <tr>
+          <td width="33%" valign="top" style="padding: 14px; background-color: #f8fafc; border: 1.5px solid #cbd5e1; border-radius: 8px 0 0 8px;">
+            <p style="margin: 0 0 6px 0; font-size: 13px; font-weight: bold; color: #64748b; letter-spacing: 0.08em;">PLAN SILVER</p>
+            <p style="margin: 0 0 10px 0; font-size: 11px; color: #6b7280; font-style: italic;">Para presupuesto ajustado</p>
+            <p style="margin: 0 0 4px 0; font-size: 12.5px; color: #1f2937;">• Coating básico Gardner Gibson</p>
+            <p style="margin: 0 0 4px 0; font-size: 12.5px; color: #1f2937;">• 1 año en mano de obra</p>
+            <p style="margin: 0 0 4px 0; font-size: 12.5px; color: #1f2937; font-weight: bold;">• Garantía de por vida del fabricante</p>
+            <p style="margin: 0; font-size: 12.5px; color: #1f2937;">• Acabado blanco reflectivo</p>
+          </td>
+          <td width="34%" valign="top" style="padding: 14px; background-color: #fff7ed; border: 2px solid #F7941D; border-left: 0; border-right: 0; position: relative;">
+            <p style="margin: 0 0 6px 0; font-size: 13px; font-weight: bold; color: #F7941D; letter-spacing: 0.08em;">PLAN GOLD ★ POPULAR</p>
+            <p style="margin: 0 0 10px 0; font-size: 11px; color: #b45309; font-style: italic;">El balance entre cobertura y costo</p>
+            <p style="margin: 0 0 4px 0; font-size: 12.5px; color: #1f2937;">• Coating premium Gardner Gibson</p>
+            <p style="margin: 0 0 4px 0; font-size: 12.5px; color: #1f2937;">• <strong>10 años en mano de obra</strong></p>
+            <p style="margin: 0 0 4px 0; font-size: 12.5px; color: #1f2937; font-weight: bold;">• Garantía de por vida del fabricante</p>
+            <p style="margin: 0 0 4px 0; font-size: 12.5px; color: #1f2937;">• Cobertura de goteras</p>
+            <p style="margin: 0; font-size: 12.5px; color: #1f2937;">• Acabado blanco reflectivo</p>
+          </td>
+          <td width="33%" valign="top" style="padding: 14px; background-color: #ecfdf5; border: 1.5px solid #10b981; border-radius: 0 8px 8px 0;">
+            <p style="margin: 0 0 6px 0; font-size: 13px; font-weight: bold; color: #059669; letter-spacing: 0.08em;">PLAN PLATINUM</p>
+            <p style="margin: 0 0 10px 0; font-size: 11px; color: #047857; font-style: italic;">Cobertura completa todo incluido</p>
+            <p style="margin: 0 0 4px 0; font-size: 12.5px; color: #1f2937;">• Coating premium Gardner Gibson</p>
+            <p style="margin: 0 0 4px 0; font-size: 12.5px; color: #1f2937;">• <strong>10 años en mano de obra</strong></p>
+            <p style="margin: 0 0 4px 0; font-size: 12.5px; color: #1f2937; font-weight: bold;">• Garantía de por vida del fabricante</p>
+            <p style="margin: 0 0 4px 0; font-size: 12.5px; color: #1f2937; font-weight: bold; color: #059669;">• Limpieza techo + paneles cada 2 años por 10 años SIN COSTO</p>
+            <p style="margin: 0; font-size: 12.5px; color: #1f2937;">• Acabado blanco reflectivo</p>
+          </td>
+        </tr>
+      </table>
+
+      <!-- ────────── 6 VENTAJAS DEL COATING ────────── -->
+      <div style="margin: 18px 0; padding: 18px 22px; background-color: #fff7ed; border-left: 5px solid #F7941D; border-radius: 6px;">
+        <p style="margin: 0 0 10px 0; font-size: 14px; font-weight: bold; color: #F7941D; letter-spacing: 0.05em;">
+          VENTAJAS DEL COATING GARDNER GIBSON
+        </p>
+        <p style="margin: 0; font-size: 14px; color: #1f2937; line-height: 1.85;">
+          • Membrana continua sin uniones — donde hay union hay riesgo de goteo<br>
+          • Acabado blanco reflectivo (cool roof) — reduce calor y consumo de aire acondicionado<br>
+          • Flexible — se adapta a superficies irregulares sin rajarse<br>
+          • Resistente a ponding water y ciclos de calor extremo de PR<br>
+          • Eco-amigable — sin antorchas de gas en aplicación<br>
+          • Compatible con techos planos, metal, single-ply y membrana modificada
+        </p>
+      </div>
+
+      <!-- ────────── GARANTÍAS DE POR VIDA ────────── -->
+      <div style="margin: 18px 0; padding: 18px 22px; background-color: #ecfdf5; border-left: 5px solid #10b981; border-radius: 6px;">
+        <p style="margin: 0 0 10px 0; font-size: 14px; font-weight: bold; color: #059669; letter-spacing: 0.05em;">
+          GARANTÍAS DE POR VIDA INCLUIDAS EN LOS 3 PLANES
+        </p>
+        <p style="margin: 0; font-size: 14px; color: #1f2937; line-height: 1.85;">
+          • <strong>Garantía limitada de por vida del fabricante Gardner Gibson</strong><br>
+          • Brigadas Windmar Home certificadas para la instalación<br>
+          • Certificación oficial del fabricante al cierre del proyecto<br>
+          • Soporte técnico continuo con nuestro equipo en Puerto Rico
+        </p>
+      </div>
+
+      <!-- ────────── PROCESO 6 ETAPAS ────────── -->
+      <p style="margin: 18px 0 10px 0; font-size: 14px; font-weight: bold; color: #1B3A5C;">
+        Las 6 etapas del proyecto Roofing:
+      </p>
+      <p style="margin: 0 0 18px 0; font-size: 14px; color: #1f2937; line-height: 1.85;">
+        1. Consulta gratuita con representante Windmar<br>
+        2. Acuerdo y aprobación bancaria al momento<br>
+        3. Visita técnica con personal de Gardner Gibson para medidas<br>
+        4. Plano: medida exacta del área (puede generar cambio de orden)<br>
+        5. Sellado: brigadas Windmar completan el trabajo<br>
+        6. Certificación de garantías Gardner Gibson
+      </p>
+
+      <p>Le agradezco mucho que revise el <strong>documento PDF adjunto</strong>, donde encontrará los precios específicos según el pietaje de su techo y los términos detallados de cada plan.</p>
+
+      <p>Si tiene cualquier consulta sobre las diferencias entre los planes, el proceso de instalación o algún detalle técnico, <strong>escríbame o llámeme cuando guste</strong> — con mucho gusto le explico todo personalmente y le ayudo a decidir cuál encaja mejor con su techo y su presupuesto.</p>
+
+      <!-- ────────── CIERRE PERSUASIVO ────────── -->
+      <div style="margin: 22px 0; padding: 16px 20px; background: linear-gradient(135deg, #fff7ed 0%, #fef3c7 100%); border-radius: 8px; text-align: center;">
+        <p style="margin: 0; font-size: 15px; color: #1f2937; font-weight: 600; line-height: 1.6;">
+          Su techo es lo que protege a su familia. Hagámoslo <strong style="color:#F7941D;">duradero, eficiente y respaldado de por vida</strong>.
+        </p>
+      </div>
+
+      <p>Sin otro particular por el momento, quedo atento/a a sus comentarios. Gracias por considerarnos para este proyecto tan importante.</p>
+
+      <p><strong>Atentamente,</strong></p>
+    `),
+  },
+
+  // ─── 8. Bienvenida (producto + consultor) ─────────────────────────
   {
     id: 'welcome',
     label: 'Bienvenida',
