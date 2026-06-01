@@ -289,14 +289,19 @@ export function FollowUpEmailModal({ asesorName, asesorEmail, asesorCargo, onClo
         setAttachError(`"${file.name}" no es un formato permitido (PDF, JPG, PNG).`);
         return;
       }
-      // Validar tamaño individual
+      // Validar tamaño individual (límite de Microsoft Graph para inline)
       if (file.size > MAX_FILE_SIZE) {
-        setAttachError(`"${file.name}" excede 3MB. Comprímelo primero.`);
+        const mb = (file.size / 1024 / 1024).toFixed(1);
+        setAttachError(
+          `"${file.name}" pesa ${mb}MB — excede el límite de 3MB de Microsoft Graph. Compríme­lo en tinypdf.com o ilovepdf.com (suelen reducir 50-80%).`
+        );
         return;
       }
       // Validar tamaño total acumulado
       if (runningTotal + file.size > MAX_TOTAL_SIZE) {
-        setAttachError('Los archivos suman más de 4MB. Quita alguno.');
+        setAttachError(
+          'Los archivos suman más de 4MB en total. Quita alguno o usa un link de OneDrive en el cuerpo del correo.'
+        );
         return;
       }
       runningTotal += file.size;
