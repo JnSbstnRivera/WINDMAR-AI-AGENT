@@ -34,6 +34,7 @@ interface AsesorRow {
   display_name: string | null;
   departamento: string | null;
   rol: string | null;
+  photo_url?: string | null;
   total_messages: number;
   total_convs: number;
 }
@@ -53,6 +54,7 @@ interface ConvRow {
   display_name: string | null;
   departamento: string | null;
   rol: string | null;
+  photo_url?: string | null;
   title: string;
   total_messages: number;
   first_user_message: string | null;

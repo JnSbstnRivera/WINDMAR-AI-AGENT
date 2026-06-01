@@ -3,6 +3,8 @@ interface AsesorRow {
   display_name: string | null;
   departamento: string | null;
   rol: string | null;
+  /** Foto de Microsoft 365 como data URI base64 — null si no tiene */
+  photo_url?: string | null;
   total_messages: number;
   total_convs: number;
 }
@@ -67,17 +69,32 @@ export function TopAsesoresTable({ data }: Props) {
                 <span className="ad-mono text-[9px] w-3 flex-shrink-0 relative z-10" style={{ color: 'var(--text3)' }}>
                   {i + 1}
                 </span>
-                <div
-                  className="w-8 h-8 rounded-[10px] flex items-center justify-center font-bold text-[11px] flex-shrink-0 border relative z-10"
-                  style={{
-                    background: palette.bg,
-                    color: palette.col,
-                    borderColor: 'rgba(255,255,255,0.08)',
-                    boxShadow: `0 0 8px ${palette.col}33`,
-                  }}
-                >
-                  {initials || '—'}
-                </div>
+                {/* Avatar: foto Microsoft 365 si existe, sino iniciales con
+                    color de paleta. La foto va con object-fit cover + redondeada
+                    al mismo radio que las iniciales (10px). */}
+                {row.photo_url ? (
+                  <img
+                    src={row.photo_url}
+                    alt={row.display_name || row.asesor_email}
+                    className="w-8 h-8 rounded-[10px] object-cover flex-shrink-0 relative z-10 border"
+                    style={{
+                      borderColor: 'rgba(255,255,255,0.08)',
+                      boxShadow: `0 0 8px ${palette.col}33`,
+                    }}
+                  />
+                ) : (
+                  <div
+                    className="w-8 h-8 rounded-[10px] flex items-center justify-center font-bold text-[11px] flex-shrink-0 border relative z-10"
+                    style={{
+                      background: palette.bg,
+                      color: palette.col,
+                      borderColor: 'rgba(255,255,255,0.08)',
+                      boxShadow: `0 0 8px ${palette.col}33`,
+                    }}
+                  >
+                    {initials || '—'}
+                  </div>
+                )}
                 <div className="flex-1 min-w-0 relative z-10">
                   <div className="text-[13px] font-semibold truncate" style={{ color: 'var(--text)' }}>
                     {row.display_name || row.asesor_email.split('@')[0]}

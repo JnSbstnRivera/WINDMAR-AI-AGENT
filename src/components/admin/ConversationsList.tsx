@@ -8,6 +8,8 @@ interface ConvRow {
   display_name: string | null;
   departamento: string | null;
   rol: string | null;
+  /** Foto de Microsoft 365 (data URI base64) — null si no la tiene */
+  photo_url?: string | null;
   title: string;
   total_messages: number;
   first_user_message: string | null;
@@ -211,13 +213,30 @@ export function ConversationsList({ data }: Props) {
                         className="border-t border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors"
                       >
                         <td className="px-5 py-3">
-                          <p className="font-medium text-slate-800 dark:text-slate-100">
-                            {row.display_name || row.user_email.split('@')[0]}
-                          </p>
-                          <p className="text-xs text-slate-400">
-                            {row.departamento || '—'}
-                            {row.rol && ` · ${row.rol}`}
-                          </p>
+                          <div className="flex items-center gap-3">
+                            {/* Avatar: foto Microsoft 365 si existe, sino
+                                círculo con inicial del nombre */}
+                            {row.photo_url ? (
+                              <img
+                                src={row.photo_url}
+                                alt={row.display_name || row.user_email}
+                                className="w-9 h-9 rounded-full object-cover flex-shrink-0 border border-slate-200 dark:border-slate-700"
+                              />
+                            ) : (
+                              <div className="w-9 h-9 rounded-full bg-[#F7941D]/15 border border-[#F7941D]/30 text-[#F7941D] flex items-center justify-center font-bold text-sm flex-shrink-0">
+                                {((row.display_name || row.user_email)[0] || '?').toUpperCase()}
+                              </div>
+                            )}
+                            <div className="min-w-0">
+                              <p className="font-medium text-slate-800 dark:text-slate-100 truncate">
+                                {row.display_name || row.user_email.split('@')[0]}
+                              </p>
+                              <p className="text-xs text-slate-400 truncate">
+                                {row.departamento || '—'}
+                                {row.rol && ` · ${row.rol}`}
+                              </p>
+                            </div>
+                          </div>
                         </td>
                         <td className="px-5 py-3 hidden md:table-cell max-w-md">
                           <div className="flex items-center gap-2">
