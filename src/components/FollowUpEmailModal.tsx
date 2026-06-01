@@ -217,17 +217,18 @@ export function FollowUpEmailModal({ asesorName, asesorEmail, asesorCargo, onClo
 
   const isCustom = customBody !== null;
 
-  // Algunas plantillas requieren PDF adjunto obligatorio (ej. cotización)
-  const attachmentRequired = template.requiresAttachment === true;
+  // Algunas plantillas RECOMIENDAN PDF adjunto (ej. cotización porque el
+  // cuerpo menciona "revise el PDF adjunto"). Sin embargo NO bloqueamos
+  // el envío — el asesor puede mandar sin PDF si edita el texto antes,
+  // o si va a mandar el PDF por otro medio (link de OneDrive, etc.).
+  const attachmentRecommended = template.requiresAttachment === true;
   const hasAttachment = attachments.length > 0;
-  const attachmentOk = !attachmentRequired || hasAttachment;
 
   // Si está en modo personalizado, no exigimos los campos extra (ya horneados)
   const canSubmit =
     name.trim().length >= 2 &&
     /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()) &&
     (isCustom ? customBody!.trim().length > 0 : extrasValid) &&
-    attachmentOk &&
     status !== 'sending';
 
   // Render del preview en vivo
@@ -709,15 +710,20 @@ export function FollowUpEmailModal({ asesorName, asesorEmail, asesorCargo, onClo
               PDF, JPG o PNG · máx 3MB por archivo · 4MB total
             </p>
 
-            {/* Aviso si la plantilla REQUIERE adjunto y no hay ninguno */}
-            {attachmentRequired && !hasAttachment && (
+            {/* Aviso sutil si la plantilla recomienda adjunto y no hay.
+                NO bloquea el envío — solo advierte que el texto menciona PDF.
+                El asesor puede enviar igual (compartir el PDF por otro medio)
+                o editar el cuerpo con "Editar texto" para quitar la mención. */}
+            {attachmentRecommended && !hasAttachment && (
               <div className="rounded-md bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 px-2.5 py-2 text-[11px] text-amber-700 dark:text-amber-300 flex items-start gap-1.5">
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0 mt-0.5">
                   <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
                   <line x1="12" y1="9" x2="12" y2="13" />
                   <line x1="12" y1="17" x2="12.01" y2="17" />
                 </svg>
-                <span><strong>Adjunta el PDF de la cotización</strong> antes de enviar. Esta plantilla requiere el documento con los precios.</span>
+                <span>
+                  <strong>Sin PDF adjunto.</strong> El cuerpo del correo menciona &quot;PDF adjunto&quot; — si vas a enviar el documento por otro medio, edita el texto con el botón <strong>&quot;Editar texto&quot;</strong> antes de enviar.
+                </span>
               </div>
             )}
           </div>

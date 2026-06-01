@@ -127,14 +127,11 @@ export async function POST(req: Request) {
     }
   }
 
-  // Validar PDF adjunto obligatorio si la plantilla lo requiere
-  // (ej. cotizaciones — el cuerpo del correo refiere al PDF adjunto).
-  if (template.requiresAttachment && attachments.length === 0) {
-    return NextResponse.json(
-      { error: 'Esta plantilla requiere adjuntar al menos un archivo (PDF de la cotización).' },
-      { status: 400 }
-    );
-  }
+  // NOTA: antes había una validación dura que bloqueaba el envío sin PDF
+  // para plantillas con requiresAttachment=true. Eliminada — el asesor
+  // puede enviar sin PDF si el cliente recibirá el documento por otro
+  // medio (OneDrive, mensajería, próximo correo, etc.). El UI muestra un
+  // warning amarillo sutil pero NO impide el envío.
 
   // Datos del asesor para la firma — formal_name del SSO de Microsoft
   const userExt = session.user as unknown as {
