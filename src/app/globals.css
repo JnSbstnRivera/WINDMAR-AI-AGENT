@@ -87,6 +87,80 @@ body {
   animation: wmFadeInUp 0.3s ease-out;
 }
 
+/* ════════════════════════════════════════════════════════════════
+   CHAT INPUT — estela de luz girando alrededor del borde
+   ════════════════════════════════════════════════════════════════
+   Loop suave de ~8s donde un "punto de luz" (gradient cónico) recorre
+   el perímetro del input. Colores Windmar (naranja + purple) con alta
+   transparencia para que sea sutil y no agresivo. */
+
+@property --chat-input-angle {
+  syntax: '<angle>';
+  initial-value: 0deg;
+  inherits: false;
+}
+
+.chat-input-glow {
+  position: relative;
+  border-radius: 1rem;
+  isolation: isolate;
+}
+
+.chat-input-glow::before {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border-radius: calc(1rem + 2px);
+  background: conic-gradient(
+    from var(--chat-input-angle, 0deg),
+    transparent 0deg,
+    transparent 240deg,
+    rgba(247, 148, 29, 0.7) 295deg,
+    rgba(192, 132, 252, 0.55) 320deg,
+    rgba(96, 165, 250, 0.4) 340deg,
+    transparent 360deg
+  );
+  filter: blur(7px);
+  z-index: -1;
+  animation: chatInputGlowSpin 8s linear infinite;
+  pointer-events: none;
+}
+
+@keyframes chatInputGlowSpin {
+  to {
+    --chat-input-angle: 360deg;
+  }
+}
+
+/* Fallback para Firefox antiguo o browsers sin @property */
+@supports not (background: conic-gradient(from var(--chat-input-angle))) {
+  .chat-input-glow::before {
+    background: conic-gradient(
+      from 0deg,
+      transparent 0deg,
+      transparent 240deg,
+      rgba(247, 148, 29, 0.7) 295deg,
+      rgba(192, 132, 252, 0.55) 320deg,
+      rgba(96, 165, 250, 0.4) 340deg,
+      transparent 360deg
+    );
+    animation: chatInputGlowSpinFallback 8s linear infinite;
+  }
+  @keyframes chatInputGlowSpinFallback {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+}
+
+/* Respeto absoluto a usuarios con motion reducido */
+@media (prefers-reduced-motion: reduce) {
+  .chat-input-glow::before {
+    animation: none;
+    /* Mantiene el glow estático para que igual se vea bonito */
+  }
+}
+
 /* ════════════════════════════════════════
    THEME TOGGLE — Circular reveal animation
    ════════════════════════════════════════ */

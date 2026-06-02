@@ -83,8 +83,11 @@ export function ChatInput({ onSend, disabled, onTypingChange, isStreaming, onSto
   return (
     <div className="px-4 py-4 safe-bottom">
       <div className="max-w-3xl mx-auto">
+        {/* chat-input-glow agrega una estela de luz girando alrededor del
+            input (loop 8s) — conic-gradient con colores Windmar (naranja
+            + purple + azul) y filter blur para que se sienta suave. */}
         <div
-          className="relative rounded-2xl transition-all duration-300"
+          className="chat-input-glow relative rounded-2xl transition-all duration-300"
           style={{
             boxShadow: focused
               ? '0 0 0 3px rgba(247,148,29,0.18), 0 12px 40px rgba(247,148,29,0.25), 0 4px 16px rgba(0,0,0,0.08)'
