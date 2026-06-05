@@ -1,7 +1,7 @@
 # 🗺️ Roadmap Visual — WINDMAR AI AGENT
 
-> Mapa conceptual del proyecto. **Última actualización: 11 mayo 2026 (v4)**
-> Estado: **🟢 EN PRODUCCIÓN — Uso activo + Panel admin operativo + 5 admins**
+> Mapa conceptual del proyecto. **Última actualización: 5 junio 2026 (v5)**
+> Estado: **🟢 EN PRODUCCIÓN — Uso activo + Panel admin operativo + 5 admins + PWA instalable**
 
 ---
 
@@ -29,6 +29,7 @@ flowchart TD
     Done --> D13[👍 Feedback 👍/👎]
     Done --> D14[📝 Markdown completo]
     Done --> D15[🎨 UX Polish v2]
+    Done --> D16[📲 PWA instalable]
 
     Now --> N1[Validación con asesores reales]
     Now --> N2[Recolección feedback en /admin]
@@ -54,6 +55,7 @@ flowchart TD
     style D13 fill:#dcfce7,color:#15803d
     style D14 fill:#dcfce7,color:#15803d
     style D15 fill:#dcfce7,color:#15803d
+    style D16 fill:#dcfce7,color:#15803d
     style N1 fill:#fef3c7,color:#92400e
     style N2 fill:#fef3c7,color:#92400e
     style X1 fill:#ede9fe,color:#5b21b6
@@ -312,6 +314,7 @@ gantt
 | 🚦 Rate limit 30 msgs/min | ✅ Live | Protege TPM compartido |
 | ⏱️ Logout por inactividad | ✅ Live | 15 min sin actividad + warning 1 min antes |
 | 📱 Mobile UX optimizado | ✅ Live | Safe areas iPhone + auto-scroll al focus |
+| 📲 PWA instalable | ✅ Live | Manifest + service worker · instalable en Windows/iOS con icono SUN BOT, ventana propia |
 
 ### 📊 Para el ADMIN (panel /admin)
 
@@ -379,6 +382,34 @@ flowchart LR
 ---
 
 ## 📅 Bitácora de Cambios
+
+### 5 junio 2026 — PWA instalable (SUN BOT como app) 📲
+
+Se formalizó el agente como **PWA (Progressive Web App)** para que los asesores
+lo instalen como aplicación nativa en Windows (y iOS), con el icono del **SUN BOT
+feliz** en escritorio y barra de tareas, abriendo en ventana propia sin barra del
+navegador.
+
+**Cambios:**
+- `src/app/manifest.ts`: Web App Manifest tipado de Next.js (`display: standalone`,
+  branding Windmar navy `#1B3A5C`, `short_name: SUN BOT`). Servido en
+  `/manifest.webmanifest`
+- **Iconos PWA** generados con `sharp` desde `sunbot-feliz.png` sobre fondo navy:
+  `icon-192`, `icon-512`, `icon-maskable-512` (safe-zone 60% para el recorte
+  circular de Windows/Android) y `apple-touch-icon` 180px (el `icon.png` original
+  586×589 no era válido para iOS)
+- `public/sw.js`: service worker (network-first en navegación, cache-first en
+  estáticos, fallback offline). **No intercepta** `/api`, `/auth` ni métodos
+  no-GET → next-auth y el chat intactos
+- `ServiceWorkerRegister.tsx`: registro del SW solo en producción
+- `layout.tsx`: metadata `manifest` + `appleWebApp` + `apple-touch-icon`
+- 🐛 **Fix clave**: el middleware de next-auth redirigía `/manifest.webmanifest`
+  y `/sw.js` a `/login` (307), así que el navegador no podía leer el manifest y
+  **no ofrecía instalar**. Ambos añadidos a la exclusión del matcher → ahora
+  responden 200 en producción
+
+**Verificado en producción:** manifest 200 `application/manifest+json`, sw.js 200
+`application/javascript`, iconos 200. Listo para instalar desde Edge/Chrome.
 
 ### 11 mayo 2026 — Día de polish + Dashboard admin 📊
 
@@ -617,7 +648,7 @@ Sistema de login email/password con flip card 3D, registro con depto/rol/T&C, Pr
 - Foto de perfil desde Microsoft Graph
 - Renombrar conversaciones
 - Multi-idioma (futuro lejano)
-- Notificaciones push
+- Notificaciones push (la base PWA ya está lista — solo falta backend de push)
 - Reportes semanales automatizados
 
 ---
@@ -642,5 +673,5 @@ Sistema de login email/password con flip card 3D, registro con depto/rol/T&C, Pr
 
 ---
 
-**Última actualización**: 8 mayo 2026 — día de lanzamiento definitivo
+**Última actualización**: 5 junio 2026 — PWA instalable (SUN BOT como app)
 **Próxima revisión sugerida**: después de 1 semana de uso real, basado en feedback de asesores
