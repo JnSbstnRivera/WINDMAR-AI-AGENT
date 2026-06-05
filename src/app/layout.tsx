@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import { Providers } from '@/components/Providers';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
+import { ServiceWorkerRegister } from '@/components/ServiceWorkerRegister';
 
 // viewport-fit=cover habilita el uso de env(safe-area-inset-*) en CSS
 // para que el contenido respete el notch del iPhone y la home indicator.
@@ -21,8 +22,20 @@ export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: TITLE,
   description: DESCRIPTION,
+  applicationName: 'SUN BOT',
+  // Manifest PWA (Next.js genera /manifest.webmanifest desde app/manifest.ts).
+  manifest: '/manifest.webmanifest',
+  // Instalación tipo app en iOS/iPadOS.
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'black-translucent',
+    title: 'SUN BOT',
+  },
   // Favicon: Next.js auto-detecta src/app/icon.png y genera <link rel="icon">.
-  // No declaramos icons aquí para evitar conflictos.
+  // Añadimos el apple-touch-icon dedicado (586x589 no es válido para iOS).
+  icons: {
+    apple: '/apple-touch-icon.png',
+  },
   // Preview en Teams, WhatsApp, Slack, LinkedIn, Discord, etc.
   openGraph: {
     type: 'website',
@@ -77,6 +90,7 @@ export default function RootLayout({
         <ErrorBoundary>
           <Providers>{children}</Providers>
         </ErrorBoundary>
+        <ServiceWorkerRegister />
       </body>
     </html>
   );
