@@ -13,10 +13,13 @@ export default function manifest(): MetadataRoute.Manifest {
     scope: '/',
     display: 'standalone',
     orientation: 'any',
-    background_color: '#1B3A5C',
+    background_color: '#0f1115',
     theme_color: '#1B3A5C',
     lang: 'es-PR',
     categories: ['business', 'productivity', 'utilities'],
+    // Iconos PNG con fondo transparente (sin recuadro azul).
+    // No declaramos 'maskable' a propósito: ese formato exige fondo sólido
+    // edge-to-edge, lo que reintroduciría el recuadro que no queremos.
     icons: [
       {
         src: '/icon-192.png',
@@ -29,12 +32,6 @@ export default function manifest(): MetadataRoute.Manifest {
         sizes: '512x512',
         type: 'image/png',
         purpose: 'any',
-      },
-      {
-        src: '/icon-maskable-512.png',
-        sizes: '512x512',
-        type: 'image/png',
-        purpose: 'maskable',
       },
     ],
   };

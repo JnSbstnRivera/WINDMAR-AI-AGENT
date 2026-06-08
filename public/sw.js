@@ -3,14 +3,13 @@
  * (manifest + SW con handler de fetch) y dar un fallback offline básico,
  * SIN interferir con autenticación (next-auth) ni con las llamadas a la API.
  */
-const CACHE = 'windmar-ai-v1';
+const CACHE = 'windmar-ai-v2';
 
 // Recursos que precacheamos para el "shell" y el modo offline.
 const PRECACHE = [
   '/',
   '/icon-192.png',
   '/icon-512.png',
-  '/icon-maskable-512.png',
   '/apple-touch-icon.png',
   '/sunbot-feliz.png',
   '/sunbot-error.png',
