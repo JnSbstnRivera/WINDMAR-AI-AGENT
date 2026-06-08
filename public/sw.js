@@ -3,7 +3,7 @@
  * (manifest + SW con handler de fetch) y dar un fallback offline básico,
  * SIN interferir con autenticación (next-auth) ni con las llamadas a la API.
  */
-const CACHE = 'windmar-ai-v2';
+const CACHE = 'windmar-ai-v3';
 
 // Recursos que precacheamos para el "shell" y el modo offline.
 const PRECACHE = [
