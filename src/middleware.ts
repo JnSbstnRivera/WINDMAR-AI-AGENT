@@ -3,9 +3,29 @@ import { NextResponse } from 'next/server';
 
 export default isAuthEnabled()
   ? auth((req) => {
-      // Si el usuario no tiene sesión, lo mandamos a /login
-      if (!req.auth?.user) {
+      const user = req.auth?.user as Record<string, unknown> | undefined;
+      const { pathname } = req.nextUrl;
+
+      // Sin sesión → login
+      if (!user) {
         return NextResponse.redirect(new URL('/login', req.nextUrl));
+      }
+
+      // Compuerta de acceso: quien no esté 'active' (pending/rejected/suspended)
+      // va a /pending. status ausente (sesión previa a la migración) = se trata
+      // como activo para no bloquear a nadie por error.
+      const status = user.status as string | undefined;
+      const onPending = pathname === '/pending';
+      if (status && status !== 'active') {
+        if (!onPending) {
+          return NextResponse.redirect(new URL('/pending', req.nextUrl));
+        }
+        return; // dejar ver la pantalla de espera
+      }
+
+      // Usuario activo no debe quedarse en la pantalla de espera
+      if (onPending) {
+        return NextResponse.redirect(new URL('/', req.nextUrl));
       }
     })
   : () => NextResponse.next();

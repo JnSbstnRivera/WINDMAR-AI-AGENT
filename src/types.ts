@@ -40,9 +40,14 @@ export interface Conversation {
   updatedAt: Date;
 }
 
+export type AppRole = 'Asesor' | 'Líder' | 'Channel' | 'Project M' | 'Admin';
+export type AccessStatus = 'pending' | 'active' | 'rejected' | 'suspended';
+
 export interface UserRole {
   user_email: string;
   display_name: string | null;
   departamento: string | null;
-  rol: 'Asesor' | 'Líder' | 'Channel' | 'Project M';
+  rol: AppRole;
+  status?: AccessStatus;
+  is_superadmin?: boolean;
 }

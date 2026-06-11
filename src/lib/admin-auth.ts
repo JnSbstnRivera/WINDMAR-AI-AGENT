@@ -41,3 +41,20 @@ export function isAdmin(email: string | null | undefined): boolean {
   const allowlist = getAdminEmails();
   return allowlist.has(email.toLowerCase());
 }
+
+/**
+ * Lista de correos de los admins (hardcoded + env), en minúsculas.
+ * Usada para enviar la notificación de "nuevo acceso solicitado".
+ */
+export function getAdminEmailList(): string[] {
+  return Array.from(getAdminEmails());
+}
+
+/**
+ * ¿Este email puede APROBAR / RECHAZAR accesos nuevos?
+ * Decisión del proyecto: cualquier Admin (de la allowlist) puede aprobar.
+ * Va por EMAIL (no por rol) → inmune a que alguien se auto-asigne un rol.
+ */
+export function canApproveAccess(email: string | null | undefined): boolean {
+  return isAdmin(email);
+}

@@ -1,3 +1,4 @@
+import { redirect } from 'next/navigation';
 import { auth, signOut } from '@/auth';
 import { ChatApp } from '@/components/ChatApp';
 import { OnboardingGate } from '@/components/OnboardingGate';
@@ -12,6 +13,13 @@ export default async function HomePage() {
 
   const sessionUser = session.user as unknown as Record<string, string | null | undefined>;
   const email = session.user.email;
+
+  // Refuerzo server-side de la compuerta de acceso: si no está 'active'
+  // (pendiente/rechazado/suspendido), va a la pantalla de espera.
+  const status = (sessionUser.status as string | undefined) ?? 'active';
+  if (status !== 'active') {
+    redirect('/pending');
+  }
 
   // Foto de perfil leída server-side (NO en el JWT — sería demasiado grande).
   // Se lee aquí en cada render, lo que es eficiente porque page.tsx ya es Server Component.

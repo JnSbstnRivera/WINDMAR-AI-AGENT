@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation';
 import { auth, signOut } from '@/auth';
 import { isAdmin } from '@/lib/admin-auth';
+import { getSupabaseAdmin } from '@/lib/supabase';
 import { AdminClock } from '@/components/admin/AdminClock';
 import { AdminThemeToggle } from '@/components/admin/AdminThemeToggle';
 import './admin-theme.css';
@@ -33,6 +34,18 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   const userEmail = session.user.email;
   const userName = userEmail.split('@')[0].split('.')[0];
   const capName = userName.charAt(0).toUpperCase() + userName.slice(1);
+
+  // Conteo de accesos pendientes para el badge del enlace "Usuarios".
+  let pendingCount = 0;
+  try {
+    const { count } = await getSupabaseAdmin()
+      .from('user_roles')
+      .select('user_email', { count: 'exact', head: true })
+      .eq('status', 'pending');
+    pendingCount = count ?? 0;
+  } catch {
+    pendingCount = 0;
+  }
 
   return (
     <>
@@ -76,6 +89,33 @@ export default async function AdminLayout({ children }: { children: React.ReactN
               </div>
               <AdminClock />
               <AdminThemeToggle />
+              <a
+                href="/admin"
+                className="ad-mono text-[10px] uppercase tracking-[0.15em] px-3 py-2 rounded-lg border border-[var(--glass-border)] hover:border-[var(--n4)] hover:text-[var(--n4)] transition-colors"
+                style={{ color: 'var(--text2)', background: 'var(--glass-bg)' }}
+                title="Dashboard"
+              >
+                Dashboard
+              </a>
+              <a
+                href="/admin/usuarios"
+                className="ad-mono text-[10px] uppercase tracking-[0.15em] px-3 py-2 rounded-lg border border-[var(--glass-border)] hover:border-[var(--n4)] hover:text-[var(--n4)] transition-colors relative"
+                style={{ color: 'var(--text2)', background: 'var(--glass-bg)' }}
+                title="Usuarios y accesos"
+              >
+                Usuarios
+                {pendingCount > 0 && (
+                  <span
+                    className="absolute -top-1.5 -right-1.5 flex items-center justify-center"
+                    style={{
+                      minWidth: 16, height: 16, padding: '0 4px', fontSize: 10, fontWeight: 700,
+                      background: '#F7941D', color: '#1B3A5C', borderRadius: 999,
+                    }}
+                  >
+                    {pendingCount}
+                  </span>
+                )}
+              </a>
               <a
                 href="/"
                 className="ad-mono text-[10px] uppercase tracking-[0.15em] px-3 py-2 rounded-lg border border-[var(--glass-border)] hover:border-[var(--n4)] hover:text-[var(--n4)] transition-colors"

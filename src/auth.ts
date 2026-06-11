@@ -1,6 +1,8 @@
 import NextAuth from 'next-auth';
 import MicrosoftEntraID from 'next-auth/providers/microsoft-entra-id';
 import { getSupabaseAdmin } from '@/lib/supabase';
+import { isAdmin } from '@/lib/admin-auth';
+import { notifyAdminsNewAccess } from '@/lib/access-notify';
 
 // Acepta el issuer como URL completa O como tenant ID solo.
 function getIssuer() {
@@ -146,18 +148,37 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         const accessToken = account?.access_token;
         const photoUrl = accessToken ? await fetchMicrosoftPhoto(accessToken) : null;
 
-        // 1) Upsert idempotente del registro inicial (no sobrescribe display_name si ya existe)
-        await getSupabaseAdmin()
+        // 1) Upsert idempotente del registro inicial (no sobrescribe si ya existe).
+        //    - Usuario NUEVO normal  → status 'pending' (espera aprobación de un admin).
+        //    - Usuario NUEVO admin   → status 'active' + is_superadmin (no se auto-bloquea).
+        //    Con ignoreDuplicates:true, .select() devuelve fila SOLO si fue inserción nueva.
+        const isAdminEmail = isAdmin(email);
+        const { data: insertedRows } = await getSupabaseAdmin()
           .from('user_roles')
           .upsert(
             {
               user_email: email,
               display_name: capitalizedFirstName,
-              rol: 'Asesor',
+              rol: isAdminEmail ? 'Admin' : 'Asesor',
               assigned_by: 'auto',
+              status: isAdminEmail ? 'active' : 'pending',
+              is_superadmin: isAdminEmail,
             },
             { onConflict: 'user_email', ignoreDuplicates: true }
-          );
+          )
+          .select('user_email');
+
+        // 2b) Si es un usuario NUEVO no-admin, avísale a los admins por correo.
+        //     Best-effort con el token Graph del propio solicitante.
+        const isNewPending =
+          Array.isArray(insertedRows) && insertedRows.length > 0 && !isAdminEmail;
+        if (isNewPending && accessToken) {
+          await notifyAdminsNewAccess({
+            accessToken,
+            newUserEmail: email,
+            displayName: capitalizedFirstName,
+          });
+        }
 
         // 2) Si tenemos foto, la actualizamos siempre (refresh en cada login).
         //    Esto se hace por separado para NO depender de ignoreDuplicates: true del upsert anterior.
@@ -226,24 +247,30 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       // IMPORTANTE: NO guardamos photo_url en el JWT (la foto base64 es ~30KB y
       // hace que la cookie supere el límite de Vercel → REQUEST_HEADER_TOO_LARGE).
       // La foto se lee del servidor (page.tsx) directamente de Supabase.
-      if (trigger === 'signIn' || !token.userRole) {
+      if (trigger === 'signIn' || !token.userRole || token.status === undefined) {
         const email = (token.email || '').toLowerCase();
         if (email) {
           try {
             const { data } = await getSupabaseAdmin()
               .from('user_roles')
-              .select('display_name, departamento, rol, onboarded_at')
+              .select('display_name, departamento, rol, onboarded_at, status, is_superadmin')
               .eq('user_email', email)
               .single();
             token.displayName = data?.display_name || null;
             token.departamento = data?.departamento || null;
             token.userRole = data?.rol || 'Asesor';
             token.onboardedAt = data?.onboarded_at || null;
+            // status null/ausente → 'active' (no bloquear sesiones previas a la migración)
+            token.status = data?.status || 'active';
+            token.isSuperadmin = data?.is_superadmin === true;
           } catch {
             token.displayName = null;
             token.departamento = null;
             token.userRole = 'Asesor';
             token.onboardedAt = null;
+            // Ante error transitorio de DB, NO bloqueamos al usuario.
+            token.status = 'active';
+            token.isSuperadmin = false;
           }
         }
       }
@@ -261,6 +288,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         u.onboardedAt = token.onboardedAt ?? null;
         u.formalName = token.formalName ?? null;
         u.fullName = token.fullName ?? null;
+        u.status = token.status ?? 'active';
+        u.isSuperadmin = token.isSuperadmin === true;
       }
       // Exponer access token de Microsoft Graph al server (vía auth()).
       // Necesario para /api/email/send → Graph API.
