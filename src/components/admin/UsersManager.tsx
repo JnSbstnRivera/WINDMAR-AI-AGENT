@@ -13,6 +13,7 @@ export interface AdminUser {
   approved_at: string | null;
   created_at: string;
   photo_url?: string | null;
+  zoho_user_id?: string | null;
 }
 
 const ROLES = ['Asesor', 'Líder', 'Channel', 'Project M', 'Admin'];
@@ -39,6 +40,38 @@ export function UsersManager({ initialUsers }: { initialUsers: AdminUser[] }) {
   const [users, setUsers] = useState<AdminUser[]>(initialUsers);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [syncing, setSyncing] = useState(false);
+  const [syncMsg, setSyncMsg] = useState<string | null>(null);
+
+  async function syncZoho() {
+    setSyncing(true);
+    setSyncMsg(null);
+    setError(null);
+    try {
+      const res = await fetch('/api/admin/zoho-sync', { method: 'POST' });
+      const json = await res.json();
+      if (!res.ok) {
+        setError(json.error || 'Error sincronizando');
+        return;
+      }
+      setSyncMsg(
+        `Mapeados ${json.mapped}/${json.total} a Zoho${json.unmapped?.length ? ` · sin usuario Zoho: ${json.unmapped.join(', ')}` : ''}.`
+      );
+      // Marcar como mapeados localmente (los que no estaban en unmapped)
+      const unmapped: string[] = json.unmapped || [];
+      setUsers((prev) =>
+        prev.map((u) =>
+          u.status === 'active' && !unmapped.includes(u.user_email)
+            ? { ...u, zoho_user_id: u.zoho_user_id || 'synced' }
+            : u
+        )
+      );
+    } catch {
+      setError('Error de conexión');
+    } finally {
+      setSyncing(false);
+    }
+  }
 
   const pending = useMemo(() => users.filter((u) => u.status === 'pending'), [users]);
   const rest = useMemo(() => users.filter((u) => u.status !== 'pending'), [users]);
@@ -168,9 +201,28 @@ export function UsersManager({ initialUsers }: { initialUsers: AdminUser[] }) {
       </div>
 
       {/* ── Todos los usuarios ── */}
-      <div style={{ fontFamily: 'Outfit, sans-serif', fontWeight: 600, color: 'var(--text1)', fontSize: 16, marginBottom: 12 }}>
-        Equipo ({rest.length})
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10, marginBottom: 12 }}>
+        <span style={{ fontFamily: 'Outfit, sans-serif', fontWeight: 600, color: 'var(--text1)', fontSize: 16 }}>
+          Equipo ({rest.length})
+        </span>
+        <button
+          onClick={syncZoho}
+          disabled={syncing}
+          style={{
+            fontSize: 12, fontWeight: 600, padding: '7px 13px', borderRadius: 8,
+            cursor: syncing ? 'not-allowed' : 'pointer',
+            border: '1px solid #38bdf8', background: 'transparent', color: '#38bdf8',
+          }}
+          title="Resuelve el Owner de Zoho de cada asesor (por correo) y lo guarda"
+        >
+          {syncing ? 'Sincronizando…' : '↻ Sincronizar IDs Zoho'}
+        </button>
       </div>
+      {syncMsg && (
+        <div style={{ ...card, borderColor: '#38bdf855', color: '#38bdf8', marginBottom: 12, fontSize: 12 }}>
+          {syncMsg}
+        </div>
+      )}
       <div style={{ display: 'grid', gap: 8 }}>
         {rest.map((u) => (
           <div key={u.user_email} style={{ ...card, display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
@@ -185,7 +237,14 @@ export function UsersManager({ initialUsers }: { initialUsers: AdminUser[] }) {
                     </span>
                   )}
                 </div>
-                <div style={{ color: 'var(--text2)', fontSize: 12 }}>{u.user_email}</div>
+                <div style={{ color: 'var(--text2)', fontSize: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
+                  {u.user_email}
+                  {u.status === 'active' && (
+                    <span style={{ fontSize: 10, color: u.zoho_user_id ? '#22c55e' : 'var(--text3)' }}>
+                      {u.zoho_user_id ? '· Zoho ✓' : '· Zoho —'}
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
 

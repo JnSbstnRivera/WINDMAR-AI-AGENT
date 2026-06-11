@@ -125,6 +125,14 @@ export default async function AdminLayout({ children }: { children: React.ReactN
                 Asignar
               </a>
               <a
+                href="/admin/auditoria"
+                className="ad-mono text-[10px] uppercase tracking-[0.15em] px-3 py-2 rounded-lg border border-[var(--glass-border)] hover:border-[var(--n4)] hover:text-[var(--n4)] transition-colors"
+                style={{ color: 'var(--text2)', background: 'var(--glass-bg)' }}
+                title="Registro de auditoría"
+              >
+                Auditoría
+              </a>
+              <a
                 href="/"
                 className="ad-mono text-[10px] uppercase tracking-[0.15em] px-3 py-2 rounded-lg border border-[var(--glass-border)] hover:border-[var(--n4)] hover:text-[var(--n4)] transition-colors"
                 style={{ color: 'var(--text2)', background: 'var(--glass-bg)' }}

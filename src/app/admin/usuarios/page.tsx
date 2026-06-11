@@ -12,7 +12,7 @@ export default async function AdminUsersPage() {
   const { data } = await getSupabaseAdmin()
     .from('user_roles')
     .select(
-      'user_email, display_name, departamento, rol, status, is_superadmin, approved_by, approved_at, created_at, photo_url'
+      'user_email, display_name, departamento, rol, status, is_superadmin, approved_by, approved_at, created_at, photo_url, zoho_user_id'
     )
     .order('created_at', { ascending: false });
 

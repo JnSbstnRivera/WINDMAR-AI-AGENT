@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { canApproveAccess } from '@/lib/admin-auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
+import { logAudit } from '@/lib/audit';
 
 export const runtime = 'nodejs';
 
@@ -127,6 +128,8 @@ export async function POST(req: Request) {
     console.error('[admin/users] POST error:', error.message);
     return NextResponse.json({ error: 'No se pudo actualizar' }, { status: 500 });
   }
+
+  await logAudit(adminEmail, `access.${action}`, targetEmail, rol ? { rol } : undefined);
 
   return NextResponse.json({ ok: true, email: targetEmail, action });
 }
