@@ -466,11 +466,16 @@ export function ChatApp({ user, onSignOut }: Props) {
    *   - list   → varios leads → abre ClientList para que elija
    *   - none   → sin matches → mensaje en banner amarillo
    */
-  async function searchZohoClient(query: string) {
+  async function searchZohoClient(query: string, preserveContext = false) {
     setZohoError(null);
     setZohoLoading(true);
     setZohoClient(null);
-    setZohoLeads(null);
+    // Si NO venimos de una lista / "mis leads" (preserveContext), limpiamos esas
+    // vistas. Si SÍ, las conservamos ocultas para poder "Volver" a ellas.
+    if (!preserveContext) {
+      setZohoLeads(null);
+      setMyLeads(null);
+    }
     try {
       const res = await fetch(`/api/zoho/search?q=${encodeURIComponent(query)}`);
       const data = await res.json();
@@ -528,14 +533,14 @@ export function ChatApp({ user, onSignOut }: Props) {
    * datos completos por email (más confiable que por id).
    */
   async function openLeadFromList(lead: ZohoLead) {
-    setZohoLeads(null);
+    // Conservamos la lista (preserveContext) para poder volver a ella.
     // Preferimos email, sino el teléfono, sino el lead number
     const query = lead.email || lead.mobile || lead.phone || lead.leadNumber || '';
     if (!query) {
       setZohoError('No se pudo abrir el cliente — sin email ni teléfono');
       return;
     }
-    await searchZohoClient(query);
+    await searchZohoClient(query, true);
   }
 
   /**
@@ -1179,8 +1184,8 @@ export function ChatApp({ user, onSignOut }: Props) {
                 </button>
               </div>
             )}
-            {/* Lista de múltiples leads (varios resultados) */}
-            {zohoLeads && (
+            {/* Lista de múltiples leads (varios resultados) — oculta si hay ficha abierta */}
+            {zohoLeads && !zohoClient && (
               <ClientList
                 leads={zohoLeads}
                 onSelectLead={openLeadFromList}
@@ -1189,30 +1194,31 @@ export function ChatApp({ user, onSignOut }: Props) {
             )}
             {/* Card de cliente con coach IA (1 resultado) */}
             {zohoClient && (
-              <div className="relative">
-                <button
-                  onClick={() => setZohoClient(null)}
-                  className="absolute top-2 right-2 z-10 text-gray-400 hover:text-white p-1.5 rounded-md hover:bg-white/10 cursor-pointer"
-                  aria-label="Cerrar"
-                  title="Cerrar tarjeta de cliente"
-                >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-                    <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
-                  </svg>
-                </button>
+              <div className="relative mx-auto my-3 max-w-[860px] w-full">
+                {/* Barra superior: Volver a la vista anterior (lista / mis leads / chat) */}
+                <div className="flex items-center justify-between mb-2">
+                  <button
+                    onClick={() => setZohoClient(null)}
+                    className="flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-lg cursor-pointer transition-colors"
+                    style={{ border: '1px solid rgba(247,148,29,0.5)', color: '#F7941D' }}
+                    title="Volver a la vista anterior"
+                  >
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <line x1="19" y1="12" x2="5" y2="12" /><polyline points="12 19 5 12 12 5" />
+                    </svg>
+                    {zohoLeads ? 'Volver a la lista' : myLeads ? 'Volver a mis leads' : 'Volver al chat'}
+                  </button>
+                </div>
                 <ClientCard client={zohoClient} />
               </div>
             )}
-            {/* Mi cartera / triage de seguimiento */}
-            {myLeads && (
+            {/* Mi cartera / triage de seguimiento — oculta si hay ficha abierta */}
+            {myLeads && !zohoClient && (
               <MyLeadsPanel
                 data={myLeads}
                 mode={myLeadsMode}
                 onClose={() => setMyLeads(null)}
-                onOpenLead={(q) => {
-                  setMyLeads(null);
-                  searchZohoClient(q);
-                }}
+                onOpenLead={(q) => searchZohoClient(q, true)}
               />
             )}
             {followUpOpen && (
@@ -1267,8 +1273,8 @@ export function ChatApp({ user, onSignOut }: Props) {
                 </button>
               </div>
             )}
-            {/* Lista de múltiples leads (varios resultados) */}
-            {zohoLeads && (
+            {/* Lista de múltiples leads (varios resultados) — oculta si hay ficha abierta */}
+            {zohoLeads && !zohoClient && (
               <ClientList
                 leads={zohoLeads}
                 onSelectLead={openLeadFromList}
@@ -1277,30 +1283,31 @@ export function ChatApp({ user, onSignOut }: Props) {
             )}
             {/* Card de cliente con coach IA (1 resultado) */}
             {zohoClient && (
-              <div className="relative">
-                <button
-                  onClick={() => setZohoClient(null)}
-                  className="absolute top-2 right-2 z-10 text-gray-400 hover:text-white p-1.5 rounded-md hover:bg-white/10 cursor-pointer"
-                  aria-label="Cerrar"
-                  title="Cerrar tarjeta de cliente"
-                >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-                    <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
-                  </svg>
-                </button>
+              <div className="relative mx-auto my-3 max-w-[860px] w-full">
+                {/* Barra superior: Volver a la vista anterior (lista / mis leads / chat) */}
+                <div className="flex items-center justify-between mb-2">
+                  <button
+                    onClick={() => setZohoClient(null)}
+                    className="flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-lg cursor-pointer transition-colors"
+                    style={{ border: '1px solid rgba(247,148,29,0.5)', color: '#F7941D' }}
+                    title="Volver a la vista anterior"
+                  >
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <line x1="19" y1="12" x2="5" y2="12" /><polyline points="12 19 5 12 12 5" />
+                    </svg>
+                    {zohoLeads ? 'Volver a la lista' : myLeads ? 'Volver a mis leads' : 'Volver al chat'}
+                  </button>
+                </div>
                 <ClientCard client={zohoClient} />
               </div>
             )}
-            {/* Mi cartera / triage de seguimiento */}
-            {myLeads && (
+            {/* Mi cartera / triage de seguimiento — oculta si hay ficha abierta */}
+            {myLeads && !zohoClient && (
               <MyLeadsPanel
                 data={myLeads}
                 mode={myLeadsMode}
                 onClose={() => setMyLeads(null)}
-                onOpenLead={(q) => {
-                  setMyLeads(null);
-                  searchZohoClient(q);
-                }}
+                onOpenLead={(q) => searchZohoClient(q, true)}
               />
             )}
             {followUpOpen && (
