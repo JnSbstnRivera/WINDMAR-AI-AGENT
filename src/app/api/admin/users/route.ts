@@ -7,7 +7,7 @@ import { logAudit } from '@/lib/audit';
 export const runtime = 'nodejs';
 
 const ALLOWED_ROLES = ['Asesor', 'Líder', 'Channel', 'Project M', 'Admin'];
-const ALLOWED_ACTIONS = ['approve', 'reject', 'suspend', 'reactivate', 'set-role'] as const;
+const ALLOWED_ACTIONS = ['approve', 'reject', 'suspend', 'reactivate', 'set-role', 'delete'] as const;
 type Action = (typeof ALLOWED_ACTIONS)[number];
 
 /**
@@ -90,6 +90,21 @@ export async function POST(req: Request) {
       { error: 'No puedes cambiar el estado de un administrador.' },
       { status: 403 }
     );
+  }
+  if (targetEmail === adminEmail.toLowerCase()) {
+    return NextResponse.json({ error: 'No puedes eliminarte/modificarte a ti mismo.' }, { status: 403 });
+  }
+
+  // DELETE: borra la fila. Al volver a iniciar sesión, el usuario nace de nuevo
+  // como 'pending' → requiere re-aprobación de un admin.
+  if (action === 'delete') {
+    const { error: delErr } = await supabase.from('user_roles').delete().eq('user_email', targetEmail);
+    if (delErr) {
+      console.error('[admin/users] delete error:', delErr.message);
+      return NextResponse.json({ error: 'No se pudo eliminar' }, { status: 500 });
+    }
+    await logAudit(adminEmail, 'access.delete', targetEmail);
+    return NextResponse.json({ ok: true, email: targetEmail, action });
   }
 
   const now = new Date().toISOString();

@@ -77,6 +77,9 @@ export function UsersManager({ initialUsers }: { initialUsers: AdminUser[] }) {
   const rest = useMemo(() => users.filter((u) => u.status !== 'pending'), [users]);
 
   async function act(email: string, action: string, rol?: string) {
+    if (action === 'delete' && !window.confirm(`¿Eliminar a ${email}? Para volver a entrar tendrá que ser aprobado de nuevo.`)) {
+      return;
+    }
     setBusy(email + action);
     setError(null);
     try {
@@ -88,6 +91,10 @@ export function UsersManager({ initialUsers }: { initialUsers: AdminUser[] }) {
       const json = await res.json();
       if (!res.ok) {
         setError(json.error || 'Error');
+        return;
+      }
+      if (action === 'delete') {
+        setUsers((prev) => prev.filter((u) => u.user_email !== email));
         return;
       }
       // Reflejar el cambio localmente
@@ -279,6 +286,16 @@ export function UsersManager({ initialUsers }: { initialUsers: AdminUser[] }) {
                   Suspender
                 </button>
               ))}
+            {!u.is_superadmin && (
+              <button
+                onClick={() => act(u.user_email, 'delete')}
+                disabled={!!busy}
+                style={btn('#ef4444', true)}
+                title="Eliminar definitivamente (para volver a entrar deberá ser aprobado de nuevo)"
+              >
+                Eliminar
+              </button>
+            )}
           </div>
         ))}
       </div>
