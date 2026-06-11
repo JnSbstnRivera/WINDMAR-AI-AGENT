@@ -14,6 +14,8 @@
 //   - ZohoCRM.modules.deals.READ
 //   - ZohoCRM.users.READ
 
+import { bucketOf, type Bucket } from '@/lib/zoho-status';
+
 const ZOHO_ACCOUNTS = 'https://accounts.zoho.com';
 const ZOHO_API = process.env.ZOHO_API_DOMAIN || 'https://www.zohoapis.com';
 const API_V2 = `${ZOHO_API}/crm/v2`;
@@ -383,6 +385,152 @@ function mapLead(raw: ZohoLeadRaw): ZohoLead {
     createdAt: raw.Created_Time || null,
     zohoUrl: `https://crm.zoho.com/crm/org${ZOHO_ORG_ID}/tab/Leads/${raw.id}`,
   };
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// FASE 3 — "Mis leads", última nota, triage
+// ═══════════════════════════════════════════════════════════════════
+
+/** POST a Zoho (para COQL). Mismo manejo de auth/timeout que zohoFetch. */
+async function zohoPost(path: string, body: unknown, timeoutMs = 10_000): Promise<unknown> {
+  const token = await getAccessToken();
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const res = await fetch(`${API_V2}${path}`, {
+      method: 'POST',
+      headers: { Authorization: `Zoho-oauthtoken ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+      signal: controller.signal,
+    });
+    if (res.status === 204) return { data: [] };
+    if (!res.ok) {
+      const text = await res.text().catch(() => '');
+      throw new Error(`Zoho error ${res.status} en ${path}: ${text.slice(0, 200)}`);
+    }
+    return res.json();
+  } catch (err) {
+    if (err instanceof Error && err.name === 'AbortError') {
+      throw new Error(`Zoho timeout (${timeoutMs / 1000}s) en ${path}`);
+    }
+    throw err;
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
+// ── Cache email → Zoho user id (Owner) ───────────────────────────────
+// Los IDs de Owner en COQL deben ser numéricos, no el correo. Resolvemos
+// una vez por proceso y cacheamos en memoria.
+let usersCache: Map<string, string> | null = null;
+
+async function loadUsers(): Promise<Map<string, string>> {
+  if (usersCache) return usersCache;
+  const map = new Map<string, string>();
+  let page = 1;
+  // Hasta 4 páginas de 200 = 800 usuarios (de sobra para Windmar PR).
+  for (; page <= 4; page++) {
+    const res = (await zohoFetch(`/users?type=ActiveUsers&per_page=200&page=${page}`)) as {
+      users?: Array<{ id: string; email?: string }>;
+      info?: { more_records?: boolean };
+    };
+    for (const u of res.users || []) {
+      if (u.email) map.set(u.email.toLowerCase(), u.id);
+    }
+    if (!res.info?.more_records) break;
+  }
+  usersCache = map;
+  return map;
+}
+
+/** Resuelve el Owner ID de Zoho a partir del correo del asesor. */
+export async function getZohoUserIdByEmail(email: string): Promise<string | null> {
+  const map = await loadUsers();
+  return map.get(email.trim().toLowerCase()) || null;
+}
+
+export interface MyLead {
+  id: string;
+  fullName: string;
+  email: string | null;
+  phone: string | null;
+  status: string | null;
+  bucket: Bucket;
+  modifiedAt: string | null;
+  createdAt: string | null;
+  zohoUrl: string;
+  lastNote?: { content: string; createdAt: string | null } | null;
+  /** true si está en bucket accionable y sin nota en las últimas 24h. */
+  needsFollowUp?: boolean;
+}
+
+interface CoqlLeadRow {
+  id: string;
+  Full_Name?: string;
+  Email?: string;
+  Phone?: string;
+  Mobile?: string;
+  Lead_Status?: string;
+  Modified_Time?: string;
+  Created_Time?: string;
+}
+
+/**
+ * Trae los leads de un asesor (por Owner ID) vía COQL, ordenados por actividad.
+ * Fallback a /Leads/search?criteria=(Owner:equals:id) si COQL falla.
+ */
+export async function getMyLeads(ownerId: string, limit = 200): Promise<MyLead[]> {
+  const query = `select id, Full_Name, Email, Phone, Mobile, Lead_Status, Modified_Time, Created_Time from Leads where Owner = ${ownerId} order by Modified_Time desc limit ${Math.min(limit, 200)}`;
+  let rows: CoqlLeadRow[] = [];
+  try {
+    const res = (await zohoPost('/coql', { select_query: query })) as { data?: CoqlLeadRow[] };
+    rows = res.data || [];
+  } catch (err) {
+    console.warn('[zoho] COQL my-leads falló, usando fallback search:', (err as Error).message);
+    const res = (await zohoFetch(
+      `/Leads/search?criteria=(Owner:equals:${ownerId})&fields=${LEAD_FIELDS}&per_page=${Math.min(limit, 200)}`
+    )) as { data?: ZohoLeadRaw[] };
+    rows = (res.data || []).map((r) => ({
+      id: r.id,
+      Full_Name: r.Full_Name,
+      Email: r.Email,
+      Phone: r.Phone,
+      Mobile: r.Mobile,
+      Lead_Status: r.Lead_Status,
+      Created_Time: r.Created_Time,
+    }));
+  }
+
+  return rows.map((r) => ({
+    id: r.id,
+    fullName: r.Full_Name || 'Sin nombre',
+    email: r.Email || null,
+    phone: r.Mobile || r.Phone || null,
+    status: r.Lead_Status || null,
+    bucket: bucketOf(r.Lead_Status),
+    modifiedAt: r.Modified_Time || null,
+    createdAt: r.Created_Time || null,
+    zohoUrl: `https://crm.zoho.com/crm/org${ZOHO_ORG_ID}/tab/Leads/${r.id}`,
+  }));
+}
+
+/** Última nota de un lead (la más reciente), o null si no tiene. */
+export async function getLeadLastNote(
+  leadId: string
+): Promise<{ content: string; createdAt: string | null } | null> {
+  try {
+    const res = (await zohoFetch(
+      `/Leads/${leadId}/Notes?fields=Note_Content,Note_Title,Created_Time&sort_by=Created_Time&sort_order=desc&per_page=1`
+    )) as { data?: Array<{ Note_Content?: string; Note_Title?: string; Created_Time?: string }> };
+    const n = res.data?.[0];
+    if (!n) return null;
+    return {
+      content: n.Note_Content || n.Note_Title || '(nota sin texto)',
+      createdAt: n.Created_Time || null,
+    };
+  } catch {
+    return null;
+  }
 }
 
 function mapDeal(raw: ZohoDealRaw): ZohoDeal {
