@@ -97,6 +97,8 @@ Hecho por Juan Sebastián Rivera · 2026
 **Comandos disponibles:**
 - \`/@\` · \`/seguimiento\` · \`/correos\` — envía correo de seguimiento al cliente 📧
 - \`/zoho {email|teléfono|nombre|Lead#}\` — busca cliente en Zoho + coach IA 🔍 (alias: \`/cliente\`, \`/lead\`)
+- \`/misleads\` · \`/cartera\` — toda tu cartera de Zoho por estado 📋
+- \`/pendientes\` · \`/triage\` — leads tuyos sin nota en 24h (necesitan seguimiento) ⏰
 - \`/sunbot\` — saludo del SUN BOT
 - \`/temblor\` — protocolo sísmico PR
 - \`/snake\` — mini-juego serpiente

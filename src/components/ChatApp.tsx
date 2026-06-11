@@ -15,6 +15,7 @@ import { FollowUpEmailModal } from './FollowUpEmailModal';
 import { buildAsesorCargo } from '@/lib/email-templates';
 import { ClientCard } from './ClientCard';
 import { ClientList } from './ClientList';
+import { MyLeadsPanel, type MyLeadsData } from './MyLeadsPanel';
 import type { ZohoClientFull, ZohoLead } from '@/lib/zoho';
 import { SUNBOT_ART, TEMBLOR_TEXT, ABOUT_TEXT } from '@/lib/easter-eggs';
 import { useInactivityLogout } from '@/hooks/useInactivityLogout';
@@ -102,6 +103,8 @@ export function ChatApp({ user, onSignOut }: Props) {
   const [zohoLeads, setZohoLeads] = useState<ZohoLead[] | null>(null);
   const [zohoLoading, setZohoLoading] = useState(false);
   const [zohoError, setZohoError] = useState<string | null>(null);
+  const [myLeads, setMyLeads] = useState<MyLeadsData | null>(null);
+  const [myLeadsMode, setMyLeadsMode] = useState<'list' | 'triage'>('list');
 
   // AbortController para poder cortar el fetch del streaming desde el botón "detener".
   // Lo guardamos en ref para que persista entre renders sin disparar re-renders.
@@ -495,6 +498,32 @@ export function ChatApp({ user, onSignOut }: Props) {
   }
 
   /**
+   * Trae la cartera del asesor (Mis leads) o el triage de seguimiento.
+   * Reutiliza los estados de loading/error de Zoho.
+   */
+  async function fetchMyLeads(triage: boolean) {
+    setZohoError(null);
+    setZohoLoading(true);
+    setZohoClient(null);
+    setZohoLeads(null);
+    setMyLeads(null);
+    setMyLeadsMode(triage ? 'triage' : 'list');
+    try {
+      const res = await fetch(`/api/zoho/my-leads${triage ? '?triage=1' : ''}`);
+      const data = await res.json();
+      if (!res.ok) {
+        setZohoError(data.error || 'Error consultando Zoho');
+        return;
+      }
+      setMyLeads(data as MyLeadsData);
+    } catch {
+      setZohoError('Error de conexión con Zoho');
+    } finally {
+      setZohoLoading(false);
+    }
+  }
+
+  /**
    * Cuando el asesor elige un lead de la lista (ClientList), buscamos sus
    * datos completos por email (más confiable que por id).
    */
@@ -606,6 +635,18 @@ export function ChatApp({ user, onSignOut }: Props) {
       return;
     }
 
+    // Mi cartera / triage de seguimiento (sin argumentos).
+    //   /misleads, /cartera, /pipeline   → toda mi cartera por estado
+    //   /pendientes, /triage, /porseguir → solo los que necesitan seguimiento (sin nota 24h)
+    if (cmd === '/misleads' || cmd === '/cartera' || cmd === '/mileads' || cmd === '/pipeline') {
+      fetchMyLeads(false);
+      return;
+    }
+    if (cmd === '/pendientes' || cmd === '/triage' || cmd === '/porseguir' || cmd === '/seguir') {
+      fetchMyLeads(true);
+      return;
+    }
+
     // ──────────────────────────────────────────────────────────────────
     // FALLBACK COMANDO DESCONOCIDO — si el mensaje empieza con `/` pero
     // no matcheó ninguno arriba, NO lo mandamos al LLM (evita que el bot
@@ -620,6 +661,7 @@ export function ChatApp({ user, onSignOut }: Props) {
         '/pong',
         '/@', '/seguimiento', '/correos', '/correo', '/email', '/followup',
         '/zoho', '/cliente', '/lead',
+        '/misleads', '/cartera', '/pipeline', '/pendientes', '/triage', '/porseguir',
         '/sunbot', '/temblor', '/sobre',
       ];
       const suggestion = findClosestCommand(cmd, knownCommands);
@@ -1161,6 +1203,18 @@ export function ChatApp({ user, onSignOut }: Props) {
                 <ClientCard client={zohoClient} />
               </div>
             )}
+            {/* Mi cartera / triage de seguimiento */}
+            {myLeads && (
+              <MyLeadsPanel
+                data={myLeads}
+                mode={myLeadsMode}
+                onClose={() => setMyLeads(null)}
+                onOpenLead={(q) => {
+                  setMyLeads(null);
+                  searchZohoClient(q);
+                }}
+              />
+            )}
             {followUpOpen && (
               <FollowUpEmailModal
                 asesorName={user.formalName || capDisplayName}
@@ -1236,6 +1290,18 @@ export function ChatApp({ user, onSignOut }: Props) {
                 </button>
                 <ClientCard client={zohoClient} />
               </div>
+            )}
+            {/* Mi cartera / triage de seguimiento */}
+            {myLeads && (
+              <MyLeadsPanel
+                data={myLeads}
+                mode={myLeadsMode}
+                onClose={() => setMyLeads(null)}
+                onOpenLead={(q) => {
+                  setMyLeads(null);
+                  searchZohoClient(q);
+                }}
+              />
             )}
             {followUpOpen && (
               <FollowUpEmailModal
