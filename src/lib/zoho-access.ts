@@ -36,6 +36,15 @@ export function getViewerScope(session: SessionLike): ViewerScope {
   return { email, canSeeAll };
 }
 
+/**
+ * ¿El usuario puede ESCRIBIR en Zoho (asignar, reasignar, notas)?
+ * Mismo gate que ver-todo: solo roles elevados (Líder/Channel/Project M/Admin).
+ * El Asesor es estrictamente solo-lectura.
+ */
+export function canWrite(scope: ViewerScope): boolean {
+  return scope.canSeeAll;
+}
+
 /** ¿El usuario puede ver este lead? */
 export function ownsLead(
   lead: { ownerEmail?: string | null },

@@ -514,6 +514,81 @@ export async function getMyLeads(ownerId: string, limit = 200): Promise<MyLead[]
   }));
 }
 
+// ── ESCRITURA (Fase 4) — solo la usan endpoints gateados a Líder/Admin ──
+
+/** PUT a Zoho (update de registros). */
+async function zohoPut(path: string, body: unknown, timeoutMs = 15_000): Promise<unknown> {
+  const token = await getAccessToken();
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const res = await fetch(`${API_V2}${path}`, {
+      method: 'PUT',
+      headers: { Authorization: `Zoho-oauthtoken ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+      signal: controller.signal,
+    });
+    if (!res.ok) {
+      const text = await res.text().catch(() => '');
+      throw new Error(`Zoho error ${res.status} en ${path}: ${text.slice(0, 200)}`);
+    }
+    return res.json();
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
+export interface AssignResult {
+  total: number;
+  success: number;
+  failed: number;
+  errors: Array<{ id: string; reason: string }>;
+}
+
+/**
+ * Asigna/reasigna el Owner de uno o varios leads (asignación masiva).
+ * Procesa en lotes de 100 (límite de Zoho). Tolera errores por registro.
+ */
+export async function assignLeads(leadIds: string[], newOwnerId: string): Promise<AssignResult> {
+  const result: AssignResult = { total: leadIds.length, success: 0, failed: 0, errors: [] };
+
+  for (let i = 0; i < leadIds.length; i += 100) {
+    const batch = leadIds.slice(i, i + 100);
+    const body = { data: batch.map((id) => ({ id, Owner: { id: newOwnerId } })) };
+    try {
+      const res = (await zohoPut('/Leads', body)) as {
+        data?: Array<{ code?: string; status?: string; details?: { id?: string }; message?: string }>;
+      };
+      for (const r of res.data || []) {
+        if (r.code === 'SUCCESS' || r.status === 'success') result.success++;
+        else {
+          result.failed++;
+          result.errors.push({ id: r.details?.id || '?', reason: r.message || r.code || 'error' });
+        }
+      }
+    } catch (err) {
+      // Lote completo falló
+      result.failed += batch.length;
+      batch.forEach((id) => result.errors.push({ id, reason: (err as Error).message }));
+    }
+  }
+  return result;
+}
+
+/** Crea una nota en un lead. */
+export async function addLeadNote(
+  leadId: string,
+  content: string,
+  title = 'Nota — Sun Bot'
+): Promise<boolean> {
+  const body = { data: [{ Note_Title: title, Note_Content: content }] };
+  const res = (await zohoPost(`/Leads/${leadId}/Notes`, body)) as {
+    data?: Array<{ code?: string; status?: string }>;
+  };
+  const r = res.data?.[0];
+  return r?.code === 'SUCCESS' || r?.status === 'success';
+}
+
 /** Última nota de un lead (la más reciente), o null si no tiene. */
 export async function getLeadLastNote(
   leadId: string
