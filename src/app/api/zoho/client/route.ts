@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { getClientFull } from '@/lib/zoho';
+import { getViewerScope, ownsLead, NOT_IN_PORTFOLIO_MSG } from '@/lib/zoho-access';
 
 export const runtime = 'nodejs';
 export const maxDuration = 15;
@@ -37,6 +38,11 @@ export async function GET(req: Request) {
         { found: false, message: `No se encontró ningún cliente con "${q}" en Zoho.` },
         { status: 200 }
       );
+    }
+    // Scoping por dueño: el Asesor solo ve su cartera.
+    const scope = getViewerScope(session);
+    if (!ownsLead(result.lead, scope)) {
+      return NextResponse.json({ found: false, message: NOT_IN_PORTFOLIO_MSG }, { status: 200 });
     }
     return NextResponse.json({ found: true, ...result });
   } catch (err) {

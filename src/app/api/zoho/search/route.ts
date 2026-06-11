@@ -7,6 +7,12 @@ import {
   type ZohoLead,
   type ZohoClientFull,
 } from '@/lib/zoho';
+import {
+  getViewerScope,
+  ownsLead,
+  filterOwnedLeads,
+  NOT_IN_PORTFOLIO_MSG,
+} from '@/lib/zoho-access';
 
 export const runtime = 'nodejs';
 export const maxDuration = 15;
@@ -41,6 +47,9 @@ export async function GET(req: Request) {
     );
   }
 
+  // Alcance del usuario: Asesor solo ve lo suyo; Líder/Admin ven todo.
+  const scope = getViewerScope(session);
+
   try {
     const type = detectQueryType(q);
     // Email y Lead Number deberían dar siempre 1 resultado → full client
@@ -52,22 +61,27 @@ export async function GET(req: Request) {
           message: `No se encontró ningún cliente con "${q}" en Zoho.`,
         });
       }
+      // Scoping: si no es de su cartera, lo tratamos como "no encontrado para él".
+      if (!ownsLead(client.lead, scope)) {
+        return NextResponse.json({ mode: 'none', message: NOT_IN_PORTFOLIO_MSG });
+      }
       return NextResponse.json({ mode: 'single', client });
     }
 
     // Teléfono o nombre → puede haber múltiples matches → lista
-    const leads = await searchLeads(q, 10);
+    const allLeads = await searchLeads(q, 10);
+    const leads = filterOwnedLeads(allLeads, scope);
     if (leads.length === 0) {
-      return NextResponse.json({
-        mode: 'none',
-        message: `No se encontró ningún cliente con "${q}" en Zoho.`,
-      });
+      // Si había resultados pero ninguno es suyo, lo decimos claro.
+      const msg =
+        allLeads.length > 0 ? NOT_IN_PORTFOLIO_MSG : `No se encontró ningún cliente con "${q}" en Zoho.`;
+      return NextResponse.json({ mode: 'none', message: msg });
     }
 
-    // Si hay UN solo resultado, lo trato como single — más útil
+    // Si hay UN solo resultado (ya filtrado a lo suyo), lo trato como single — más útil
     if (leads.length === 1) {
       const client = await getClientFull(q);
-      if (client) {
+      if (client && ownsLead(client.lead, scope)) {
         return NextResponse.json({ mode: 'single', client });
       }
     }

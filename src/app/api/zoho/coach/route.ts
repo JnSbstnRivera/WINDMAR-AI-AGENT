@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import Anthropic from '@anthropic-ai/sdk';
 import type { ZohoClientFull } from '@/lib/zoho';
+import { getViewerScope, ownsLead, NOT_IN_PORTFOLIO_MSG } from '@/lib/zoho-access';
 
 export const runtime = 'nodejs';
 export const maxDuration = 20;
@@ -43,6 +44,13 @@ export async function POST(req: Request) {
   const client = body.client;
   if (!client?.lead) {
     return NextResponse.json({ error: 'Falta info del cliente' }, { status: 400 });
+  }
+
+  // Scoping por dueño (defensa en profundidad — el body viene del cliente):
+  // el Asesor no puede pedir coach sobre un lead que no es suyo.
+  const scope = getViewerScope(session);
+  if (!ownsLead(client.lead, scope)) {
+    return NextResponse.json({ error: NOT_IN_PORTFOLIO_MSG }, { status: 403 });
   }
 
   // Resumen ESTRUCTURADO para el LLM
