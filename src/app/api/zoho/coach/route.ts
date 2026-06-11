@@ -79,27 +79,29 @@ Sistema comprado/cerrado: ${client.summary.sistemaComprado}
 ${dealsResumen || '(Sin cotizaciones previas)'}
 
 ═══ TU TRABAJO ═══
-Genera una respuesta corta (3-5 secciones cortas con bullets) que ayude al asesor a responder MEJOR a este cliente. Incluye:
+El asesor está EN UNA LLAMADA EN VIVO. Sé MUY breve. Máximo 3 secciones, 1-2 bullets cada una, frases cortas. NADA de párrafos largos ni introducciones.
 
-1. 📊 **Resumen rápido del cliente** (en 1-2 líneas, qué tipo de cliente es)
-2. 💡 **Oportunidades de venta** (qué productos Windmar le puedes ofrecer dado su historial)
-3. ⚠️ **Cuidados / objeciones esperables** (qué cuidar al hablar con este cliente)
-4. 🎯 **Próximo paso recomendado** (acción concreta de seguimiento)
+Responde EXACTAMENTE en este formato (markdown, sin título inicial):
 
-REGLAS CRÍTICAS:
-- NUNCA des precios concretos. Si mencionas un producto, dí "cotízalo con [Cotizador]".
-- Si el cliente YA TIENE PLACAS, sugiere complementarias: batería (Power Wall 2/3), purificador de agua, suavizador.
-- Si el cliente tiene cotización ABIERTA hace tiempo, recomienda retomarla con call-to-action urgente.
-- Si el consultor asignado es OTRO, sugiere coordinar con él antes de contactar (cortesía + ética interna).
-- Sé breve y accionable. El asesor está en una llamada en vivo.
-- Usa emojis para escanear visualmente.
+**💡 Qué ofrecer**
+- (1-2 productos concretos según su historial)
 
-Responde en markdown.`;
+**⚠️ Cuidado**
+- (1 objeción/riesgo clave)
+
+**🎯 Próximo paso**
+- (1 acción concreta)
+
+REGLAS:
+- NUNCA des precios. Si mencionas producto, di "cotízalo con [Cotizador]".
+- Si ya tiene placas → sugiere batería / purificador / suavizador.
+- Si el consultor asignado es OTRO, dilo en 'Cuidado' (coordinar con él).
+- Total: máximo ~80 palabras. Telegráfico.`;
 
   try {
     const response = await getAnthropic().messages.create({
       model: 'claude-haiku-4-5',
-      max_tokens: 700,
+      max_tokens: 350,
       messages: [{ role: 'user', content: userPrompt }],
     });
 

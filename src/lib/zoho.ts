@@ -127,8 +127,10 @@ export interface ZohoLead {
   address: string | null;
   zipCode: string | null;
   stage: string | null;           // Hot/Warm/Cold/etc
-  owner: string | null;           // consultor/owner asignado
+  owner: string | null;           // Lead Owner (agente del call center que registró el lead)
   ownerEmail: string | null;
+  consultor: string | null;       // Sales_Rep — el consultor de ventas asignado (NO el owner)
+  consultorEmail: string | null;
   systemPurchased: string | null; // qué tiene comprado (campo custom o de Deals)
   createdAt: string | null;
   zohoUrl: string;                // hipervínculo directo al lead en Zoho
@@ -191,7 +193,7 @@ export function detectQueryType(query: string): QueryType {
 // Campos que pedimos a Zoho — minimizar payload (Zoho devuelve TODO si no
 // especificas). Lista probada en NOTAS-VENTAS-VASS.
 const LEAD_FIELDS =
-  'Full_Name,First_Name,Last_Name,Phone,Mobile,Email,Lead_Status,Owner,Street,City,State,Zip_Code,Created_Time,Lead_Number';
+  'Full_Name,First_Name,Last_Name,Phone,Mobile,Email,Lead_Status,Owner,Sales_Rep,Sales_Rep_Email,Street,City,State,Zip_Code,Created_Time,Lead_Number';
 const DEAL_FIELDS =
   'Deal_Name,Amount,Stage,Closing_Date,Contact_Name,Owner,Created_Time';
 
@@ -317,7 +319,7 @@ export async function getClientFull(query: string): Promise<ZohoClientFull | nul
     deals,
     summary: {
       sistemaComprado: sistemaComprado || 'Sin información',
-      consultor: lead.owner || 'Sin asignar',
+      consultor: lead.consultor || 'Sin asignar',
       totalDeals: deals.length,
       dealsAbiertos,
       ultimaActividad,
@@ -345,6 +347,8 @@ interface ZohoLeadRaw {
   Zip_Code?: string;
   Lead_Status?: string;
   Owner?: { name?: string; email?: string };
+  Sales_Rep?: { name?: string; email?: string };
+  Sales_Rep_Email?: string;
   Created_Time?: string;
   // Campos custom posibles:
   Sistema_Comprado?: string;
@@ -381,6 +385,8 @@ function mapLead(raw: ZohoLeadRaw): ZohoLead {
     stage: raw.Lead_Status || null,
     owner: raw.Owner?.name || null,
     ownerEmail: raw.Owner?.email || null,
+    consultor: raw.Sales_Rep?.name || null,
+    consultorEmail: raw.Sales_Rep?.email || raw.Sales_Rep_Email || null,
     systemPurchased: raw.Sistema_Comprado || null,
     createdAt: raw.Created_Time || null,
     zohoUrl: `https://crm.zoho.com/crm/org${ZOHO_ORG_ID}/tab/Leads/${raw.id}`,
