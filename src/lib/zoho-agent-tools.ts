@@ -133,36 +133,64 @@ export async function executeZohoTool(
         const leads = await getMyLeads(ownerId);
         if (leads.length === 0) return 'No tienes leads en tu cartera de Zoho.';
 
+        // Helpers de formato para la tabla
+        const fmtFecha = (iso: string | null) => (iso ? iso.slice(0, 10) : '—');
+        const fmtNota = (note: { content: string; createdAt: string | null } | null) => {
+          if (!note) return '⚠️ sin notas';
+          const txt = note.content.replace(/\s+/g, ' ').trim();
+          const preview = txt.length > 60 ? txt.slice(0, 57) + '…' : txt;
+          return `${preview} (${fmtFecha(note.createdAt)})`;
+        };
+        // Escapar pipes para no romper la tabla markdown
+        const esc = (s: string) => s.replace(/\|/g, '/');
+
+        const buildTable = (rows: typeof leads, notes: Map<string, Awaited<ReturnType<typeof getLeadLastNote>>>) => {
+          const header = '| Cliente | Estado | Owner | Consultor | Creado | Última nota |\n|---|---|---|---|---|---|';
+          const body = rows
+            .map((l) => {
+              const nota = notes.has(l.id) ? fmtNota(notes.get(l.id) ?? null) : '—';
+              return `| [${esc(l.fullName)}](${l.zohoUrl}) | ${esc(l.status || 'sin estado')} | ${esc(l.owner || '—')} | ${esc(l.consultor || '—')} | ${fmtFecha(l.createdAt)} | ${esc(nota)} |`;
+            })
+            .join('\n');
+          return `${header}\n${body}`;
+        };
+
+        // Trae las últimas notas de un conjunto de leads (chunks de 8)
+        const fetchNotes = async (rows: typeof leads) => {
+          const map = new Map<string, Awaited<ReturnType<typeof getLeadLastNote>>>();
+          for (let i = 0; i < rows.length; i += 8) {
+            const chunk = rows.slice(i, i + 8);
+            const notes = await Promise.all(chunk.map((l) => getLeadLastNote(l.id)));
+            chunk.forEach((l, idx) => map.set(l.id, notes[idx]));
+          }
+          return map;
+        };
+
+        const FORMATO =
+          'INSTRUCCIÓN DE FORMATO: presenta la TABLA markdown de abajo TAL CUAL en tu respuesta (no la conviertas en lista ni en prosa, no quites columnas ni los enlaces). Antes de la tabla pon 1 línea de contexto y después máximo 2-3 líneas de coach con el próximo paso.';
+
         if (!soloSeguimiento) {
+          const shown = leads.slice(0, 15);
+          const notes = await fetchNotes(shown);
           const byBucket: Record<string, number> = {};
           for (const l of leads) byBucket[l.bucket] = (byBucket[l.bucket] || 0) + 1;
           const resumen = Object.entries(byBucket)
             .map(([b, n]) => `${BUCKET_LABEL[b as keyof typeof BUCKET_LABEL] || b}: ${n}`)
             .join(' · ');
-          const muestra = leads
-            .slice(0, 15)
-            .map((l) => `  - ${l.fullName} · ${l.status || 'sin estado'} · ${l.zohoUrl}`)
-            .join('\n');
-          return `CARTERA (${leads.length} leads) — ${resumen}\nMuestra:\n${muestra}${leads.length > 15 ? `\n…y ${leads.length - 15} más.` : ''}`;
+          return `${FORMATO}\n\nCARTERA: ${leads.length} leads (${resumen})${leads.length > 15 ? ` — mostrando los 15 con actividad más reciente` : ''}\n\n${buildTable(shown, notes)}`;
         }
 
-        // Triage: revisar última nota de los accionables (acotado)
+        // Triage: leads accionables SIN nota en las últimas 24h
         const actionable = leads.filter((l) => isActionable(l.bucket)).slice(0, TRIAGE_LIMIT);
         const cutoff = Date.now() - STALE_HOURS * 3600 * 1000;
-        const stale: string[] = [];
-        for (let i = 0; i < actionable.length; i += 8) {
-          const chunk = actionable.slice(i, i + 8);
-          const notes = await Promise.all(chunk.map((l) => getLeadLastNote(l.id)));
-          chunk.forEach((l, idx) => {
-            const note = notes[idx];
-            const t = note?.createdAt ? Date.parse(note.createdAt) : 0;
-            if (!note || isNaN(t) || t < cutoff) {
-              stale.push(`  - ${l.fullName} · ${l.status || 'sin estado'} · ${l.zohoUrl}`);
-            }
-          });
-        }
+        const notes = await fetchNotes(actionable);
+        const stale = actionable.filter((l) => {
+          const note = notes.get(l.id);
+          const t = note?.createdAt ? Date.parse(note.createdAt) : 0;
+          return !note || isNaN(t) || t < cutoff;
+        });
         if (stale.length === 0) return '¡Todo al día! Ningún lead accionable sin nota en las últimas 24h.';
-        return `LEADS QUE NECESITAN SEGUIMIENTO (sin nota en 24h) — ${stale.length} de ${actionable.length} revisados:\n${stale.join('\n')}`;
+        return `${FORMATO}\n\nLEADS QUE NECESITAN SEGUIMIENTO (sin nota en ${STALE_HOURS}h): ${stale.length} de ${actionable.length} accionables revisados\n\n${buildTable(stale, notes)}`;
       }
 
       case 'asignar_leads': {

@@ -462,6 +462,8 @@ export interface MyLead {
   phone: string | null;
   status: string | null;
   bucket: Bucket;
+  owner: string | null;       // Lead Owner (agente call center)
+  consultor: string | null;   // Sales_Rep (consultor de ventas)
   modifiedAt: string | null;
   createdAt: string | null;
   zohoUrl: string;
@@ -470,50 +472,30 @@ export interface MyLead {
   needsFollowUp?: boolean;
 }
 
-interface CoqlLeadRow {
-  id: string;
-  Full_Name?: string;
-  Email?: string;
-  Phone?: string;
-  Mobile?: string;
-  Lead_Status?: string;
-  Modified_Time?: string;
-  Created_Time?: string;
-}
-
 /**
- * Trae los leads de un asesor (por Owner ID) vía COQL, ordenados por actividad.
- * Fallback a /Leads/search?criteria=(Owner:equals:id) si COQL falla.
+ * Trae los leads de un asesor (por Owner ID), ordenados por última actividad.
+ * Usa /Leads/search?criteria=(Owner:equals:id) — a diferencia de COQL, devuelve
+ * los lookups completos (Owner y Sales_Rep con nombre), verificado contra la
+ * org de PR. Orden client-side por Modified_Time (search no soporta sort).
  */
 export async function getMyLeads(ownerId: string, limit = 200): Promise<MyLead[]> {
-  const query = `select id, Full_Name, Email, Phone, Mobile, Lead_Status, Modified_Time, Created_Time from Leads where Owner = ${ownerId} order by Modified_Time desc limit ${Math.min(limit, 200)}`;
-  let rows: CoqlLeadRow[] = [];
-  try {
-    const res = (await zohoPost('/coql', { select_query: query })) as { data?: CoqlLeadRow[] };
-    rows = res.data || [];
-  } catch (err) {
-    console.warn('[zoho] COQL my-leads falló, usando fallback search:', (err as Error).message);
-    const res = (await zohoFetch(
-      `/Leads/search?criteria=(Owner:equals:${ownerId})&fields=${LEAD_FIELDS}&per_page=${Math.min(limit, 200)}`
-    )) as { data?: ZohoLeadRaw[] };
-    rows = (res.data || []).map((r) => ({
-      id: r.id,
-      Full_Name: r.Full_Name,
-      Email: r.Email,
-      Phone: r.Phone,
-      Mobile: r.Mobile,
-      Lead_Status: r.Lead_Status,
-      Created_Time: r.Created_Time,
-    }));
-  }
+  const fields = `${LEAD_FIELDS},Modified_Time`;
+  const res = (await zohoFetch(
+    `/Leads/search?criteria=(Owner:equals:${ownerId})&fields=${fields}&per_page=${Math.min(limit, 200)}`
+  )) as { data?: (ZohoLeadRaw & { Modified_Time?: string })[] };
+
+  const rows = res.data || [];
+  rows.sort((a, b) => (b.Modified_Time || '').localeCompare(a.Modified_Time || ''));
 
   return rows.map((r) => ({
     id: r.id,
-    fullName: r.Full_Name || 'Sin nombre',
+    fullName: r.Full_Name || [r.First_Name, r.Last_Name].filter(Boolean).join(' ').trim() || 'Sin nombre',
     email: r.Email || null,
     phone: r.Mobile || r.Phone || null,
     status: r.Lead_Status || null,
     bucket: bucketOf(r.Lead_Status),
+    owner: r.Owner?.name || null,
+    consultor: r.Sales_Rep?.name || null,
     modifiedAt: r.Modified_Time || null,
     createdAt: r.Created_Time || null,
     zohoUrl: `https://crm.zoho.com/crm/org${ZOHO_ORG_ID}/tab/Leads/${r.id}`,
