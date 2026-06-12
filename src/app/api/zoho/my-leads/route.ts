@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import {
   getZohoUserIdByEmail,
+  findZohoUserByQuery,
   getMyLeads,
   getLeadLastNote,
   type MyLead,
@@ -36,11 +37,24 @@ export async function GET(req: Request) {
   const triage = url.searchParams.get('triage') === '1';
   const ownerParam = (url.searchParams.get('owner') || '').trim().toLowerCase();
 
-  // Asesor solo ve lo suyo. Elevados pueden pedir ?owner=correo.
-  const targetEmail = ownerParam && scope.canSeeAll ? ownerParam : scope.email;
-
   try {
-    const ownerId = await getZohoUserIdByEmail(targetEmail);
+    // Asesor solo ve lo suyo. Elevados pueden pedir ?owner=<correo O nombre>
+    // (la resolución por nombre es insensible a acentos: "juan sebastian rive").
+    let ownerId: string | null;
+    let targetEmail = scope.email;
+    if (ownerParam && scope.canSeeAll) {
+      const u = await findZohoUserByQuery(ownerParam);
+      if (!u) {
+        return NextResponse.json(
+          { error: `No se encontró ningún usuario de Zoho que coincida con "${ownerParam}".` },
+          { status: 404 }
+        );
+      }
+      ownerId = u.id;
+      targetEmail = u.email;
+    } else {
+      ownerId = await getZohoUserIdByEmail(targetEmail);
+    }
     if (!ownerId) {
       return NextResponse.json(
         { error: `No se encontró el usuario de Zoho para ${targetEmail}. Avisa a un admin para mapearlo.` },

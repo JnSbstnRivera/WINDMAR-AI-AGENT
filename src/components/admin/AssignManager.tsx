@@ -11,11 +11,15 @@ export interface AssignUser {
 
 interface Lead {
   id: string;
+  leadNumber: string | null;
   fullName: string;
   status: string | null;
   bucket: Bucket;
   phone: string | null;
   email: string | null;
+  owner: string | null;
+  consultor: string | null;
+  createdAt: string | null;
   zohoUrl: string;
 }
 
@@ -37,6 +41,7 @@ export function AssignManager({ users }: { users: AssignUser[] }) {
   const [manualTarget, setManualTarget] = useState('');
   const [zohoUsers, setZohoUsers] = useState<Array<{ name: string; email: string }>>([]);
   const [leads, setLeads] = useState<Lead[] | null>(null);
+  const [statusFilter, setStatusFilter] = useState<string>('');
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -61,6 +66,7 @@ export function AssignManager({ users }: { users: AssignUser[] }) {
     setMsg(null);
     setLeads(null);
     setSelected(new Set());
+    setStatusFilter('');
     try {
       const res = await fetch(`/api/zoho/my-leads?owner=${encodeURIComponent(effectiveSource)}`);
       const data = await res.json();
@@ -85,9 +91,23 @@ export function AssignManager({ users }: { users: AssignUser[] }) {
     });
   }
 
+  // Leads visibles según el filtro de estado (ej. solo "No Contesta")
+  const visible = leads ? (statusFilter ? leads.filter((l) => (l.status || 'sin estado') === statusFilter) : leads) : [];
+  const distinctStatuses = leads
+    ? Array.from(
+        leads.reduce((m, l) => {
+          const s = l.status || 'sin estado';
+          m.set(s, (m.get(s) || 0) + 1);
+          return m;
+        }, new Map<string, number>())
+      ).sort((a, b) => b[1] - a[1])
+    : [];
+
   function toggleAll() {
-    if (!leads) return;
-    setSelected((prev) => (prev.size === leads.length ? new Set() : new Set(leads.map((l) => l.id))));
+    if (visible.length === 0) return;
+    setSelected((prev) =>
+      prev.size === visible.length ? new Set() : new Set(visible.map((l) => l.id))
+    );
   }
 
   async function assign() {
@@ -234,39 +254,92 @@ export function AssignManager({ users }: { users: AssignUser[] }) {
             <div style={{ color: 'var(--text2)', fontSize: 13 }}>Ese asesor no tiene leads.</div>
           ) : (
             <>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+              {/* Barra: seleccionar todos + filtro por Lead Status */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8, flexWrap: 'wrap' }}>
                 <label style={{ color: 'var(--text2)', fontSize: 12, display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
-                  <input type="checkbox" checked={selected.size === leads.length && leads.length > 0} onChange={toggleAll} />
-                  Seleccionar todos ({leads.length})
+                  <input type="checkbox" checked={selected.size === visible.length && visible.length > 0} onChange={toggleAll} />
+                  Seleccionar todos ({visible.length})
                 </label>
                 <span style={{ color: 'var(--text3)', fontSize: 12 }}>· {selected.size} seleccionados</span>
+                <span style={{ color: 'var(--text2)', fontSize: 12, marginLeft: 'auto' }}>Filtrar estado:</span>
+                <select
+                  value={statusFilter}
+                  onChange={(e) => { setStatusFilter(e.target.value); setSelected(new Set()); }}
+                  style={{ ...selectStyle, minWidth: 190 }}
+                >
+                  <option value="">Todos ({leads.length})</option>
+                  {distinctStatuses.map(([s, n]) => (
+                    <option key={s} value={s} style={{ background: '#0f1525' }}>
+                      {s} ({n})
+                    </option>
+                  ))}
+                </select>
               </div>
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 420, overflowY: 'auto' }}>
-                {leads.map((l) => (
+              {/* Tabla en columnas */}
+              <div style={{ maxHeight: 440, overflowY: 'auto', borderRadius: 10, border: '1px solid var(--glass-border)' }}>
+                {/* Header */}
+                <div
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: '30px 1.5fr 1.1fr 1fr 1fr 88px 110px',
+                    gap: 8, padding: '8px 12px', position: 'sticky', top: 0, zIndex: 1,
+                    background: '#0f1525', borderBottom: '1px solid var(--glass-border)',
+                    fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#F7941D', fontWeight: 700,
+                  }}
+                >
+                  <span />
+                  <span>Cliente</span>
+                  <span>Estado</span>
+                  <span>Lead Owner</span>
+                  <span>Consultor</span>
+                  <span>Creado</span>
+                  <span style={{ textAlign: 'right' }}>Acciones</span>
+                </div>
+                {visible.map((l) => (
                   <div
                     key={l.id}
                     style={{
-                      display: 'flex', alignItems: 'center', gap: 12, padding: '8px 12px',
-                      borderRadius: 10, background: selected.has(l.id) ? 'rgba(56,189,248,0.1)' : 'var(--glass-bg)',
-                      border: '1px solid var(--glass-border)',
+                      display: 'grid',
+                      gridTemplateColumns: '30px 1.5fr 1.1fr 1fr 1fr 88px 110px',
+                      gap: 8, padding: '8px 12px', alignItems: 'center',
+                      background: selected.has(l.id) ? 'rgba(56,189,248,0.1)' : 'transparent',
+                      borderBottom: '1px solid rgba(255,255,255,0.05)',
                     }}
                   >
                     <input type="checkbox" checked={selected.has(l.id)} onChange={() => toggle(l.id)} />
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ color: 'var(--text1)', fontSize: 14, fontWeight: 500 }}>{l.fullName}</div>
-                      <div style={{ fontSize: 11, marginTop: 2 }}>
-                        <span style={{ color: BUCKET_COLOR[l.bucket] || '#94a3b8' }}>● {l.status || 'sin estado'}</span>
-                        <span style={{ color: 'var(--text3)' }}> · {BUCKET_LABEL[l.bucket]}</span>
-                        {l.phone && <span style={{ color: 'var(--text3)' }}> · {l.phone}</span>}
+                    <div style={{ minWidth: 0 }}>
+                      <a
+                        href={l.zohoUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{ color: 'var(--text1)', fontSize: 13, fontWeight: 600, textDecoration: 'none' }}
+                        title={`Abrir ${l.leadNumber || ''} en Zoho`}
+                      >
+                        {l.fullName}
+                      </a>
+                      <div style={{ fontSize: 11, color: 'var(--text3)' }}>
+                        {l.leadNumber || ''}{l.phone ? ` · ${l.phone}` : ''}
                       </div>
                     </div>
-                    <button onClick={() => addNote(l)} disabled={busy} style={{ fontSize: 12, padding: '5px 10px', borderRadius: 7, cursor: 'pointer', border: '1px solid var(--glass-border)', background: 'transparent', color: 'var(--text2)' }}>
-                      + Nota
-                    </button>
-                    <a href={l.zohoUrl} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12, color: 'var(--text3)' }}>
-                      Zoho ↗
-                    </a>
+                    <span style={{ fontSize: 12, color: BUCKET_COLOR[l.bucket] || '#94a3b8' }}>
+                      ● {l.status || 'sin estado'}
+                    </span>
+                    <span style={{ fontSize: 12, color: 'var(--text2)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={l.owner || ''}>
+                      {l.owner || '—'}
+                    </span>
+                    <span style={{ fontSize: 12, color: 'var(--text2)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={l.consultor || ''}>
+                      {l.consultor || '—'}
+                    </span>
+                    <span style={{ fontSize: 12, color: 'var(--text3)' }}>{l.createdAt ? l.createdAt.slice(0, 10) : '—'}</span>
+                    <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
+                      <button onClick={() => addNote(l)} disabled={busy} style={{ fontSize: 11, padding: '4px 8px', borderRadius: 7, cursor: 'pointer', border: '1px solid var(--glass-border)', background: 'transparent', color: 'var(--text2)' }}>
+                        + Nota
+                      </button>
+                      <a href={l.zohoUrl} target="_blank" rel="noopener noreferrer" style={{ fontSize: 11, color: '#38bdf8', alignSelf: 'center' }}>
+                        Zoho ↗
+                      </a>
+                    </div>
                   </div>
                 ))}
               </div>

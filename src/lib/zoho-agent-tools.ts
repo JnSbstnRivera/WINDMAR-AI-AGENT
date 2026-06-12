@@ -11,6 +11,7 @@ import {
   getMyLeads,
   getLeadLastNote,
   getZohoUserIdByEmail,
+  findZohoUserByQuery,
   assignLeads,
   addLeadNote,
 } from '@/lib/zoho';
@@ -39,10 +40,14 @@ export function getZohoToolDefs(canWrite: boolean): Anthropic.Tool[] {
     {
       name: 'mis_leads',
       description:
-        'Trae la cartera de leads del asesor desde Zoho como TABLA. Soporta: cantidad de filas (ej. "mis últimos 30 leads"), orden por fecha de creación o por última actividad, filtro por estado (ej. "mis No Contesta"), y modo seguimiento (solo accionables SIN nota en 24h). Úsala para "mis leads", "mi cartera", "últimos N creados", "¿a quién debo llamar?", "mis leads en X estado".',
+        'Trae la cartera de leads desde Zoho como TABLA. Por defecto la del usuario actual; los LÍDERES/ADMINS pueden pedir la de OTRO asesor con el parámetro "asesor" (nombre o correo — ej. "los leads de juan sebastian rivera"). Soporta: cantidad de filas, orden por creación o actividad, filtro por estado (ej. "No Contesta"), filtro por fechas, y modo seguimiento (sin nota en 24h). Úsala para "mis leads", "la cartera de X", "últimos N creados", "¿a quién debo llamar?".',
       input_schema: {
         type: 'object',
         properties: {
+          asesor: {
+            type: 'string',
+            description: 'SOLO líderes/admins: nombre o correo del asesor cuya cartera quieres ver (ej. "j.salas@windmarhome.com" o "juan sebastian rivera"). Omitir = cartera propia.',
+          },
           solo_seguimiento: {
             type: 'boolean',
             description: 'true = solo leads que necesitan seguimiento (sin nota en 24h).',
@@ -166,10 +171,23 @@ export async function executeZohoTool(
         const ordenarPor = input.ordenar_por === 'creacion' ? 'creacion' : 'actividad';
         const estadoFiltro = String(input.estado || '').trim().toLowerCase();
 
-        const ownerId = await getZohoUserIdByEmail(scope.email);
-        if (!ownerId) return `No se encontró tu usuario de Zoho (${scope.email}). Pídele a un admin que sincronice los IDs de Zoho en /admin/usuarios.`;
+        // Cartera de OTRO asesor (solo líderes/admins; por nombre o correo)
+        const asesorQ = String(input.asesor || '').trim();
+        let ownerId: string | null;
+        let dueño = 'tu cartera';
+        if (asesorQ && scope.canSeeAll) {
+          const u = await findZohoUserByQuery(asesorQ);
+          if (!u) return `No encontré al usuario "${asesorQ}" en Zoho. Verifica el nombre o usa su correo.`;
+          ownerId = u.id;
+          dueño = `cartera de ${u.name}`;
+        } else if (asesorQ && !scope.canSeeAll) {
+          return 'Solo los líderes/admins pueden ver la cartera de otro asesor. Te muestro la tuya si me la pides sin nombre.';
+        } else {
+          ownerId = await getZohoUserIdByEmail(scope.email);
+          if (!ownerId) return `No se encontró tu usuario de Zoho (${scope.email}). Pídele a un admin que sincronice los IDs de Zoho en /admin/usuarios.`;
+        }
         let leads = await getMyLeads(ownerId);
-        if (leads.length === 0) return 'No tienes leads en tu cartera de Zoho.';
+        if (leads.length === 0) return `No hay leads en la ${dueño}.`;
 
         // Filtro por estado (match parcial, sin acentos ni mayúsculas)
         const norm = (s: string) => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
@@ -240,7 +258,8 @@ export async function executeZohoTool(
             .join(' · ');
           const ordenTxt = ordenarPor === 'creacion' ? 'más recién creados' : 'con actividad más reciente';
           const filtroTxt = estadoFiltro ? ` con estado "${input.estado}"` : '';
-          return `${FORMATO}\n\nCARTERA${filtroTxt}: ${leads.length} leads (${resumen})${leads.length > shown.length ? ` — mostrando los ${shown.length} ${ordenTxt}` : ''}\n\n${buildTable(shown, notes)}`;
+          const duenoTxt = dueño === 'tu cartera' ? '' : ` (${dueño})`;
+          return `${FORMATO}\n\nCARTERA${duenoTxt}${filtroTxt}: ${leads.length} leads (${resumen})${leads.length > shown.length ? ` — mostrando los ${shown.length} ${ordenTxt}` : ''}\n\n${buildTable(shown, notes)}`;
         }
 
         // Triage: leads accionables SIN nota en las últimas 24h

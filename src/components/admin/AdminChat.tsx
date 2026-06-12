@@ -1,6 +1,34 @@
 'use client';
 
 import { useRef, useState, useEffect } from 'react';
+import ReactMarkdown, { type Components } from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+
+// Render markdown del asistente: tablas con bordes, enlaces naranjas a Zoho.
+const mdComponents: Components = {
+  a: ({ ...props }) => (
+    <a {...props} target="_blank" rel="noopener noreferrer" style={{ color: '#F7941D', textDecoration: 'underline' }} />
+  ),
+  table: ({ ...props }) => (
+    <div style={{ overflowX: 'auto', margin: '8px 0' }}>
+      <table style={{ borderCollapse: 'collapse', width: '100%', fontSize: 13 }} {...props} />
+    </div>
+  ),
+  th: ({ ...props }) => (
+    <th
+      style={{
+        border: '1px solid rgba(255,255,255,0.18)', padding: '6px 9px', textAlign: 'left',
+        background: 'rgba(247,148,29,0.14)', color: '#F7941D', whiteSpace: 'nowrap',
+      }}
+      {...props}
+    />
+  ),
+  td: ({ ...props }) => (
+    <td style={{ border: '1px solid rgba(255,255,255,0.10)', padding: '6px 9px', verticalAlign: 'top' }} {...props} />
+  ),
+  p: ({ ...props }) => <p style={{ margin: '4px 0' }} {...props} />,
+  ul: ({ ...props }) => <ul style={{ margin: '4px 0', paddingLeft: 18 }} {...props} />,
+};
 
 interface Msg {
   role: 'user' | 'assistant';
@@ -151,14 +179,24 @@ export function AdminChat() {
                 borderRadius: 12,
                 fontSize: 14,
                 lineHeight: 1.55,
-                whiteSpace: 'pre-wrap',
+                whiteSpace: m.role === 'user' ? 'pre-wrap' : 'normal',
                 wordBreak: 'break-word',
                 background: m.role === 'user' ? 'rgba(247,148,29,0.15)' : 'rgba(255,255,255,0.05)',
                 border: `1px solid ${m.role === 'user' ? 'rgba(247,148,29,0.35)' : 'var(--glass-border)'}`,
                 color: 'var(--text1)',
               }}
             >
-              {m.content || (busy && i === msgs.length - 1 ? '…' : '')}
+              {m.role === 'assistant' ? (
+                m.content ? (
+                  <ReactMarkdown remarkPlugins={[remarkGfm]} components={mdComponents}>
+                    {m.content}
+                  </ReactMarkdown>
+                ) : (
+                  busy && i === msgs.length - 1 ? '…' : ''
+                )
+              ) : (
+                m.content
+              )}
             </div>
             {/* Chips de coach (quick replies) — seleccionables */}
             {m.role === 'assistant' && (m.quickReplies?.length ?? 0) > 0 && (

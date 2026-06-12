@@ -473,6 +473,26 @@ export async function getZohoUsers(): Promise<ZohoUser[]> {
   return usersListCache || [];
 }
 
+/**
+ * Resuelve un usuario de Zoho por correo O por nombre (match parcial,
+ * insensible a acentos/mayúsculas). "juan sebastian rive" → Juan Sebastián
+ * Rivera Joven. Devuelve null si no hay match.
+ */
+export async function findZohoUserByQuery(query: string): Promise<ZohoUser | null> {
+  const users = await getZohoUsers();
+  const norm = (s: string) => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+  const q = norm(query.trim());
+  if (!q) return null;
+  if (q.includes('@')) return users.find((u) => u.email === q) || null;
+  // Nombre: todas las palabras de la query deben estar en el nombre
+  const words = q.split(/\s+/).filter(Boolean);
+  const matches = users.filter((u) => {
+    const name = norm(u.name);
+    return words.every((w) => name.includes(w));
+  });
+  return matches[0] || null;
+}
+
 export interface MyLead {
   id: string;
   leadNumber: string | null;  // Lead # visible en Zoho (formato PR: L792795)
