@@ -70,13 +70,25 @@ export function getZohoToolDefs(canWrite: boolean): Anthropic.Tool[] {
       },
       {
         name: 'agregar_nota',
-        description:
-          'Agrega una nota a un lead en Zoho (queda en el historial del cliente). SOLO para líderes/admins.',
+        description: `Agrega una nota a un lead en Zoho (queda en el historial del cliente). SOLO para líderes/admins.
+
+PLANTILLAS — elige la que corresponda al escenario y rellena los {placeholders} con datos de la conversación (pregunta si falta algo clave). El sistema firma automáticamente con el sello SUN BOT, NO agregues firma:
+- ✅ VENTA CERRADA — Caso vendido por {asesor} ({área}). Método de pago: {cash/loan/lease}. {detalle opcional}
+- 🤝 ASISTENCIA COORDINADA — Gestión conjunta: apoyo a {asesor original} ({área}). Venta cerrada por {asesor que cierra} ({área}). {detalle}
+- 📞 SEGUIMIENTO — Contacto el {fecha}: {resultado}. Próximo paso: {acción y fecha}.
+- 📵 NO CONTESTA — Intento #{n} el {fecha/hora}. Reintentar: {cuándo / otra hora o canal}.
+- 📅 CITA COORDINADA — Cita para {fecha/hora} con {consultor}. {detalle}
+- ⏰ LLAMAR DESPUÉS — Cliente pide contacto el {fecha/hora}. Motivo: {motivo}.
+- ❌ NO INTERESADO / DQ — Motivo: {motivo}. {qué se intentó}
+- ℹ️ INFO — {dato relevante del cliente o la gestión}`,
         input_schema: {
           type: 'object',
           properties: {
             lead_id: { type: 'string', description: 'ID del lead' },
-            contenido: { type: 'string', description: 'Texto de la nota' },
+            contenido: {
+              type: 'string',
+              description: 'Texto de la nota siguiendo la plantilla del escenario. SIN firma (se agrega sola).',
+            },
           },
           required: ['lead_id', 'contenido'],
         },

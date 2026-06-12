@@ -563,13 +563,20 @@ export async function assignLeads(leadIds: string[], newOwnerId: string): Promis
   return result;
 }
 
-/** Crea una nota en un lead. */
+// Firma que cierra TODA nota creada por el agente (chat, admin o automatización).
+// Pedido del negocio: que siempre quede claro que la nota vino del SUN BOT.
+const NOTE_SIGNATURE = '\n\n🤖☀️ Nota dejada con WINDMAR AI Agent — SUN BOT';
+
+/** Crea una nota en un lead. Siempre se firma con el sello del SUN BOT. */
 export async function addLeadNote(
   leadId: string,
   content: string,
   title = 'Nota — Sun Bot'
 ): Promise<boolean> {
-  const body = { data: [{ Note_Title: title, Note_Content: content }] };
+  const signed = content.trim().endsWith(NOTE_SIGNATURE.trim())
+    ? content.trim()
+    : content.trim() + NOTE_SIGNATURE;
+  const body = { data: [{ Note_Title: title, Note_Content: signed }] };
   const res = (await zohoPost(`/Leads/${leadId}/Notes`, body)) as {
     data?: Array<{ code?: string; status?: string }>;
   };
