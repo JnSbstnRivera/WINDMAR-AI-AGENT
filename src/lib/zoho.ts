@@ -184,8 +184,8 @@ export type QueryType = 'email' | 'phone' | 'leadNumber' | 'name';
 export function detectQueryType(query: string): QueryType {
   const trimmed = query.trim();
   if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) return 'email';
-  // Lead numbers en Zoho suelen tener prefijo LD-XXXXXX o LE-XXXXXX
-  if (/^(LD|LE)[-_]?\d+$/i.test(trimmed)) return 'leadNumber';
+  // Lead numbers en la org de PR: L792795 (también LD-XXXXXX / LE-XXXXXX)
+  if (/^L[DE]?[-_]?\d+$/i.test(trimmed)) return 'leadNumber';
   if (normalizePhone(trimmed)) return 'phone';
   return 'name';
 }
@@ -457,6 +457,7 @@ export async function getZohoUserIdByEmail(email: string): Promise<string | null
 
 export interface MyLead {
   id: string;
+  leadNumber: string | null;  // Lead # visible en Zoho (formato PR: L792795)
   fullName: string;
   email: string | null;
   phone: string | null;
@@ -489,6 +490,7 @@ export async function getMyLeads(ownerId: string, limit = 200): Promise<MyLead[]
 
   return rows.map((r) => ({
     id: r.id,
+    leadNumber: r.Lead_Number || null,
     fullName: r.Full_Name || [r.First_Name, r.Last_Name].filter(Boolean).join(' ').trim() || 'Sin nombre',
     email: r.Email || null,
     phone: r.Mobile || r.Phone || null,

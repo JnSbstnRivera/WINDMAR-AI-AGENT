@@ -126,6 +126,7 @@ export async function executeZohoTool(
           .join('\n');
         return [
           `CLIENTE: ${l.fullName}`,
+          `Lead #: ${l.leadNumber || '—'} · enlace: ${l.zohoUrl}`,
           `Estado: ${l.stage || 'sin estado'} (bucket: ${BUCKET_LABEL[bucketOf(l.stage)]})`,
           `Email: ${l.email || 'no registrado'} · Tel: ${l.mobile || l.phone || 'no registrado'}`,
           `Consultor (Sales_Rep): ${l.consultor || 'sin asignar'}`,
@@ -157,11 +158,12 @@ export async function executeZohoTool(
         const esc = (s: string) => s.replace(/\|/g, '/');
 
         const buildTable = (rows: typeof leads, notes: Map<string, Awaited<ReturnType<typeof getLeadLastNote>>>) => {
-          const header = '| Cliente | Estado | Owner | Consultor | Creado | Última nota |\n|---|---|---|---|---|---|';
+          const header = '| Lead | Cliente | Estado | Owner | Consultor | Creado | Última nota |\n|---|---|---|---|---|---|---|';
           const body = rows
             .map((l) => {
               const nota = notes.has(l.id) ? fmtNota(notes.get(l.id) ?? null) : '—';
-              return `| [${esc(l.fullName)}](${l.zohoUrl}) | ${esc(l.status || 'sin estado')} | ${esc(l.owner || '—')} | ${esc(l.consultor || '—')} | ${fmtFecha(l.createdAt)} | ${esc(nota)} |`;
+              const leadLink = `[${esc(l.leadNumber || 'abrir')}](${l.zohoUrl})`;
+              return `| ${leadLink} | [${esc(l.fullName)}](${l.zohoUrl}) | ${esc(l.status || 'sin estado')} | ${esc(l.owner || '—')} | ${esc(l.consultor || '—')} | ${fmtFecha(l.createdAt)} | ${esc(nota)} |`;
             })
             .join('\n');
           return `${header}\n${body}`;
@@ -179,7 +181,7 @@ export async function executeZohoTool(
         };
 
         const FORMATO =
-          'INSTRUCCIÓN DE FORMATO: presenta la TABLA markdown de abajo TAL CUAL en tu respuesta (no la conviertas en lista ni en prosa, no quites columnas ni los enlaces). Antes de la tabla pon 1 línea de contexto y después máximo 2-3 líneas de coach con el próximo paso.';
+          'INSTRUCCIÓN DE FORMATO (OBLIGATORIA): reproduce la TABLA markdown de abajo TAL CUAL en tu respuesta — con sus enlaces [..](..) intactos. PROHIBIDO: inventar o agregar filas, columnas, Lead IDs, teléfonos o totales que no estén abajo; convertirla en lista o prosa. Estos son TODOS los datos reales — si el usuario pide más, dile que esto es lo que hay en Zoho. Antes de la tabla 1 línea de contexto; después máximo 2-3 líneas de coach.';
 
         if (!soloSeguimiento) {
           const shown = leads.slice(0, 15);
