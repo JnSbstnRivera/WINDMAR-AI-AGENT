@@ -5,6 +5,20 @@ import { useRef, useState, useEffect } from 'react';
 interface Msg {
   role: 'user' | 'assistant';
   content: string;
+  quickReplies?: string[];
+}
+
+// Extrae el bloque <quick_replies> (mismo formato que el chat principal):
+// líneas dentro del tag → chips; el bloque se quita del texto visible.
+function extractQuickReplies(text: string): { cleanText: string; replies: string[] } {
+  const match = text.match(/<quick_replies>([\s\S]*?)<\/quick_replies>/i);
+  if (!match) return { cleanText: text.replace(/<quick_replies>[\s\S]*$/i, '').trimEnd(), replies: [] };
+  const replies = match[1]
+    .split('\n')
+    .map((l) => l.replace(/^[-*•]\s*/, '').trim())
+    .filter((l) => l.length > 1)
+    .slice(0, 4);
+  return { cleanText: text.replace(match[0], '').trimEnd(), replies };
 }
 
 const SUGERENCIAS = [
@@ -62,13 +76,21 @@ export function AdminChat() {
         const { done, value } = await reader.read();
         if (done) break;
         acc += decoder.decode(value, { stream: true });
-        const current = acc;
+        // Durante el stream ocultamos el bloque <quick_replies> parcial
+        const visible = acc.replace(/<quick_replies>[\s\S]*$/i, '').trimEnd();
         setMsgs((prev) => {
           const copy = [...prev];
-          copy[copy.length - 1] = { role: 'assistant', content: current };
+          copy[copy.length - 1] = { role: 'assistant', content: visible };
           return copy;
         });
       }
+      // Al terminar: separar texto limpio y chips
+      const { cleanText, replies } = extractQuickReplies(acc);
+      setMsgs((prev) => {
+        const copy = [...prev];
+        copy[copy.length - 1] = { role: 'assistant', content: cleanText, quickReplies: replies };
+        return copy;
+      });
     } catch {
       setMsgs((prev) => {
         const copy = [...prev];
@@ -122,23 +144,40 @@ export function AdminChat() {
         )}
 
         {msgs.map((m, i) => (
-          <div
-            key={i}
-            style={{
-              alignSelf: m.role === 'user' ? 'flex-end' : 'flex-start',
-              maxWidth: '85%',
-              padding: '10px 14px',
-              borderRadius: 12,
-              fontSize: 14,
-              lineHeight: 1.55,
-              whiteSpace: 'pre-wrap',
-              wordBreak: 'break-word',
-              background: m.role === 'user' ? 'rgba(247,148,29,0.15)' : 'rgba(255,255,255,0.05)',
-              border: `1px solid ${m.role === 'user' ? 'rgba(247,148,29,0.35)' : 'var(--glass-border)'}`,
-              color: 'var(--text1)',
-            }}
-          >
-            {m.content || (busy && i === msgs.length - 1 ? '…' : '')}
+          <div key={i} style={{ alignSelf: m.role === 'user' ? 'flex-end' : 'flex-start', maxWidth: '85%' }}>
+            <div
+              style={{
+                padding: '10px 14px',
+                borderRadius: 12,
+                fontSize: 14,
+                lineHeight: 1.55,
+                whiteSpace: 'pre-wrap',
+                wordBreak: 'break-word',
+                background: m.role === 'user' ? 'rgba(247,148,29,0.15)' : 'rgba(255,255,255,0.05)',
+                border: `1px solid ${m.role === 'user' ? 'rgba(247,148,29,0.35)' : 'var(--glass-border)'}`,
+                color: 'var(--text1)',
+              }}
+            >
+              {m.content || (busy && i === msgs.length - 1 ? '…' : '')}
+            </div>
+            {/* Chips de coach (quick replies) — seleccionables */}
+            {m.role === 'assistant' && (m.quickReplies?.length ?? 0) > 0 && (
+              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 6 }}>
+                {m.quickReplies!.map((q) => (
+                  <button
+                    key={q}
+                    onClick={() => send(q)}
+                    disabled={busy}
+                    style={{
+                      fontSize: 12, padding: '6px 11px', borderRadius: 999, cursor: 'pointer',
+                      border: '1px solid rgba(247,148,29,0.45)', background: 'transparent', color: '#F7941D',
+                    }}
+                  >
+                    › {q}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         ))}
       </div>

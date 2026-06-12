@@ -60,6 +60,14 @@ export function getZohoToolDefs(canWrite: boolean): Anthropic.Tool[] {
             type: 'string',
             description: 'Filtra por Lead_Status (match parcial, ej. "No Contesta", "Cita", "Vendido").',
           },
+          creado_desde: {
+            type: 'string',
+            description: 'Filtra leads creados desde esta fecha (YYYY-MM-DD). Ej: "leads de junio" → 2026-06-01.',
+          },
+          creado_hasta: {
+            type: 'string',
+            description: 'Filtra leads creados hasta esta fecha (YYYY-MM-DD). Ej: "leads de junio" → 2026-06-30.',
+          },
         },
         required: [],
       },
@@ -171,6 +179,15 @@ export async function executeZohoTool(
           if (leads.length === 0) return `No tienes leads con estado que contenga "${input.estado}".`;
         }
 
+        // Filtro por fecha de creación (YYYY-MM-DD, comparación lexicográfica sobre ISO)
+        const desde = String(input.creado_desde || '').trim();
+        const hasta = String(input.creado_hasta || '').trim();
+        if (desde) leads = leads.filter((l) => (l.createdAt || '') >= desde);
+        if (hasta) leads = leads.filter((l) => (l.createdAt || '').slice(0, 10) <= hasta);
+        if ((desde || hasta) && leads.length === 0) {
+          return `No tienes leads creados en ese rango de fechas (${desde || '…'} a ${hasta || 'hoy'}).`;
+        }
+
         // Orden: por defecto última actividad (ya viene así); 'creacion' = más nuevos primero
         if (ordenarPor === 'creacion') {
           leads = [...leads].sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
@@ -211,7 +228,7 @@ export async function executeZohoTool(
         };
 
         const FORMATO =
-          'INSTRUCCIÓN DE FORMATO (OBLIGATORIA): reproduce la TABLA markdown de abajo TAL CUAL en tu respuesta — con sus enlaces [..](..) intactos. PROHIBIDO: inventar o agregar filas, columnas, Lead IDs, teléfonos o totales que no estén abajo; convertirla en lista o prosa. Estos son TODOS los datos reales — si el usuario pide más, dile que esto es lo que hay en Zoho. Antes de la tabla 1 línea de contexto; después máximo 2-3 líneas de coach.';
+          'INSTRUCCIÓN DE FORMATO (OBLIGATORIA — RESPUESTA PLANA): tu respuesta es SOLO: 1 línea corta de contexto + la TABLA markdown de abajo TAL CUAL (enlaces [..](..) intactos). NADA MÁS de texto: cero análisis, cero secciones tipo "CALIENTE/REVISAR", cero recomendaciones en prosa, cero preguntas al final. PROHIBIDO inventar o agregar filas, columnas, Lead IDs, teléfonos o totales que no estén abajo. Todo tu COACHING va EXCLUSIVAMENTE en el bloque <quick_replies> como 3 chips accionables sobre estos leads concretos (ej: "Busca a {nombre} y dime qué pasó", "¿A quién llamo primero?", "Dame solo los No Contesta") — el asesor selecciona el que quiera.';
 
         if (!soloSeguimiento) {
           const shown = leads.slice(0, cantidad);
