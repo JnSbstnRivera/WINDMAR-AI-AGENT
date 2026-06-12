@@ -39,13 +39,26 @@ export function getZohoToolDefs(canWrite: boolean): Anthropic.Tool[] {
     {
       name: 'mis_leads',
       description:
-        'Trae la cartera de leads del asesor desde Zoho, agrupada por estado. Si solo_seguimiento=true, devuelve solo los leads accionables SIN nota en las últimas 24h (los que necesitan seguimiento hoy). Úsala para "mis leads", "mi cartera", "mi pipeline", "¿a quién debo llamar?", "leads pendientes", "qué tengo sin seguir".',
+        'Trae la cartera de leads del asesor desde Zoho como TABLA. Soporta: cantidad de filas (ej. "mis últimos 30 leads"), orden por fecha de creación o por última actividad, filtro por estado (ej. "mis No Contesta"), y modo seguimiento (solo accionables SIN nota en 24h). Úsala para "mis leads", "mi cartera", "últimos N creados", "¿a quién debo llamar?", "mis leads en X estado".',
       input_schema: {
         type: 'object',
         properties: {
           solo_seguimiento: {
             type: 'boolean',
-            description: 'true = solo leads que necesitan seguimiento (sin nota en 24h). false = toda la cartera.',
+            description: 'true = solo leads que necesitan seguimiento (sin nota en 24h).',
+          },
+          cantidad: {
+            type: 'number',
+            description: 'Cuántos leads mostrar en la tabla (default 15, máximo 40).',
+          },
+          ordenar_por: {
+            type: 'string',
+            enum: ['creacion', 'actividad'],
+            description: '"creacion" = más recién creados primero (ej. "últimos 30 creados"). "actividad" (default) = última modificación.',
+          },
+          estado: {
+            type: 'string',
+            description: 'Filtra por Lead_Status (match parcial, ej. "No Contesta", "Cita", "Vendido").',
           },
         },
         required: [],
@@ -141,10 +154,27 @@ export async function executeZohoTool(
 
       case 'mis_leads': {
         const soloSeguimiento = input.solo_seguimiento === true;
+        const cantidad = Math.min(Math.max(Number(input.cantidad) || 15, 1), 40);
+        const ordenarPor = input.ordenar_por === 'creacion' ? 'creacion' : 'actividad';
+        const estadoFiltro = String(input.estado || '').trim().toLowerCase();
+
         const ownerId = await getZohoUserIdByEmail(scope.email);
         if (!ownerId) return `No se encontró tu usuario de Zoho (${scope.email}). Pídele a un admin que sincronice los IDs de Zoho en /admin/usuarios.`;
-        const leads = await getMyLeads(ownerId);
+        let leads = await getMyLeads(ownerId);
         if (leads.length === 0) return 'No tienes leads en tu cartera de Zoho.';
+
+        // Filtro por estado (match parcial, sin acentos ni mayúsculas)
+        const norm = (s: string) => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+        if (estadoFiltro) {
+          const f = norm(estadoFiltro);
+          leads = leads.filter((l) => norm(l.status || '').includes(f));
+          if (leads.length === 0) return `No tienes leads con estado que contenga "${input.estado}".`;
+        }
+
+        // Orden: por defecto última actividad (ya viene así); 'creacion' = más nuevos primero
+        if (ordenarPor === 'creacion') {
+          leads = [...leads].sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
+        }
 
         // Helpers de formato para la tabla
         const fmtFecha = (iso: string | null) => (iso ? iso.slice(0, 10) : '—');
@@ -184,14 +214,16 @@ export async function executeZohoTool(
           'INSTRUCCIÓN DE FORMATO (OBLIGATORIA): reproduce la TABLA markdown de abajo TAL CUAL en tu respuesta — con sus enlaces [..](..) intactos. PROHIBIDO: inventar o agregar filas, columnas, Lead IDs, teléfonos o totales que no estén abajo; convertirla en lista o prosa. Estos son TODOS los datos reales — si el usuario pide más, dile que esto es lo que hay en Zoho. Antes de la tabla 1 línea de contexto; después máximo 2-3 líneas de coach.';
 
         if (!soloSeguimiento) {
-          const shown = leads.slice(0, 15);
+          const shown = leads.slice(0, cantidad);
           const notes = await fetchNotes(shown);
           const byBucket: Record<string, number> = {};
           for (const l of leads) byBucket[l.bucket] = (byBucket[l.bucket] || 0) + 1;
           const resumen = Object.entries(byBucket)
             .map(([b, n]) => `${BUCKET_LABEL[b as keyof typeof BUCKET_LABEL] || b}: ${n}`)
             .join(' · ');
-          return `${FORMATO}\n\nCARTERA: ${leads.length} leads (${resumen})${leads.length > 15 ? ` — mostrando los 15 con actividad más reciente` : ''}\n\n${buildTable(shown, notes)}`;
+          const ordenTxt = ordenarPor === 'creacion' ? 'más recién creados' : 'con actividad más reciente';
+          const filtroTxt = estadoFiltro ? ` con estado "${input.estado}"` : '';
+          return `${FORMATO}\n\nCARTERA${filtroTxt}: ${leads.length} leads (${resumen})${leads.length > shown.length ? ` — mostrando los ${shown.length} ${ordenTxt}` : ''}\n\n${buildTable(shown, notes)}`;
         }
 
         // Triage: leads accionables SIN nota en las últimas 24h
