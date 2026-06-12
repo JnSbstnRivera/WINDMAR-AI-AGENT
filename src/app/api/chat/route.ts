@@ -2,6 +2,8 @@ import { auth } from '@/auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { SYSTEM_PROMPT } from '@/lib/prompts';
 import { pickRelevantTools, buildToolsContext, toClientCards } from '@/lib/tools';
+import { getViewerScope } from '@/lib/zoho-access';
+import { getZohoToolDefs, executeZohoTool } from '@/lib/zoho-agent-tools';
 import Anthropic from '@anthropic-ai/sdk';
 
 export const runtime = 'nodejs';
@@ -281,6 +283,8 @@ ${rol ? `- Rol: ${rol}` : ''}
 - ¿Es el primer mensaje de la conversación? ${isFirstMessage ? 'SÍ — saluda al asesor con: "¡' + greeting + ', ' + asesorName + '! 👋"' : 'NO — NO saludes de nuevo. Mantén el HILO temático.'}
 ${useWebSearch ? '- ⚠️ WEB SEARCH ACTIVADO: el asesor usó una palabra clave de búsqueda en internet. Cuando uses información de internet, indícalo claramente con 🌐 al inicio y cita la fuente.' : ''}
 
+ZOHO CRM (datos en vivo): tienes herramientas para consultar Zoho — buscar_cliente, mis_leads${rol && rol !== 'Asesor' ? ', asignar_leads, agregar_nota' : ''}. Úsalas cuando el asesor pregunte por clientes, su cartera o seguimientos, en lenguaje natural (NO necesita comandos). Tras traer los datos, actúa como COACH: resume breve y di el próximo paso. NUNCA inventes datos de clientes — si no los tienes, usa la herramienta. ${rol === 'Asesor' ? 'Este usuario es Asesor: solo ve SUS leads (las herramientas ya lo filtran).' : 'Este usuario puede ver todo y asignar/anotar.'}
+
 REGLA DE VIGENCIA: usa la fecha actual de arriba para validar promociones, feriados, campañas estacionales. Si una promoción del knowledge base venció antes de hoy, NO la ofrezcas — dile al asesor que ya venció y que valide con su Office Manager.`;
 
     // 6. Mensajes (history + user message con contexto inyectado)
@@ -299,38 +303,22 @@ REGLA DE VIGENCIA: usa la fecha actual de arriba para validar promociones, feria
       { role: 'user', content: userContent },
     ];
 
-    // 7. Llamar a Claude Haiku 4.5 con prompt caching del SYSTEM_PROMPT + streaming
+    // 7. Llamar a Claude Haiku 4.5 con prompt caching + streaming + tool-use (Zoho)
     const anthropic = getAnthropic();
 
-    const tools: Anthropic.Messages.ToolUnion[] | undefined = useWebSearch
-      ? [
-          {
-            type: 'web_search_20250305',
-            name: 'web_search',
-            max_uses: 3,
-          },
-        ]
-      : undefined;
+    // Scope para las herramientas de Zoho: Asesor solo ve lo suyo; Líder/Admin
+    // ven todo y pueden escribir (asignar/notas).
+    const scope = getViewerScope(session);
+    const zohoTools = getZohoToolDefs(scope.canSeeAll);
+    const tools: Anthropic.Messages.ToolUnion[] = [
+      ...(useWebSearch
+        ? [{ type: 'web_search_20250305' as const, name: 'web_search' as const, max_uses: 3 }]
+        : []),
+      ...zohoTools,
+    ];
 
-    // max_tokens: 1024 es suficiente para 95% de respuestas (~750 palabras).
-    // Si el modelo necesita más, mejor responde corto y completa con un seguimiento —
-    // eso es lo natural para una llamada en vivo, no un manual.
-    const stream = anthropic.messages.stream({
-      model: 'claude-haiku-4-5',
-      max_tokens: 1024,
-      system: [
-        {
-          type: 'text',
-          text: SYSTEM_PROMPT,
-          cache_control: { type: 'ephemeral' },
-        },
-      ],
-      messages,
-      ...(tools ? { tools } : {}),
-    });
-
-    // 8. Stream text deltas al cliente (formato plano, mismo contrato que tenía Groq)
-    // Métricas de timing para diagnosticar pausas: TTFT, throughput, gaps entre chunks.
+    // 8. Loop agéntico con streaming: piped text deltas; si el modelo pide una
+    // herramienta Zoho, la ejecutamos server-side (con scoping) y continuamos.
     const requestStart = Date.now();
     let firstChunkAt = 0;
     let lastChunkAt = 0;
@@ -342,9 +330,20 @@ REGLA DE VIGENCIA: usa la fecha actual de arriba para validar promociones, feria
       async start(controller) {
         const encoder = new TextEncoder();
         try {
-          for await (const event of stream) {
-            if (event.type === 'content_block_delta') {
-              if (event.delta.type === 'text_delta') {
+          const convo: Anthropic.MessageParam[] = [...messages];
+          let finalMessage: Anthropic.Message | null = null;
+
+          for (let iter = 0; iter < 6; iter++) {
+            const stream = anthropic.messages.stream({
+              model: 'claude-haiku-4-5',
+              max_tokens: 1024,
+              system: [{ type: 'text', text: SYSTEM_PROMPT, cache_control: { type: 'ephemeral' } }],
+              messages: convo,
+              tools,
+            });
+
+            for await (const event of stream) {
+              if (event.type === 'content_block_delta' && event.delta.type === 'text_delta') {
                 const now = Date.now();
                 if (firstChunkAt === 0) firstChunkAt = now;
                 else {
@@ -357,28 +356,56 @@ REGLA DE VIGENCIA: usa la fecha actual de arriba para validar promociones, feria
                 controller.enqueue(encoder.encode(event.delta.text));
               }
             }
+
+            finalMessage = await stream.finalMessage();
+
+            const toolUses = finalMessage.content.filter(
+              (b): b is Anthropic.ToolUseBlock => b.type === 'tool_use'
+            );
+
+            // Herramientas de cliente (Zoho) → ejecutar y continuar el turno
+            if (finalMessage.stop_reason === 'tool_use' && toolUses.length > 0) {
+              const results: Anthropic.ToolResultBlockParam[] = [];
+              for (const tu of toolUses) {
+                const out = await executeZohoTool(
+                  tu.name,
+                  (tu.input as Record<string, unknown>) || {},
+                  scope
+                );
+                results.push({ type: 'tool_result', tool_use_id: tu.id, content: out });
+              }
+              convo.push({ role: 'assistant', content: finalMessage.content });
+              convo.push({ role: 'user', content: results });
+              continue;
+            }
+
+            // Herramienta server-side (web_search) pausó → reanudar
+            if (finalMessage.stop_reason === 'pause_turn') {
+              convo.push({ role: 'assistant', content: finalMessage.content });
+              continue;
+            }
+
+            break; // end_turn (o cualquier otro) → terminamos
           }
 
-          // Log de uso para monitoreo (cache hits, costo) + métricas de timing
-          const finalMessage = await stream.finalMessage();
-          const ttftMs = firstChunkAt - requestStart;
-          const totalMs = lastChunkAt - requestStart;
-          const throughputCps = totalMs > 0 ? Math.round((totalChars / totalMs) * 1000) : 0;
-
-          console.log('[chat/haiku] usage+timing:', JSON.stringify({
-            input: finalMessage.usage.input_tokens,
-            output: finalMessage.usage.output_tokens,
-            cache_create: finalMessage.usage.cache_creation_input_tokens,
-            cache_read: finalMessage.usage.cache_read_input_tokens,
-            web_search: useWebSearch,
-            user: email,
-            ttft_ms: ttftMs,       // Time to first token (debe ser <500ms ideal)
-            total_ms: totalMs,     // Tiempo total del stream
-            chunks: chunkCount,    // Número de text_deltas recibidos
-            chars: totalChars,
-            throughput_cps: throughputCps, // Chars/seg (Haiku ideal: ~600-800)
-            max_gap_ms: maxGap,    // Mayor pausa entre chunks (si >300ms hay throttling)
-          }));
+          if (finalMessage) {
+            const ttftMs = firstChunkAt - requestStart;
+            const totalMs = lastChunkAt - requestStart;
+            const throughputCps = totalMs > 0 ? Math.round((totalChars / totalMs) * 1000) : 0;
+            console.log('[chat/haiku] usage+timing:', JSON.stringify({
+              input: finalMessage.usage.input_tokens,
+              output: finalMessage.usage.output_tokens,
+              cache_read: finalMessage.usage.cache_read_input_tokens,
+              web_search: useWebSearch,
+              user: email,
+              ttft_ms: ttftMs,
+              total_ms: totalMs,
+              chunks: chunkCount,
+              chars: totalChars,
+              throughput_cps: throughputCps,
+              max_gap_ms: maxGap,
+            }));
+          }
         } catch (err) {
           const msg = err instanceof Error ? err.message : 'Error interno';
           console.error('[chat/haiku] stream error:', msg);
