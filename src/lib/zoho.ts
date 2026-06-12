@@ -497,13 +497,22 @@ export interface MyLead {
  * los lookups completos (Owner y Sales_Rep con nombre), verificado contra la
  * org de PR. Orden client-side por Modified_Time (search no soporta sort).
  */
-export async function getMyLeads(ownerId: string, limit = 200): Promise<MyLead[]> {
+export async function getMyLeads(ownerId: string, limit = 1000): Promise<MyLead[]> {
   const fields = `${LEAD_FIELDS},Modified_Time`;
-  const res = (await zohoFetch(
-    `/Leads/search?criteria=(Owner:equals:${ownerId})&fields=${fields}&per_page=${Math.min(limit, 200)}`
-  )) as { data?: (ZohoLeadRaw & { Modified_Time?: string })[] };
+  type Raw = ZohoLeadRaw & { Modified_Time?: string };
 
-  const rows = res.data || [];
+  // Paginación: Zoho devuelve máx 200 por página. Traemos hasta 5 páginas
+  // (1000 leads) para que filtros por meses viejos no pierdan registros.
+  const rows: Raw[] = [];
+  const maxPages = Math.min(Math.ceil(limit / 200), 5);
+  for (let page = 1; page <= maxPages; page++) {
+    const res = (await zohoFetch(
+      `/Leads/search?criteria=(Owner:equals:${ownerId})&fields=${fields}&per_page=200&page=${page}`
+    )) as { data?: Raw[]; info?: { more_records?: boolean } };
+    rows.push(...(res.data || []));
+    if (!res.info?.more_records) break;
+  }
+
   rows.sort((a, b) => (b.Modified_Time || '').localeCompare(a.Modified_Time || ''));
 
   return rows.map((r) => ({

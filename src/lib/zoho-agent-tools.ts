@@ -228,7 +228,7 @@ export async function executeZohoTool(
         };
 
         const FORMATO =
-          'INSTRUCCIÓN DE FORMATO (OBLIGATORIA — RESPUESTA PLANA): tu respuesta es SOLO: 1 línea corta de contexto + la TABLA markdown de abajo TAL CUAL (enlaces [..](..) intactos). NADA MÁS de texto: cero análisis, cero secciones tipo "CALIENTE/REVISAR", cero recomendaciones en prosa, cero preguntas al final. PROHIBIDO inventar o agregar filas, columnas, Lead IDs, teléfonos o totales que no estén abajo. Todo tu COACHING va EXCLUSIVAMENTE en el bloque <quick_replies> como 3 chips accionables sobre estos leads concretos (ej: "Busca a {nombre} y dime qué pasó", "¿A quién llamo primero?", "Dame solo los No Contesta") — el asesor selecciona el que quiera.';
+          'INSTRUCCIÓN DE FORMATO (OBLIGATORIA — RESPUESTA PLANA): tu respuesta es SOLO: 1 línea corta de contexto + la TABLA markdown de abajo TAL CUAL (enlaces [..](..) intactos). La TABLA es obligatoria SIEMPRE — aunque tenga 1 SOLA fila, NUNCA la conviertas en prosa; el formato debe ser idéntico en cada consulta de leads de la conversación. NADA MÁS de texto: cero análisis, cero secciones tipo "CALIENTE/REVISAR", cero recomendaciones en prosa, cero preguntas al final. PROHIBIDO inventar o agregar filas, columnas, Lead IDs, teléfonos o totales que no estén abajo. Todo tu COACHING va EXCLUSIVAMENTE en el bloque <quick_replies> como 3 chips accionables sobre estos leads concretos (ej: "Busca a {nombre} y dime qué pasó", "¿A quién llamo primero?", "Dame solo los No Contesta") — el asesor selecciona el que quiera.';
 
         if (!soloSeguimiento) {
           const shown = leads.slice(0, cantidad);
