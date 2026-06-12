@@ -117,6 +117,14 @@ export default async function AdminLayout({ children }: { children: React.ReactN
                 )}
               </a>
               <a
+                href="/admin/gestion"
+                className="ad-mono text-[10px] uppercase tracking-[0.15em] px-3 py-2 rounded-lg border border-[var(--glass-border)] hover:border-[var(--n4)] hover:text-[var(--n4)] transition-colors"
+                style={{ color: '#F7941D', background: 'var(--glass-bg)', borderColor: 'rgba(247,148,29,0.4)' }}
+                title="Chat de gestión con el agente"
+              >
+                ☀ Gestión
+              </a>
+              <a
                 href="/admin/asignar"
                 className="ad-mono text-[10px] uppercase tracking-[0.15em] px-3 py-2 rounded-lg border border-[var(--glass-border)] hover:border-[var(--n4)] hover:text-[var(--n4)] transition-colors"
                 style={{ color: 'var(--text2)', background: 'var(--glass-bg)' }}
