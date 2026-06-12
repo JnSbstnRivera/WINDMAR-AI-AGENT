@@ -12,6 +12,8 @@ import {
   getLeadLastNote,
   getZohoUserIdByEmail,
   findZohoUserByQuery,
+  getDealsByQuery,
+  searchContacts,
   assignLeads,
   addLeadNote,
 } from '@/lib/zoho';
@@ -28,11 +30,11 @@ export function getZohoToolDefs(canWrite: boolean): Anthropic.Tool[] {
     {
       name: 'buscar_cliente',
       description:
-        'Busca un cliente/lead en Zoho CRM por email, teléfono, nombre o número de lead (LD-000123). Devuelve datos del lead, sus cotizaciones (deals), consultor asignado e historial. Úsala cuando el asesor pregunte por un cliente específico ("¿qué pasó con María?", "busca a juan@correo.com", "el cliente del 787...").',
+        'Busca un cliente en Zoho CRM por email, teléfono, nombre, Lead# (L######) o nombre/número de DEAL (ej. "WQ005165360" o "38295 Carlos..."). Devuelve datos del lead, cotizaciones (deals), consultor e historial. Si el cliente ya fue CONVERTIDO (no tiene lead, solo Contacto+Deal), también lo encuentra y trae su contacto y deals. Úsala cuando pregunten por un cliente específico.',
       input_schema: {
         type: 'object',
         properties: {
-          query: { type: 'string', description: 'Email, teléfono, nombre o número de lead del cliente' },
+          query: { type: 'string', description: 'Email, teléfono, nombre, Lead# o nombre/número de deal del cliente' },
         },
         required: ['query'],
       },
@@ -143,7 +145,42 @@ export async function executeZohoTool(
         const query = String(input.query || '').trim();
         if (query.length < 3) return 'Query muy corta.';
         const client = await getClientFull(query);
-        if (!client) return `No se encontró ningún cliente con "${query}" en Zoho.`;
+
+        // FALLBACK — cliente CONVERTIDO: sin lead, pero con Contacto y/o Deals
+        // (ej. "38295 Carlos Manuel Munoz Arce WQ005165360"). Scoping por
+        // owner del contacto/deal para asesores no elevados.
+        if (!client) {
+          const [deals, contacts] = await Promise.all([getDealsByQuery(query), searchContacts(query)]);
+          const visDeals = scope.canSeeAll
+            ? deals
+            : deals.filter((d) => (d.ownerEmail || '').toLowerCase() === scope.email);
+          const visContacts = scope.canSeeAll
+            ? contacts
+            : contacts.filter((c) => (c.ownerEmail || '').toLowerCase() === scope.email);
+
+          if (visDeals.length === 0 && visContacts.length === 0) {
+            return `No se encontró "${query}" en Zoho (ni lead, ni contacto, ni deal${scope.canSeeAll ? '' : ' en tu cartera'}).`;
+          }
+
+          const c = visContacts[0];
+          const lines: string[] = [];
+          lines.push(`CLIENTE CONVERTIDO (ya no tiene lead — está como Contacto/Deal)${c ? `: ${c.fullName}` : ''}`);
+          if (c) {
+            lines.push(`Email: ${c.email || '—'} · Tel: ${c.phone || '—'}`);
+            lines.push(`Owner del contacto: ${c.owner || '—'}`);
+            lines.push(`Contacto en Zoho: ${c.zohoUrl}`);
+          }
+          if (visDeals.length > 0) {
+            lines.push(`DEALS (${visDeals.length}):`);
+            visDeals.slice(0, 6).forEach((d) =>
+              lines.push(
+                `  - ${d.name} · ${d.stage || '?'}${d.amount ? ' · ' + d.amount : ''}${d.closingDate ? ' · cierre ' + d.closingDate : ''} · owner ${d.owner || '—'} · ${d.zohoUrl}`
+              )
+            );
+          }
+          return lines.join('\n');
+        }
+
         if (!ownsLead(client.lead, scope)) return NOT_IN_PORTFOLIO_MSG;
         const l = client.lead;
         const deals = client.deals

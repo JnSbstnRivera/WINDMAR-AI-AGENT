@@ -144,9 +144,22 @@ export interface ZohoDeal {
   amount: string | null;          // monto formateado "$12,500.00" o null
   contactName: string | null;     // cliente asociado (Contact_Name del Deal)
   owner: string | null;
+  ownerEmail: string | null;      // para scoping por dueño en clientes convertidos
   closingDate: string | null;
   createdAt: string | null;
   zohoUrl: string;                // hipervínculo directo al deal en Zoho
+}
+
+/** Contacto de Zoho (cliente convertido — ya no tiene Lead). */
+export interface ZohoContact {
+  id: string;
+  fullName: string;
+  email: string | null;
+  phone: string | null;
+  owner: string | null;
+  ownerEmail: string | null;
+  createdAt: string | null;
+  zohoUrl: string;
 }
 
 export interface ZohoClientFull {
@@ -196,6 +209,8 @@ const LEAD_FIELDS =
   'Full_Name,First_Name,Last_Name,Phone,Mobile,Email,Lead_Status,Owner,Sales_Rep,Sales_Rep_Email,Street,City,State,Zip_Code,Created_Time,Lead_Number';
 const DEAL_FIELDS =
   'Deal_Name,Amount,Stage,Closing_Date,Contact_Name,Owner,Created_Time';
+const CONTACT_FIELDS =
+  'Full_Name,First_Name,Last_Name,Email,Phone,Mobile,Owner,Created_Time,Mailing_Street,Mailing_City';
 
 /**
  * Construye el path de búsqueda usando los parámetros NATIVOS de Zoho.
@@ -206,8 +221,9 @@ const DEAL_FIELDS =
  *   leadNumber  → ?criteria=(Lead_Number:equals:LD-000123) (exacta)
  *   name        → ?word=Maria                 (full-text)
  */
-function buildSearchPath(module: 'Leads' | 'Deals', query: string, limit: number): string {
-  const fields = module === 'Leads' ? LEAD_FIELDS : DEAL_FIELDS;
+function buildSearchPath(module: 'Leads' | 'Deals' | 'Contacts', query: string, limit: number): string {
+  const fields =
+    module === 'Leads' ? LEAD_FIELDS : module === 'Deals' ? DEAL_FIELDS : CONTACT_FIELDS;
   const type = detectQueryType(query);
   const digits = (query || '').replace(/\D/g, '');
 
@@ -360,8 +376,20 @@ interface ZohoDealRaw {
   Amount?: number | string;
   Stage?: string;
   Contact_Name?: { name?: string };
-  Owner?: { name?: string };
+  Owner?: { name?: string; email?: string };
   Closing_Date?: string;
+  Created_Time?: string;
+}
+
+interface ZohoContactRaw {
+  id: string;
+  Full_Name?: string;
+  First_Name?: string;
+  Last_Name?: string;
+  Email?: string;
+  Phone?: string;
+  Mobile?: string;
+  Owner?: { name?: string; email?: string };
   Created_Time?: string;
 }
 
@@ -669,8 +697,34 @@ function mapDeal(raw: ZohoDealRaw): ZohoDeal {
     amount,
     contactName: raw.Contact_Name?.name || null,
     owner: raw.Owner?.name || null,
+    ownerEmail: raw.Owner?.email || null,
     closingDate: raw.Closing_Date || null,
     createdAt: raw.Created_Time || null,
     zohoUrl: `https://crm.zoho.com/crm/org${ZOHO_ORG_ID}/tab/Deals/${raw.id}`,
   };
+}
+
+/**
+ * Busca CONTACTOS (clientes convertidos sin lead) por email/teléfono/nombre.
+ * Devuelve [] si no hay matches o si el módulo rechaza la búsqueda.
+ */
+export async function searchContacts(query: string, limit = 5): Promise<ZohoContact[]> {
+  try {
+    const res = (await zohoFetch(buildSearchPath('Contacts', query, limit))) as {
+      data?: ZohoContactRaw[];
+    };
+    return (res.data || []).map((raw) => ({
+      id: raw.id,
+      fullName:
+        raw.Full_Name || [raw.First_Name, raw.Last_Name].filter(Boolean).join(' ').trim() || 'Sin nombre',
+      email: raw.Email || null,
+      phone: raw.Mobile || raw.Phone || null,
+      owner: raw.Owner?.name || null,
+      ownerEmail: raw.Owner?.email || null,
+      createdAt: raw.Created_Time || null,
+      zohoUrl: `https://crm.zoho.com/crm/org${ZOHO_ORG_ID}/tab/Contacts/${raw.id}`,
+    }));
+  } catch {
+    return [];
+  }
 }
