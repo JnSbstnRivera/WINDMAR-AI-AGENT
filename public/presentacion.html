@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>WINDMAR AI AGENT — Sun Bot, el asistente del call center</title>
+<style>
+  :root {
+    --orange: #f89b24;
+    --orange-soft: #ffb347;
+    --blue: #38bdf8;
+    --navy: #0f1c2e;
+    --navy2: #1b3a5c;
+    --bg: #0a0f1a;
+    --fg: #e8edf5;
+    --muted: #8aa0b8;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    font-family: -apple-system, 'Segoe UI', Arial, sans-serif;
+    background: var(--bg);
+    color: var(--fg);
+    overflow: hidden;
+  }
+
+  /* Glow de fondo pulsante */
+  .bg-glow {
+    position: fixed; inset: 0; pointer-events: none; z-index: 0;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .bg-glow::before {
+    content: ''; width: 80vw; height: 80vw; max-width: 900px; max-height: 900px;
+    background: radial-gradient(circle, rgba(248,155,36,0.18) 0%, rgba(29,66,155,0.08) 45%, transparent 70%);
+    border-radius: 50%; filter: blur(70px);
+    animation: pulse 6s ease-in-out infinite;
+  }
+  @keyframes pulse { 0%,100%{transform:scale(1);opacity:.6} 50%{transform:scale(1.18);opacity:1} }
+
+  /* Slides */
+  .deck { position: relative; z-index: 1; height: 100vh; }
+  .slide {
+    position: absolute; inset: 0;
+    display: none; flex-direction: column; align-items: center; justify-content: center;
+    text-align: center; padding: 6vh 8vw; gap: 22px;
+  }
+  .slide.active { display: flex; }
+  .slide.active .anim { animation: rise .7s cubic-bezier(.2,.9,.3,1.2) both; }
+  .slide.active .anim:nth-child(2){animation-delay:.1s}
+  .slide.active .anim:nth-child(3){animation-delay:.2s}
+  .slide.active .anim:nth-child(4){animation-delay:.3s}
+  .slide.active .anim:nth-child(5){animation-delay:.4s}
+  .slide.active .anim:nth-child(6){animation-delay:.5s}
+  @keyframes rise { from{opacity:0;transform:translateY(28px) scale(.98)} to{opacity:1;transform:translateY(0) scale(1)} }
+
+  h1 { font-size: clamp(2.4rem, 6vw, 4.5rem); font-weight: 900; letter-spacing: -.03em; line-height: 1; text-transform: uppercase; }
+  h2 { font-size: clamp(1.8rem, 4.5vw, 3.2rem); font-weight: 900; letter-spacing: -.02em; line-height: 1.05; text-transform: uppercase; }
+  .orange { color: var(--orange); }
+  .blue { color: var(--blue); }
+  p.lead { font-size: clamp(1.1rem, 2.4vw, 1.7rem); color: var(--fg); max-width: 940px; line-height: 1.5; }
+  p.sub { font-size: clamp(.95rem, 1.8vw, 1.25rem); color: var(--muted); max-width: 860px; line-height: 1.6; }
+  .kicker { font-size: .8rem; letter-spacing: .35em; text-transform: uppercase; color: var(--orange); font-weight: 700; }
+
+  .logo { width: clamp(150px, 24vw, 260px); height: auto; filter: drop-shadow(0 0 30px rgba(248,155,36,.45)); }
+  .logo.float { animation: float 4s ease-in-out infinite; }
+  @keyframes float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-14px)} }
+
+  /* Tarjetas */
+  .cards { display: flex; gap: 18px; flex-wrap: wrap; justify-content: center; max-width: 1140px; }
+  .card {
+    background: rgba(255,255,255,.04); border: 1px solid rgba(248,155,36,.25);
+    border-radius: 16px; padding: 24px 20px; width: 230px;
+    backdrop-filter: blur(8px); box-shadow: 0 8px 30px rgba(0,0,0,.3);
+  }
+  .card .ico { font-size: 2.3rem; margin-bottom: 10px; }
+  .card h3 { font-size: 1.12rem; font-weight: 800; margin-bottom: 6px; }
+  .card p { font-size: .9rem; color: var(--muted); line-height: 1.5; }
+
+  /* Grid compacto de features */
+  .grid { display: grid; grid-template-columns: repeat(3, minmax(220px, 1fr)); gap: 14px; max-width: 1080px; }
+  .gitem {
+    display: flex; align-items: flex-start; gap: 12px; text-align: left;
+    background: rgba(255,255,255,.03); border: 1px solid rgba(255,255,255,.1);
+    border-radius: 12px; padding: 14px 16px;
+  }
+  .gitem .gi { font-size: 1.5rem; line-height: 1; }
+  .gitem b { display: block; font-size: .98rem; margin-bottom: 2px; }
+  .gitem span { font-size: .82rem; color: var(--muted); line-height: 1.4; }
+  @media (max-width: 780px) { .grid { grid-template-columns: 1fr; } }
+
+  /* Pasos */
+  .steps { display: flex; gap: 16px; flex-wrap: wrap; justify-content: center; align-items: stretch; max-width: 1140px; }
+  .step {
+    background: linear-gradient(135deg, rgba(15,28,46,.9), rgba(27,58,92,.5));
+    border: 1px solid rgba(56,189,248,.25); border-radius: 16px; padding: 24px; width: 250px; position: relative;
+  }
+  .step .num {
+    position: absolute; top: -16px; left: 24px; width: 36px; height: 36px; border-radius: 50%;
+    background: var(--orange); color: var(--navy); font-weight: 900; display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 0 16px rgba(248,155,36,.6);
+  }
+  .step h3 { font-size: 1.08rem; margin: 10px 0 6px; font-weight: 800; }
+  .step p { font-size: .88rem; color: var(--muted); line-height: 1.5; }
+
+  /* Chat mock (lenguaje natural) */
+  .chat { max-width: 760px; width: 100%; display: flex; flex-direction: column; gap: 12px; text-align: left; }
+  .bubble { border-radius: 16px; padding: 14px 18px; font-size: clamp(.92rem, 1.8vw, 1.1rem); line-height: 1.5; max-width: 80%; }
+  .bubble.user { align-self: flex-end; background: var(--navy2); border: 1px solid rgba(56,189,248,.3); }
+  .bubble.bot { align-self: flex-start; background: rgba(248,155,36,.08); border: 1px solid rgba(248,155,36,.3); }
+  .bubble .who { font-size: .7rem; letter-spacing: .15em; text-transform: uppercase; color: var(--muted); display: block; margin-bottom: 4px; }
+
+  /* Antes/Después */
+  .vs { display: flex; gap: 24px; flex-wrap: wrap; justify-content: center; max-width: 1000px; }
+  .vs-box { border-radius: 18px; padding: 30px; width: 380px; }
+  .vs-before { background: rgba(239,68,68,.08); border: 1px solid rgba(239,68,68,.3); }
+  .vs-after { background: rgba(34,197,94,.08); border: 1px solid rgba(34,197,94,.35); }
+  .vs-box .tag { font-size: .75rem; letter-spacing: .2em; text-transform: uppercase; font-weight: 800; margin-bottom: 12px; }
+  .vs-before .tag { color: #f87171; }
+  .vs-after .tag { color: #4ade80; }
+  .vs-box .big { font-size: 2.2rem; font-weight: 900; margin-bottom: 8px; }
+  .vs-box p { color: var(--fg); font-size: 1rem; line-height: 1.5; }
+
+  /* Highlight slide */
+  .hl-badge {
+    display: inline-block; background: var(--orange); color: var(--navy); font-weight: 900;
+    padding: 8px 20px; border-radius: 999px; font-size: .9rem; letter-spacing: .1em; text-transform: uppercase;
+    box-shadow: 0 0 24px rgba(248,155,36,.5);
+  }
+
+  /* Cita / regla */
+  .quote-def {
+    max-width: 900px; border-left: 3px solid var(--orange); padding: 14px 22px; text-align: left;
+    background: rgba(248,155,36,.06); border-radius: 0 12px 12px 0; font-size: clamp(1rem,2vw,1.3rem);
+    line-height: 1.5; color: var(--fg);
+  }
+
+  /* Stat strip */
+  .stats { display: flex; gap: 28px; flex-wrap: wrap; justify-content: center; max-width: 1000px; }
+  .stat b { display: block; font-size: clamp(2rem, 5vw, 3rem); font-weight: 900; color: var(--orange); line-height: 1; }
+  .stat span { font-size: .9rem; color: var(--muted); }
+
+  /* Navegación */
+  .nav { position: fixed; bottom: 22px; left: 0; right: 0; z-index: 10; display: flex; align-items: center; justify-content: center; gap: 18px; }
+  .nav button {
+    background: rgba(255,255,255,.06); border: 1px solid rgba(248,155,36,.4); color: var(--fg);
+    width: 46px; height: 46px; border-radius: 50%; cursor: pointer; font-size: 1.3rem; transition: all .2s;
+  }
+  .nav button:hover { background: var(--orange); color: var(--navy); box-shadow: 0 0 18px rgba(248,155,36,.6); }
+  .dots { display: flex; gap: 8px; flex-wrap: wrap; max-width: 60vw; justify-content: center; }
+  .dot { width: 9px; height: 9px; border-radius: 50%; background: rgba(255,255,255,.2); transition: all .3s; cursor: pointer; }
+  .dot.active { background: var(--orange); width: 26px; border-radius: 5px; box-shadow: 0 0 12px rgba(248,155,36,.7); }
+  .progress { position: fixed; top: 0; left: 0; height: 3px; background: var(--orange); z-index: 20; transition: width .4s ease; box-shadow: 0 0 12px rgba(248,155,36,.8); }
+  .hint { position: fixed; bottom: 78px; left: 0; right: 0; text-align: center; color: var(--muted); font-size: .8rem; z-index: 10; }
+  .footer-brand { position: fixed; top: 18px; left: 24px; z-index: 10; font-size: .75rem; letter-spacing: .2em; text-transform: uppercase; color: var(--muted); }
+  .counter { position: fixed; top: 18px; right: 24px; z-index: 10; font-size: .85rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+</style>
+</head>
+<body>
+<div class="bg-glow"></div>
+<div class="progress" id="progress"></div>
+<div class="footer-brand">Windmar Home PR</div>
+<div class="counter"><span id="cur">1</span> / <span id="tot">13</span></div>
+
+<div class="deck" id="deck">
+
+  <!-- 1. Portada -->
+  <section class="slide active">
+    <img class="logo float anim" src="/sunbot-feliz.png" alt="Sun Bot" />
+    <h1 class="anim"><span class="orange">Windmar</span> AI Agent</h1>
+    <p class="lead anim">Conoce a <span class="orange">Sun Bot</span> — el asistente con Inteligencia Artificial del call center.</p>
+    <p class="sub anim">Un chat con login corporativo donde cada asesor resuelve dudas del producto, recibe coaching de ventas, consulta el CRM y recibe el cotizador correcto — todo en un solo lugar y disponible 24/7.</p>
+  </section>
+
+  <!-- 2. Qué es -->
+  <section class="slide">
+    <div class="kicker anim">¿Qué es?</div>
+    <h2 class="anim">El compañero que <span class="orange">sabe todo del producto</span><br/>y nunca se cansa de explicarlo</h2>
+    <p class="lead anim">El asesor pregunta en lenguaje normal — “¿el Powerwall 3 es compatible con lo que ya instalé?”, “dame el cotizador para roofing” — y Sun Bot responde al instante con información oficial de la empresa.</p>
+    <p class="sub anim">Es como tener al lado al asesor más experimentado del equipo: contesta dudas, guía la venta y siempre apunta a la herramienta correcta — sin inventar precios ni datos.</p>
+  </section>
+
+  <!-- 3. El problema -->
+  <section class="slide">
+    <div class="kicker anim">El reto de siempre</div>
+    <h2 class="anim">La información estaba <span class="orange">dispersa y a destiempo</span></h2>
+    <div class="cards anim">
+      <div class="card"><div class="ico">🤷</div><h3>Dudas sin respuesta</h3><p>El asesor preguntaba al líder o buscaba en mil chats y PDFs viejos.</p></div>
+      <div class="card"><div class="ico">🧮</div><h3>Cotizador equivocado</h3><p>Era fácil mandar al cliente a la herramienta que no era para su caso.</p></div>
+      <div class="card"><div class="ico">💸</div><h3>Datos inventados</h3><p>Por salir del paso se daban precios o detalles que no eran reales.</p></div>
+      <div class="card"><div class="ico">👁️</div><h3>Cero visibilidad</h3><p>Los líderes no sabían qué se preguntaba ni dónde reforzar.</p></div>
+    </div>
+  </section>
+
+  <!-- 4. Cómo funciona -->
+  <section class="slide">
+    <div class="kicker anim">Cómo funciona</div>
+    <h2 class="anim">Entrar y usarlo es de <span class="orange">3 pasos</span></h2>
+    <div class="steps anim">
+      <div class="step"><div class="num">1</div><h3>Entra con Microsoft</h3><p>Un solo botón “Iniciar sesión con Microsoft”. Solo cuentas @windmarhome.com. Sin usuarios ni contraseñas nuevas.</p></div>
+      <div class="step"><div class="num">2</div><h3>Pregunta en tu idioma</h3><p>Escribe la duda como se la dirías a un compañero. Sun Bot busca en el conocimiento oficial y responde en segundos, con memoria de la conversación.</p></div>
+      <div class="step"><div class="num">3</div><h3>Actúa de inmediato</h3><p>Recibe la respuesta, el cotizador correcto, el coaching de venta o los datos del cliente — y, si hace falta, manda el correo de seguimiento ahí mismo.</p></div>
+    </div>
+    <p class="sub anim">Funciona en computadora y en celular, e incluso se instala como app propia (PWA) con el ícono de Sun Bot.</p>
+  </section>
+
+  <!-- 5. Qué hace para el asesor -->
+  <section class="slide">
+    <div class="kicker anim">Para el asesor</div>
+    <h2 class="anim">Todo lo que Sun Bot <span class="orange">hace por ti</span></h2>
+    <div class="grid anim">
+      <div class="gitem"><div class="gi">💬</div><div><b>Chat con conocimiento oficial</b><span>~240 entradas curadas: solar, roofing, agua, Anker, EV, financiamiento y promociones vigentes.</span></div></div>
+      <div class="gitem"><div class="gi">🧮</div><div><b>Cotizador correcto</b><span>Recomienda la herramienta exacta entre los cotizadores oficiales según el caso.</span></div></div>
+      <div class="gitem"><div class="gi">📄</div><div><b>Lee documentos (visión)</b><span>Sube una factura LUMA, ID o cotización y la IA extrae los datos clave.</span></div></div>
+      <div class="gitem"><div class="gi">🌐</div><div><b>Búsqueda web bajo demanda</b><span>Con palabras como “investiga” busca info actual y cita la fuente.</span></div></div>
+      <div class="gitem"><div class="gi">🧠</div><div><b>Coaching socrático de ventas</b><span>Te devuelve preguntas para hacerle al cliente y cerrar mejor (SPIN).</span></div></div>
+      <div class="gitem"><div class="gi">📧</div><div><b>Correos de seguimiento</b><span>Plantillas formales con firma corporativa, enviadas desde tu propio correo.</span></div></div>
+    </div>
+  </section>
+
+  <!-- 6. NOVEDAD: agente Zoho en lenguaje natural -->
+  <section class="slide">
+    <div class="hl-badge anim">Lo nuevo</div>
+    <h2 class="anim">Ahora Sun Bot <span class="orange">conversa con el CRM</span></h2>
+    <p class="lead anim">Ya no necesitas comandos raros: le hablas normal y él entra a <span class="blue">Zoho</span>, busca, ordena y te lo trae armado.</p>
+    <div class="chat anim">
+      <div class="bubble user"><span class="who">Asesor</span>“Sun Bot, enséñame mis leads de junio que no he contactado.”</div>
+      <div class="bubble bot"><span class="who">Sun Bot ☀️</span>Te muestro tu cartera en una tabla: nombre, # de Lead con enlace directo, estado, fecha de creación y última nota — filtrada por los que necesitan seguimiento.</div>
+    </div>
+    <p class="sub anim">Detrás de escena la IA decide qué herramienta usar y la ejecuta sola. Nunca inventa un número de Lead: si no existe, lo dice.</p>
+  </section>
+
+  <!-- 7. Qué puede hacer con Zoho -->
+  <section class="slide">
+    <div class="kicker anim">El agente Zoho</div>
+    <h2 class="anim">Cuatro acciones <span class="orange">en lenguaje natural</span></h2>
+    <div class="cards anim">
+      <div class="card"><div class="ico">🔍</div><h3>Buscar cliente</h3><p>Por correo, teléfono, nombre, Lead# o deal. Encuentra incluso clientes ya convertidos (contacto + deal).</p></div>
+      <div class="card"><div class="ico">📋</div><h3>Mi cartera</h3><p>Tus leads en tabla, ordenados por creación o actividad, con filtros por estado y por fecha.</p></div>
+      <div class="card"><div class="ico">📝</div><h3>Agregar nota</h3><p>Deja una nota en el historial del cliente con plantilla por escenario y firma SUN BOT automática.</p></div>
+      <div class="card"><div class="ico">🎯</div><h3>Coach de ventas</h3><p>Lee el cliente y sus deals y propone qué ofrecerle, como chips listos para usar.</p></div>
+    </div>
+  </section>
+
+  <!-- 8. Para líderes y admins -->
+  <section class="slide">
+    <div class="kicker anim">Para líderes y admins</div>
+    <h2 class="anim">Control y <span class="orange">visibilidad</span> del equipo</h2>
+    <div class="grid anim">
+      <div class="gitem"><div class="gi">📊</div><div><b>Dashboard administrativo</b><span>KPIs, uso por día y departamento, hora pico, satisfacción y top asesores.</span></div></div>
+      <div class="gitem"><div class="gi">🗂️</div><div><b>Cartera de cualquier asesor</b><span>El líder consulta y revisa la cartera de su equipo desde el mismo chat.</span></div></div>
+      <div class="gitem"><div class="gi">🔁</div><div><b>Reasignar leads</b><span>Mover leads a otro asesor del equipo, directo desde la conversación.</span></div></div>
+      <div class="gitem"><div class="gi">👥</div><div><b>Gestión de usuarios y accesos</b><span>Jerarquía con Super Admin: alta, suspensión y eliminación de usuarios.</span></div></div>
+      <div class="gitem"><div class="gi">👍</div><div><b>Feedback para revisar</b><span>Cada 👎 con su razón, para mejorar las respuestas del bot.</span></div></div>
+      <div class="gitem"><div class="gi">🛡️</div><div><b>Auditoría total</b><span>Todo queda registrado, incluso lo borrado (soft delete reversible).</span></div></div>
+    </div>
+  </section>
+
+  <!-- 9. El cerebro detrás -->
+  <section class="slide">
+    <div class="kicker anim">El cerebro detrás</div>
+    <h2 class="anim">Le enseñamos a pensar como <span class="orange">tu mejor mentor</span></h2>
+    <p class="quote-def anim">A la IA le damos una instrucción clara: <b>“Actúa como un mentor de ventas senior de Windmar Home. Responde solo con información oficial, adapta el tono al rol del asesor, guía la venta paso a paso — y si no estás seguro de un dato, dilo; nunca inventes precios ni números de cliente.”</b></p>
+    <p class="sub anim">Esa instrucción se afina con el equipo para que todos reciban la misma calidad de ayuda. Y una regla es sagrada:</p>
+    <p class="quote-def anim"><span class="orange">Regla de oro:</span> Sun Bot nunca cotiza. Para números reales siempre dirige al cotizador oficial correspondiente.</p>
+  </section>
+
+  <!-- 10. Confianza y seguridad -->
+  <section class="slide">
+    <div class="kicker anim">Confianza</div>
+    <h2 class="anim">Seguro, <span class="orange">justo</span> y bajo control</h2>
+    <div class="cards anim">
+      <div class="card"><div class="ico">🔐</div><h3>Acceso por rol</h3><p>Login Microsoft, solo @windmarhome.com. Cada quien ve únicamente lo que le toca.</p></div>
+      <div class="card"><div class="ico">🚫</div><h3>Anti-invención</h3><p>Reglas duras: no estima precios ni inventa Lead#. Si duda, lo dice.</p></div>
+      <div class="card"><div class="ico">🔒</div><h3>Privacidad</h3><p>Los documentos que subes no se guardan: se analizan y se descartan.</p></div>
+      <div class="card"><div class="ico">📈</div><h3>Costo mínimo</h3><p>Tecnología eficiente: opera por unos pocos dólares al mes para todo el equipo.</p></div>
+    </div>
+  </section>
+
+  <!-- 11. Antes vs ahora -->
+  <section class="slide">
+    <div class="kicker anim">El cambio</div>
+    <div class="vs anim">
+      <div class="vs-box vs-before"><div class="tag">Antes</div><div class="big">❓ Buscar y adivinar</div><p>Preguntar al líder, rebuscar en chats, mandar el cotizador equivocado y entrar a Zoho a mano.</p></div>
+      <div class="vs-box vs-after"><div class="tag">Ahora</div><div class="big orange">⚡ Preguntar y listo</div><p>Una sola conversación que responde, recomienda, consulta el CRM y deja todo registrado.</p></div>
+    </div>
+  </section>
+
+  <!-- 12. En números -->
+  <section class="slide">
+    <div class="kicker anim">Hoy en producción</div>
+    <h2 class="anim">El agente, <span class="orange">en números</span></h2>
+    <div class="stats anim">
+      <div class="stat"><b>~240</b><span>entradas de conocimiento oficial</span></div>
+      <div class="stat"><b>10</b><span>cotizadores que recomienda</span></div>
+      <div class="stat"><b>4</b><span>acciones de CRM por chat</span></div>
+      <div class="stat"><b>24/7</b><span>disponible, web y app</span></div>
+    </div>
+    <p class="sub anim">Conectado a Microsoft 365 (SSO + correo) y a Zoho CRM, sobre la misma plataforma en la nube.</p>
+  </section>
+
+  <!-- 13. Cierre -->
+  <section class="slide">
+    <img class="logo anim" src="/sunbot-feliz.png" alt="Sun Bot" style="width:clamp(120px,18vw,200px)" />
+    <h2 class="anim">Un equipo que <span class="orange">vende mejor</span><br/>con Sun Bot al lado</h2>
+    <p class="lead anim">Menos dudas, menos errores, más cierres — y líderes con visibilidad real de su equipo.</p>
+    <p class="sub anim" style="opacity:.7">WINDMAR AI AGENT · windmar-ai-agent.vercel.app</p>
+  </section>
+
+</div>
+
+<div class="hint" id="hint">Usa las flechas ← → del teclado o los botones</div>
+<div class="nav">
+  <button onclick="go(-1)" aria-label="Anterior">‹</button>
+  <div class="dots" id="dots"></div>
+  <button onclick="go(1)" aria-label="Siguiente">›</button>
+</div>
+
+<script>
+  const slides = Array.from(document.querySelectorAll('.slide'));
+  const dotsWrap = document.getElementById('dots');
+  const total = slides.length;
+  let i = 0;
+  document.getElementById('tot').textContent = total;
+
+  slides.forEach((_, idx) => {
+    const d = document.createElement('div');
+    d.className = 'dot' + (idx === 0 ? ' active' : '');
+    d.onclick = () => show(idx);
+    dotsWrap.appendChild(d);
+  });
+  const dots = Array.from(dotsWrap.children);
+
+  function show(n) {
+    i = Math.max(0, Math.min(total - 1, n));
+    slides.forEach((s, idx) => s.classList.toggle('active', idx === i));
+    dots.forEach((d, idx) => d.classList.toggle('active', idx === i));
+    document.getElementById('cur').textContent = i + 1;
+    document.getElementById('progress').style.width = ((i + 1) / total * 100) + '%';
+    document.getElementById('hint').style.opacity = i === 0 ? '1' : '0';
+  }
+  function go(dir) { show(i + dir); }
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'PageDown') go(1);
+    if (e.key === 'ArrowLeft' || e.key === 'PageUp') go(-1);
+    if (e.key === 'Home') show(0);
+    if (e.key === 'End') show(total - 1);
+  });
+
+  // Swipe en móvil/tablet
+  let x0 = null;
+  document.addEventListener('touchstart', (e) => (x0 = e.touches[0].clientX));
+  document.addEventListener('touchend', (e) => {
+    if (x0 === null) return;
+    const dx = e.changedTouches[0].clientX - x0;
+    if (Math.abs(dx) > 50) go(dx < 0 ? 1 : -1);
+    x0 = null;
+  });
+
+  show(0);
+</script>
+</body>
+</html>
