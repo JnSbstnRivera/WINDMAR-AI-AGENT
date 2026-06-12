@@ -11,13 +11,14 @@ import {
   getMyLeads,
   getLeadLastNote,
   getZohoUserIdByEmail,
-  findZohoUserByQuery,
+  resolveAsesor,
   getDealsByQuery,
   searchContacts,
   assignLeads,
   addLeadNote,
 } from '@/lib/zoho';
-import { bucketOf, isActionable, BUCKET_LABEL } from '@/lib/zoho-status';
+import { isActionable, BUCKET_LABEL } from '@/lib/zoho-status';
+import { getZohoMaps, logZohoQuery } from '@/lib/zoho-config';
 import {
   type ViewerScope,
   ownsLead,
@@ -42,13 +43,13 @@ export function getZohoToolDefs(canWrite: boolean): Anthropic.Tool[] {
     {
       name: 'mis_leads',
       description:
-        'Trae la cartera de leads desde Zoho como TABLA. Por defecto la del usuario actual; los LÍDERES/ADMINS pueden pedir la de OTRO asesor con el parámetro "asesor" (nombre o correo — ej. "los leads de juan sebastian rivera"). Soporta: cantidad de filas, orden por creación o actividad, filtro por estado (ej. "No Contesta"), filtro por fechas, y modo seguimiento (sin nota en 24h). Úsala para "mis leads", "la cartera de X", "últimos N creados", "¿a quién debo llamar?".',
+        'Trae la cartera de leads desde Zoho como TABLA. Por defecto la del PROPIO usuario actual. Úsala para "mis leads", "mi cartera", "mis leads urgentes/de seguimiento", "¿a quién debo llamar?", "últimos N creados", "la cartera de [otro asesor]". REGLA CLAVE del parámetro "asesor": NO lo pases cuando el usuario habla de SU propia cartera ("mis leads", "mi cartera", "los míos") — déjalo vacío. SOLO pásalo cuando el usuario nombra EXPLÍCITAMENTE a OTRA persona distinta (ej. "la cartera de Juan Camilo Salas"), y entonces usa el NOMBRE COMPLETO o el correo, nunca solo el primer nombre.',
       input_schema: {
         type: 'object',
         properties: {
           asesor: {
             type: 'string',
-            description: 'SOLO líderes/admins: nombre o correo del asesor cuya cartera quieres ver (ej. "j.salas@windmarhome.com" o "juan sebastian rivera"). Omitir = cartera propia.',
+            description: 'SOLO líderes/admins, y SOLO si el usuario pide la cartera de OTRA persona. Usa nombre COMPLETO o correo (ej. "j.salas@windmarhome.com" o "Juan Camilo Salas Montoya"). NUNCA pongas solo "juan" — hay muchos asesores con ese nombre. Para la cartera propia del usuario, OMITE este parámetro por completo.',
           },
           solo_seguimiento: {
             type: 'boolean',
@@ -56,7 +57,7 @@ export function getZohoToolDefs(canWrite: boolean): Anthropic.Tool[] {
           },
           cantidad: {
             type: 'number',
-            description: 'Cuántos leads mostrar en la tabla (default 15, máximo 40).',
+            description: 'Cuántos leads mostrar en la tabla (default 15, máximo 25).',
           },
           ordenar_por: {
             type: 'string',
@@ -132,15 +133,33 @@ const STALE_HOURS = 24;
 
 /**
  * Ejecuta una herramienta de Zoho y devuelve un texto compacto para el modelo.
- * Aplica el scoping por rol del `scope`.
+ * Mide latencia y registra el resultado en `zoho_query_log` (best-effort) para
+ * el dashboard de salud. Aplica el scoping por rol vía `runZohoTool`.
  */
 export async function executeZohoTool(
   name: string,
   input: Record<string, unknown>,
   scope: ViewerScope
 ): Promise<string> {
+  const start = Date.now();
   try {
-    switch (name) {
+    const out = await runZohoTool(name, input, scope);
+    logZohoQuery({ tool: name, ok: true, durationMs: Date.now() - start, userEmail: scope.email });
+    return out;
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : 'desconocido';
+    logZohoQuery({ tool: name, ok: false, durationMs: Date.now() - start, error: msg, userEmail: scope.email });
+    return `Error ejecutando ${name}: ${msg}`;
+  }
+}
+
+/** Lógica de cada herramienta (sin try/catch — el wrapper lo maneja). */
+async function runZohoTool(
+  name: string,
+  input: Record<string, unknown>,
+  scope: ViewerScope
+): Promise<string> {
+  switch (name) {
       case 'buscar_cliente': {
         const query = String(input.query || '').trim();
         if (query.length < 3) return 'Query muy corta.';
@@ -183,6 +202,7 @@ export async function executeZohoTool(
 
         if (!ownsLead(client.lead, scope)) return NOT_IN_PORTFOLIO_MSG;
         const l = client.lead;
+        const maps = await getZohoMaps();
         const deals = client.deals
           .slice(0, 6)
           .map((d) => `  - ${d.name} · ${d.stage || '?'}${d.amount ? ' · ' + d.amount : ''}`)
@@ -190,12 +210,12 @@ export async function executeZohoTool(
         return [
           `CLIENTE: ${l.fullName}`,
           `Lead #: ${l.leadNumber || '—'} · enlace: ${l.zohoUrl}`,
-          `Estado: ${l.stage || 'sin estado'} (bucket: ${BUCKET_LABEL[bucketOf(l.stage)]})`,
+          `Estado: ${l.stage || 'sin estado'} (bucket: ${BUCKET_LABEL[maps.bucketOf(l.stage)]})`,
           `Email: ${l.email || 'no registrado'} · Tel: ${l.mobile || l.phone || 'no registrado'}`,
           `Consultor (Sales_Rep): ${l.consultor || 'sin asignar'}`,
           `Owner (lead owner): ${l.owner || 'sin asignar'}`,
           `Sistema comprado: ${client.summary.sistemaComprado}`,
-          `Cotizaciones: ${client.summary.totalDeals} (${client.summary.dealsAbiertos} abiertas)`,
+          `Cotizaciones: ${client.summary.totalDeals} (${client.summary.dealsAbiertos} en proceso de instalación)`,
           deals ? `Deals:\n${deals}` : 'Sin deals.',
           `Hipervínculo Zoho: ${l.zohoUrl}`,
           `Lead ID: ${l.id}`,
@@ -204,24 +224,53 @@ export async function executeZohoTool(
 
       case 'mis_leads': {
         const soloSeguimiento = input.solo_seguimiento === true;
-        const cantidad = Math.min(Math.max(Number(input.cantidad) || 15, 1), 40);
+        const cantidad = Math.min(Math.max(Number(input.cantidad) || 15, 1), 25);
         const ordenarPor = input.ordenar_por === 'creacion' ? 'creacion' : 'actividad';
         const estadoFiltro = String(input.estado || '').trim().toLowerCase();
 
-        // Cartera de OTRO asesor (solo líderes/admins; por nombre o correo)
+        // ── Resolución del DUEÑO de la cartera (el bug crítico del filtro) ──
+        // Por defecto: cartera propia. Líderes/admins pueden pedir la de otro.
         const asesorQ = String(input.asesor || '').trim();
         let ownerId: string | null;
         let dueño = 'tu cartera';
+
+        // Resolvemos SIEMPRE al usuario propio (id + nombre) — sirve de fallback
+        // y para detectar cuando el modelo manda el primer nombre del PROPIO
+        // usuario en "mis leads" (no debe traer la cartera de un tocayo).
+        const self = await resolveAsesor(scope.email);
+        const selfUser = self.kind === 'one' ? self.user : null;
+
+        if (asesorQ && !scope.canSeeAll) {
+          return 'Solo los líderes/admins pueden ver la cartera de otro asesor. Pídeme "mis leads" (sin nombre) y te muestro la tuya.';
+        }
+
         if (asesorQ && scope.canSeeAll) {
-          const u = await findZohoUserByQuery(asesorQ);
-          if (!u) return `No encontré al usuario "${asesorQ}" en Zoho. Verifica el nombre o usa su correo.`;
-          ownerId = u.id;
-          dueño = `cartera de ${u.name}`;
-        } else if (asesorQ && !scope.canSeeAll) {
-          return 'Solo los líderes/admins pueden ver la cartera de otro asesor. Te muestro la tuya si me la pides sin nombre.';
+          const norm = (s: string) => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').trim();
+          const qWords = norm(asesorQ).split(/\s+/).filter(Boolean);
+          const selfName = selfUser ? norm(selfUser.name) : '';
+          // ¿La query se refiere al propio usuario? (ej. Haiku mandó "juan" y el
+          // usuario es "Juan Sebastián Rivera" → es ÉL, no otro Juan.)
+          const refersToSelf = !!selfUser && qWords.length > 0 && qWords.every((w) => selfName.includes(w));
+
+          if (refersToSelf) {
+            ownerId = selfUser!.id; // cartera propia; dueño se mantiene "tu cartera"
+          } else {
+            const r = await resolveAsesor(asesorQ);
+            if (r.kind === 'none') {
+              return `No encontré a ningún asesor que coincida con "${asesorQ}" en Zoho. Verifica el nombre completo o usa su correo (@windmarhome.com).`;
+            }
+            if (r.kind === 'many') {
+              const lista = r.candidates.map((c) => `- ${c.name} (${c.email})`).join('\n');
+              return `Hay ${r.candidates.length} asesores que coinciden con "${asesorQ}". Dime el NOMBRE COMPLETO o el correo de cuál quieres la cartera:\n${lista}`;
+            }
+            ownerId = r.user.id;
+            dueño = `cartera de ${r.user.name}`;
+          }
         } else {
-          ownerId = await getZohoUserIdByEmail(scope.email);
-          if (!ownerId) return `No se encontró tu usuario de Zoho (${scope.email}). Pídele a un admin que sincronice los IDs de Zoho en /admin/usuarios.`;
+          ownerId = selfUser?.id ?? (await getZohoUserIdByEmail(scope.email));
+          if (!ownerId) {
+            return `No se encontró tu usuario de Zoho (${scope.email}). Pídele a un admin que sincronice los IDs de Zoho en /admin/usuarios.`;
+          }
         }
         let leads = await getMyLeads(ownerId);
         if (leads.length === 0) return `No hay leads en la ${dueño}.`;
@@ -336,7 +385,4 @@ export async function executeZohoTool(
       default:
         return `Herramienta desconocida: ${name}`;
     }
-  } catch (err) {
-    return `Error ejecutando ${name}: ${err instanceof Error ? err.message : 'desconocido'}`;
-  }
 }

@@ -75,7 +75,7 @@ Etapa actual: ${client.lead.stage || 'sin clasificar'}
 Consultor asignado: ${client.summary.consultor}
 Sistema comprado/cerrado: ${client.summary.sistemaComprado}
 
-═══ HISTORIAL DE COTIZACIONES (${client.deals.length} totales, ${client.summary.dealsAbiertos} abiertas) ═══
+═══ HISTORIAL DE COTIZACIONES (${client.deals.length} totales, ${client.summary.dealsAbiertos} en proceso de instalación) ═══
 ${dealsResumen || '(Sin cotizaciones previas)'}
 
 ═══ TU TRABAJO ═══

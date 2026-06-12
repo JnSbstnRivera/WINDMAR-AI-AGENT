@@ -149,7 +149,7 @@ export function ClientCard({ client }: Props) {
             </svg>
           }
           label="Total cotizaciones"
-          value={`${summary.totalDeals} (${summary.dealsAbiertos} abiertas)`}
+          value={`${summary.totalDeals} (${summary.dealsAbiertos} en proceso)`}
         />
         <Chip
           icon={

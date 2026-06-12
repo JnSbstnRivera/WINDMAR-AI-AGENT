@@ -14,7 +14,8 @@
 //   - ZohoCRM.modules.deals.READ
 //   - ZohoCRM.users.READ
 
-import { bucketOf, type Bucket } from '@/lib/zoho-status';
+import { type Bucket } from '@/lib/zoho-status';
+import { getZohoMaps } from '@/lib/zoho-config';
 
 const ZOHO_ACCOUNTS = 'https://accounts.zoho.com';
 const ZOHO_API = process.env.ZOHO_API_DOMAIN || 'https://www.zohoapis.com';
@@ -170,7 +171,7 @@ export interface ZohoClientFull {
     sistemaComprado: string;     // "Sistema Solar 8kW + Power Wall 3"
     consultor: string;            // nombre del consultor asignado
     totalDeals: number;
-    dealsAbiertos: number;        // deals que no son Closed Won/Lost
+    dealsAbiertos: number;        // deals firmados en proceso de instalación (no energizados aún)
     ultimaActividad: string | null;
   };
 }
@@ -308,17 +309,24 @@ export async function getClientFull(query: string): Promise<ZohoClientFull | nul
   // Buscamos lead y deals EN PARALELO con la misma query — más rápido.
   // Los deals se asocian al cliente final (Contact), no al lead original,
   // por eso buscamos con la misma query (email/teléfono/nombre).
-  const [lead, deals] = await Promise.all([searchLead(query), getDealsByQuery(query)]);
+  const [lead, deals, maps] = await Promise.all([
+    searchLead(query),
+    getDealsByQuery(query),
+    getZohoMaps(),
+  ]);
   if (!lead) return null;
 
-  // Construir resumen útil para el coach
-  const dealsAbiertos = deals.filter(
-    (d) => d.stage !== 'Closed Won' && d.stage !== 'Closed Lost'
-  ).length;
-  const closedWon = deals.filter((d) => d.stage === 'Closed Won');
+  // Construir resumen útil para el coach.
+  // En Windmar un Deal = contrato firmado (venta cerrada); solo 'Cancelled' es
+  // pérdida. Antes esto usaba "Closed Won/Lost" (que la org NO usa), dejando
+  // sistemaComprado SIEMPRE vacío. Ahora:
+  //   - ganados      = todos los deals firmados (no cancelados) → lo COMPRADO.
+  //   - dealsAbiertos= firmados aún en proceso de instalación (no energizados).
+  const ganados = deals.filter((d) => maps.dealStateOf(d.stage) === 'ganado');
+  const dealsAbiertos = ganados.filter((d) => !maps.isDealCompleted(d.stage)).length;
   const sistemaComprado =
-    closedWon.length > 0
-      ? closedWon.map((d) => d.productName || d.name).filter(Boolean).join(', ')
+    ganados.length > 0
+      ? ganados.map((d) => d.productName || d.name).filter(Boolean).join(', ')
       : 'Sin compras cerradas';
 
   const ultimaActividad =
@@ -501,24 +509,66 @@ export async function getZohoUsers(): Promise<ZohoUser[]> {
   return usersListCache || [];
 }
 
+const normName = (s: string) => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').trim();
+
 /**
- * Resuelve un usuario de Zoho por correo O por nombre (match parcial,
- * insensible a acentos/mayúsculas). "juan sebastian rive" → Juan Sebastián
- * Rivera Joven. Devuelve null si no hay match.
+ * Resultado de resolver un asesor por nombre/correo:
+ *   - 'one'  → match único e inequívoco.
+ *   - 'many' → varios candidatos (ej. "juan" matchea 12 usuarios) → hay que
+ *              desambiguar, NUNCA adivinar (ese era el bug del filtro por owner).
+ *   - 'none' → ningún match.
  */
-export async function findZohoUserByQuery(query: string): Promise<ZohoUser | null> {
+export type AsesorResolution =
+  | { kind: 'one'; user: ZohoUser }
+  | { kind: 'many'; candidates: ZohoUser[] }
+  | { kind: 'none' };
+
+/**
+ * Resuelve un asesor de Zoho por correo O por nombre, insensible a
+ * acentos/mayúsculas. Distingue el caso ambiguo: si "juan" matchea a varios,
+ * devuelve la lista para que el usuario elija — no silencia el match[0].
+ *
+ * Reglas:
+ *  - Correo (contiene @)            → match exacto, único.
+ *  - Nombre completo exacto         → único (ej. "juan sebastian rivera joven").
+ *  - Nombre parcial con 1 match     → único.
+ *  - Nombre parcial con N matches   → 'many' (desambiguar, máx 10 candidatos).
+ */
+export async function resolveAsesor(query: string): Promise<AsesorResolution> {
   const users = await getZohoUsers();
-  const norm = (s: string) => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
-  const q = norm(query.trim());
-  if (!q) return null;
-  if (q.includes('@')) return users.find((u) => u.email === q) || null;
-  // Nombre: todas las palabras de la query deben estar en el nombre
+  const q = normName(query);
+  if (!q) return { kind: 'none' };
+
+  if (q.includes('@')) {
+    const u = users.find((u) => u.email === q);
+    return u ? { kind: 'one', user: u } : { kind: 'none' };
+  }
+
   const words = q.split(/\s+/).filter(Boolean);
   const matches = users.filter((u) => {
-    const name = norm(u.name);
+    const name = normName(u.name);
     return words.every((w) => name.includes(w));
   });
-  return matches[0] || null;
+
+  if (matches.length === 0) return { kind: 'none' };
+
+  // Match exacto de nombre completo gana aunque haya parciales (ej. el usuario
+  // escribió su nombre completo y hay tocayos con nombres más largos).
+  const exact = matches.filter((u) => normName(u.name) === q);
+  if (exact.length === 1) return { kind: 'one', user: exact[0] };
+
+  if (matches.length === 1) return { kind: 'one', user: matches[0] };
+  return { kind: 'many', candidates: matches.slice(0, 10) };
+}
+
+/**
+ * Compat: resuelve un usuario por nombre/correo y devuelve UNO solo, o null si
+ * no hay match O si es ambiguo (varios tocayos). Para flujos que necesitan
+ * manejar la ambigüedad explícitamente, usa `resolveAsesor`.
+ */
+export async function findZohoUserByQuery(query: string): Promise<ZohoUser | null> {
+  const r = await resolveAsesor(query);
+  return r.kind === 'one' ? r.user : null;
 }
 
 export interface MyLead {
@@ -547,6 +597,7 @@ export interface MyLead {
  */
 export async function getMyLeads(ownerId: string, limit = 1000): Promise<MyLead[]> {
   const fields = `${LEAD_FIELDS},Modified_Time`;
+  const maps = await getZohoMaps(); // mapeo Lead_Status → bucket (config DB + default)
   type Raw = ZohoLeadRaw & { Modified_Time?: string };
 
   // Paginación: Zoho devuelve máx 200 por página. Traemos hasta 5 páginas
@@ -570,7 +621,7 @@ export async function getMyLeads(ownerId: string, limit = 1000): Promise<MyLead[
     email: r.Email || null,
     phone: r.Mobile || r.Phone || null,
     status: r.Lead_Status || null,
-    bucket: bucketOf(r.Lead_Status),
+    bucket: maps.bucketOf(r.Lead_Status),
     owner: r.Owner?.name || null,
     consultor: r.Sales_Rep?.name || null,
     modifiedAt: r.Modified_Time || null,

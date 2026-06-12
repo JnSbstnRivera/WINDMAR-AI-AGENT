@@ -285,6 +285,13 @@ ${useWebSearch ? '- ⚠️ WEB SEARCH ACTIVADO: el asesor usó una palabra clave
 
 ZOHO CRM (datos en vivo): tienes herramientas para consultar Zoho — buscar_cliente, mis_leads${rol && rol !== 'Asesor' ? ', asignar_leads, agregar_nota' : ''}. Úsalas cuando el asesor pregunte por clientes, su cartera o seguimientos, en lenguaje natural (NO necesita comandos). Tras traer los datos, actúa como COACH: resume breve y di el próximo paso. ${rol === 'Asesor' ? 'Este usuario es Asesor: solo ve SUS leads (las herramientas ya lo filtran).' : 'Este usuario puede ver todo y asignar/anotar.'}
 
+🧭 GUÍA PARA PETICIONES DE ZOHO (sigue esto al pie):
+- "mis leads", "mi cartera", "los míos", "mis leads urgentes" → llama mis_leads SIN el parámetro "asesor" (es la cartera del PROPIO usuario, ${asesorName}). JAMÁS pongas su nombre en "asesor".
+- "mis leads urgentes / de seguimiento / ¿a quién llamo primero?" → mis_leads con solo_seguimiento=true.
+- "la cartera de [OTRA persona]" → solo si es líder/admin, con NOMBRE COMPLETO o correo (nunca solo el primer nombre — hay decenas de tocayos en Zoho).
+- Petición VAGA (ej. "muéstrame leads" sin filtro) → NO interrogues primero: trae el default (15 recientes) y ofrece afinar (por estado, fecha o seguimiento) en los <quick_replies>.
+- Si una herramienta te devuelve una LISTA de candidatos para desambiguar, muéstrasela al asesor y pídele que elija por nombre completo — NO elijas tú por él.
+
 🚫 REGLA ABSOLUTA ANTI-INVENCIÓN: JAMÁS fabriques datos de clientes — ni nombres, ni Lead IDs, ni teléfonos, ni tablas. Si el usuario pide leads/clientes, LLAMA la herramienta y muestra SOLO lo que devuelve (con sus enlaces). Si la herramienta no devuelve algo, di que no está en Zoho. Los Lead # reales tienen formato L######  (ej: L792795) — cualquier "LD-0XXXXX" inventado es un error grave.
 
 ⚙️ ORDEN DEL TURNO CON HERRAMIENTAS: cuando vayas a usar una herramienta, NO escribas preámbulos ("Voy a traer...") ni bloques <quick_replies> ANTES de llamarla — llama la herramienta directo. El bloque <quick_replies> va UNA sola vez, al FINAL de tu respuesta definitiva (después de los datos).
@@ -327,10 +334,17 @@ REGLA DE VIGENCIA: usa la fecha actual de arriba para validar promociones, feria
     // cartera, lo obligamos a nivel de API: no puede responder sin usar una tool.
     const zohoIntent =
       !useWebSearch &&
-      (/(mis|tus|los|las|el|la|dame|tr[áa]eme|busca|buscame|búscame|mu[ée]strame|listado|lista|cu[áa]nt[oa]s|qui[ée]n(es)?)[\s\S]{0,50}\b(leads?|casos?|cartera|vendid[oa]s?|clientes?|seguimientos?|pipeline|no contesta|citas?)\b/i.test(message) ||
+      (/(mis?|m[íi]|tus|los|las|el|la|dame|tr[áa]eme|busca|buscame|búscame|mu[ée]strame|ver|necesito|listado|lista|cu[áa]nt[oa]s|cu[áa]les|qui[ée]n(es)?)[\s\S]{0,50}\b(leads?|casos?|cartera|vendid[oa]s?|clientes?|seguimientos?|pipeline|no contesta|citas?)\b/i.test(message) ||
+        /\b(mi|la|tu)\s+cartera\b/i.test(message) ||
+        /\bleads?\b[\s\S]{0,20}\b(urgentes?|de seguimiento|pendientes?|sin nota)\b/i.test(message) ||
         /\bL\d{5,}\b/.test(message) ||
         /(deja|agrega|pon|escribe)[\s\S]{0,25}\bnota\b/i.test(message) ||
         /\b(re)?asigna(r|me|le)?\b/i.test(message));
+
+    // Espacio de salida: las tablas de leads / respuestas con web search pueden
+    // pasar de 1024 tokens y quedaban TRUNCADAS a media tabla. Conversación
+    // normal mantiene 1024 (más barato y rápido).
+    const maxTokens = zohoIntent || useWebSearch ? 2048 : 1024;
 
     // 8. Loop agéntico con streaming: piped text deltas; si el modelo pide una
     // herramienta Zoho, la ejecutamos server-side (con scoping) y continuamos.
@@ -355,7 +369,7 @@ REGLA DE VIGENCIA: usa la fecha actual de arriba para validar promociones, feria
             const forceTool = iter === 0 && zohoIntent;
             const stream = anthropic.messages.stream({
               model: 'claude-haiku-4-5',
-              max_tokens: 1024,
+              max_tokens: maxTokens,
               system: [{ type: 'text', text: SYSTEM_PROMPT, cache_control: { type: 'ephemeral' } }],
               messages: convo,
               tools,

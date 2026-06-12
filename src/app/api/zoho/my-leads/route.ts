@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import {
   getZohoUserIdByEmail,
-  findZohoUserByQuery,
+  resolveAsesor,
   getMyLeads,
   getLeadLastNote,
   type MyLead,
@@ -43,15 +43,26 @@ export async function GET(req: Request) {
     let ownerId: string | null;
     let targetEmail = scope.email;
     if (ownerParam && scope.canSeeAll) {
-      const u = await findZohoUserByQuery(ownerParam);
-      if (!u) {
+      const r = await resolveAsesor(ownerParam);
+      if (r.kind === 'none') {
         return NextResponse.json(
           { error: `No se encontró ningún usuario de Zoho que coincida con "${ownerParam}".` },
           { status: 404 }
         );
       }
-      ownerId = u.id;
-      targetEmail = u.email;
+      if (r.kind === 'many') {
+        // Ambiguo (ej. "juan" → varios tocayos). Devolvemos candidatos para
+        // que el cliente desambigüe en vez de adivinar el equivocado.
+        return NextResponse.json(
+          {
+            error: `Hay ${r.candidates.length} asesores que coinciden con "${ownerParam}". Especifica nombre completo o correo.`,
+            candidates: r.candidates,
+          },
+          { status: 409 }
+        );
+      }
+      ownerId = r.user.id;
+      targetEmail = r.user.email;
     } else {
       ownerId = await getZohoUserIdByEmail(targetEmail);
     }

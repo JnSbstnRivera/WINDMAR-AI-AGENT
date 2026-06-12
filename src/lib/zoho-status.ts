@@ -64,3 +64,52 @@ export const BUCKET_LABEL: Record<Bucket, string> = {
   descartado: 'Descartado',
   sin_estado: 'Sin estado',
 };
+
+// ════════════════════════════════════════
+// MAPA DE STAGES DE DEALS (Stage) → ESTADO de la cotización
+// ════════════════════════════════════════
+// Los valores reales del picklist Stage del módulo Deals de la org PR
+// (699641359), verificados en vivo el 2026-06-12 sobre los 200 deals más
+// recientes. La org NO usa "Closed Won"/"Closed Lost" — usa stages de
+// fulfillment solar/roofing. Esto corrige el bug donde sistemaComprado salía
+// SIEMPRE "Sin compras cerradas" y dealsAbiertos contaba todo como abierto.
+//
+// REGLA DE NEGOCIO (confirmada con el usuario el 2026-06-12):
+// En Windmar, EXISTIR un Deal significa que el contrato YA está firmado = venta
+// cerrada. Les pagan a la PRIMERA firma de documentos y en ese momento el lead
+// pasa a "Caso Vendido". Por eso TODAS las etapas del Deal son fulfillment de
+// una venta ya hecha (no pipeline abierto). Solo 'Cancelled' es pérdida.
+//   - 'ganado'  = contrato firmado (cualquier etapa del deal salvo cancelado).
+//   - 'perdido' = cancelado.
+//   - 'abierto' = se conserva por compat, pero en esta org casi no aplica.
+// (Se hará editable en la Fase 2 vía tabla `zoho_deal_stage_map`.)
+export type DealState = 'ganado' | 'abierto' | 'perdido';
+
+const DEAL_STAGE_TO_STATE: Record<string, DealState> = {
+  'New Deal': 'ganado',
+  'Site Survey': 'ganado',
+  'Design/Engineering': 'ganado',
+  'Ready to Install': 'ganado',
+  'Installation Scheduled': 'ganado',
+  'Ready for Roof Prep': 'ganado',
+  'Roof Preparation': 'ganado',
+  'Roof Sealing': 'ganado',
+  'In Service': 'ganado',
+  'In Service - Complete': 'ganado',
+  'Cancelled': 'perdido',
+};
+
+/** Stage (texto Zoho) → estado. Un Deal existe = firmado, así que default 'ganado'. */
+export function dealStateOf(stage: string | null | undefined): DealState {
+  if (!stage) return 'ganado';
+  return DEAL_STAGE_TO_STATE[stage] ?? 'ganado';
+}
+
+// Etapas donde el sistema ya está energizado / la postventa está cerrada.
+// Sirve para distinguir "vendido y completado" de "vendido, en instalación".
+const DEAL_COMPLETED = new Set<string>(['In Service', 'In Service - Complete']);
+
+/** ¿El deal ya está completado/en servicio (vs. firmado pero en proceso)? */
+export function isDealCompleted(stage: string | null | undefined): boolean {
+  return !!stage && DEAL_COMPLETED.has(stage);
+}
