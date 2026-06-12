@@ -425,27 +425,39 @@ async function zohoPost(path: string, body: unknown, timeoutMs = 10_000): Promis
   }
 }
 
-// ── Cache email → Zoho user id (Owner) ───────────────────────────────
-// Los IDs de Owner en COQL deben ser numéricos, no el correo. Resolvemos
-// una vez por proceso y cacheamos en memoria.
+// ── Cache de usuarios de Zoho (email → id + lista completa) ──────────
+// Los IDs de Owner deben ser numéricos, no el correo. Resolvemos una vez
+// por proceso y cacheamos en memoria.
+export interface ZohoUser {
+  id: string;
+  name: string;
+  email: string;
+}
+
 let usersCache: Map<string, string> | null = null;
+let usersListCache: ZohoUser[] | null = null;
 
 async function loadUsers(): Promise<Map<string, string>> {
   if (usersCache) return usersCache;
   const map = new Map<string, string>();
+  const list: ZohoUser[] = [];
   let page = 1;
   // Hasta 4 páginas de 200 = 800 usuarios (de sobra para Windmar PR).
   for (; page <= 4; page++) {
     const res = (await zohoFetch(`/users?type=ActiveUsers&per_page=200&page=${page}`)) as {
-      users?: Array<{ id: string; email?: string }>;
+      users?: Array<{ id: string; email?: string; full_name?: string }>;
       info?: { more_records?: boolean };
     };
     for (const u of res.users || []) {
-      if (u.email) map.set(u.email.toLowerCase(), u.id);
+      if (u.email) {
+        map.set(u.email.toLowerCase(), u.id);
+        list.push({ id: u.id, name: u.full_name || u.email, email: u.email.toLowerCase() });
+      }
     }
     if (!res.info?.more_records) break;
   }
   usersCache = map;
+  usersListCache = list.sort((a, b) => a.name.localeCompare(b.name));
   return map;
 }
 
@@ -453,6 +465,12 @@ async function loadUsers(): Promise<Map<string, string>> {
 export async function getZohoUserIdByEmail(email: string): Promise<string | null> {
   const map = await loadUsers();
   return map.get(email.trim().toLowerCase()) || null;
+}
+
+/** Lista completa de usuarios activos de Zoho (para pickers/datalists). */
+export async function getZohoUsers(): Promise<ZohoUser[]> {
+  await loadUsers();
+  return usersListCache || [];
 }
 
 export interface MyLead {

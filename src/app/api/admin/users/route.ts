@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@/auth';
-import { canApproveAccess } from '@/lib/admin-auth';
+import { canApproveAccess, isSuperAdmin } from '@/lib/admin-auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { logAudit } from '@/lib/audit';
 
@@ -85,14 +85,28 @@ export async function POST(req: Request) {
     .single();
 
   if (!target) return NextResponse.json({ error: 'Usuario no existe' }, { status: 404 });
-  if (target.is_superadmin && action !== 'set-role') {
-    return NextResponse.json(
-      { error: 'No puedes cambiar el estado de un administrador.' },
-      { status: 403 }
-    );
-  }
+
+  // Jerarquía:
+  //  - Nadie se modifica/elimina a sí mismo.
+  //  - Un admin normal NO toca a otros admins (solo set-role de no-admins).
+  //  - El SUPER admin puede suspender/eliminar/degradar a otros admins,
+  //    pero nunca a otro super admin.
   if (targetEmail === adminEmail.toLowerCase()) {
     return NextResponse.json({ error: 'No puedes eliminarte/modificarte a ti mismo.' }, { status: 403 });
+  }
+  if (target.is_superadmin && action !== 'set-role') {
+    if (!isSuperAdmin(adminEmail)) {
+      return NextResponse.json(
+        { error: 'Solo el super admin puede cambiar el estado de un administrador.' },
+        { status: 403 }
+      );
+    }
+    if (isSuperAdmin(targetEmail)) {
+      return NextResponse.json(
+        { error: 'No se puede modificar a otro super admin.' },
+        { status: 403 }
+      );
+    }
   }
 
   // DELETE: borra la fila. Al volver a iniciar sesión, el usuario nace de nuevo

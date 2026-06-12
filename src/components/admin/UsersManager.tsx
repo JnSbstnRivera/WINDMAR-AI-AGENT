@@ -36,7 +36,15 @@ function initials(name: string | null, email: string) {
   return base.slice(0, 2).toUpperCase();
 }
 
-export function UsersManager({ initialUsers }: { initialUsers: AdminUser[] }) {
+export function UsersManager({
+  initialUsers,
+  viewerEmail = '',
+  viewerIsSuper = false,
+}: {
+  initialUsers: AdminUser[];
+  viewerEmail?: string;
+  viewerIsSuper?: boolean;
+}) {
   const [users, setUsers] = useState<AdminUser[]>(initialUsers);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -261,7 +269,7 @@ export function UsersManager({ initialUsers }: { initialUsers: AdminUser[] }) {
 
             <select
               value={u.rol}
-              disabled={!!busy || u.is_superadmin}
+              disabled={!!busy || (u.is_superadmin && !viewerIsSuper) || u.user_email === viewerEmail}
               onChange={(e) => act(u.user_email, 'set-role', e.target.value)}
               style={{
                 background: '#0f1525', color: '#E8EAF0',
@@ -276,25 +284,28 @@ export function UsersManager({ initialUsers }: { initialUsers: AdminUser[] }) {
               ))}
             </select>
 
-            {!u.is_superadmin &&
-              (u.status === 'suspended' || u.status === 'rejected' ? (
-                <button onClick={() => act(u.user_email, 'reactivate')} disabled={!!busy} style={btn('#22c55e', true)}>
-                  Reactivar
+            {/* Admin normal: solo gestiona no-admins. SUPER admin: también gestiona
+                a otros admins (nunca a sí mismo). */}
+            {(!u.is_superadmin || viewerIsSuper) && u.user_email !== viewerEmail && (
+              <>
+                {u.status === 'suspended' || u.status === 'rejected' ? (
+                  <button onClick={() => act(u.user_email, 'reactivate')} disabled={!!busy} style={btn('#22c55e', true)}>
+                    Reactivar
+                  </button>
+                ) : (
+                  <button onClick={() => act(u.user_email, 'suspend')} disabled={!!busy} style={btn('#a78bfa', true)}>
+                    Suspender
+                  </button>
+                )}
+                <button
+                  onClick={() => act(u.user_email, 'delete')}
+                  disabled={!!busy}
+                  style={btn('#ef4444', true)}
+                  title="Eliminar definitivamente (para volver a entrar deberá ser aprobado de nuevo)"
+                >
+                  Eliminar
                 </button>
-              ) : (
-                <button onClick={() => act(u.user_email, 'suspend')} disabled={!!busy} style={btn('#a78bfa', true)}>
-                  Suspender
-                </button>
-              ))}
-            {!u.is_superadmin && (
-              <button
-                onClick={() => act(u.user_email, 'delete')}
-                disabled={!!busy}
-                style={btn('#ef4444', true)}
-                title="Eliminar definitivamente (para volver a entrar deberá ser aprobado de nuevo)"
-              >
-                Eliminar
-              </button>
+              </>
             )}
           </div>
         ))}

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { BUCKET_LABEL, type Bucket } from '@/lib/zoho-status';
 
 export interface AssignUser {
@@ -32,21 +32,37 @@ const BUCKET_COLOR: Record<string, string> = {
 
 export function AssignManager({ users }: { users: AssignUser[] }) {
   const [source, setSource] = useState('');
+  const [manualSource, setManualSource] = useState('');
   const [target, setTarget] = useState('');
+  const [manualTarget, setManualTarget] = useState('');
+  const [zohoUsers, setZohoUsers] = useState<Array<{ name: string; email: string }>>([]);
   const [leads, setLeads] = useState<Lead[] | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(false);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<{ kind: 'ok' | 'err'; text: string } | null>(null);
 
+  // Lista completa de usuarios Zoho (incluye developers/data analysts que no
+  // usan la app) para la búsqueda manual con datalist.
+  useEffect(() => {
+    fetch('/api/admin/zoho-users')
+      .then((r) => r.json())
+      .then((d) => setZohoUsers(d.users || []))
+      .catch(() => {});
+  }, []);
+
+  // La búsqueda manual tiene prioridad sobre el dropdown.
+  const effectiveSource = manualSource.trim().toLowerCase() || source;
+  const effectiveTarget = manualTarget.trim().toLowerCase() || target;
+
   async function loadLeads() {
-    if (!source) return;
+    if (!effectiveSource) return;
     setLoading(true);
     setMsg(null);
     setLeads(null);
     setSelected(new Set());
     try {
-      const res = await fetch(`/api/zoho/my-leads?owner=${encodeURIComponent(source)}`);
+      const res = await fetch(`/api/zoho/my-leads?owner=${encodeURIComponent(effectiveSource)}`);
       const data = await res.json();
       if (!res.ok) {
         setMsg({ kind: 'err', text: data.error || 'Error cargando leads' });
@@ -75,8 +91,8 @@ export function AssignManager({ users }: { users: AssignUser[] }) {
   }
 
   async function assign() {
-    if (!target || selected.size === 0) return;
-    if (target === source) {
+    if (!effectiveTarget || selected.size === 0) return;
+    if (effectiveTarget === effectiveSource) {
       setMsg({ kind: 'err', text: 'El destino es el mismo asesor de origen.' });
       return;
     }
@@ -86,7 +102,7 @@ export function AssignManager({ users }: { users: AssignUser[] }) {
       const res = await fetch('/api/zoho/assign', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ leadIds: Array.from(selected), ownerEmail: target }),
+        body: JSON.stringify({ leadIds: Array.from(selected), ownerEmail: effectiveTarget }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -95,7 +111,7 @@ export function AssignManager({ users }: { users: AssignUser[] }) {
       }
       setMsg({
         kind: 'ok',
-        text: `Asignados ${data.success}/${data.total} a ${target}${data.failed ? ` · ${data.failed} fallaron` : ''}.`,
+        text: `Asignados ${data.success}/${data.total} a ${effectiveTarget}${data.failed ? ` · ${data.failed} fallaron` : ''}.`,
       });
       // Quitar los asignados de la vista (ya no son del origen)
       setLeads((prev) => (prev ? prev.filter((l) => !selected.has(l.id)) : prev));
@@ -161,10 +177,23 @@ export function AssignManager({ users }: { users: AssignUser[] }) {
         Mira la cartera de un asesor, selecciona leads y reasígnalos. Cada acción queda auditada.
       </p>
 
+      {/* Datalist con TODOS los usuarios Zoho (para búsqueda manual) */}
+      <datalist id="zoho-users-list">
+        {zohoUsers.map((u) => (
+          <option key={u.email} value={u.email}>
+            {u.name}
+          </option>
+        ))}
+      </datalist>
+
       {/* Origen */}
       <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap', marginBottom: 16 }}>
         <span style={{ color: 'var(--text2)', fontSize: 13 }}>Ver leads de:</span>
-        <select value={source} onChange={(e) => setSource(e.target.value)} style={selectStyle}>
+        <select
+          value={source}
+          onChange={(e) => { setSource(e.target.value); setManualSource(''); }}
+          style={selectStyle}
+        >
           <option value="">— elige asesor —</option>
           {users.map((u) => (
             <option key={u.email} value={u.email} style={{ background: '#0f1525' }}>
@@ -172,7 +201,15 @@ export function AssignManager({ users }: { users: AssignUser[] }) {
             </option>
           ))}
         </select>
-        <button onClick={loadLeads} disabled={!source || loading} style={btn('#38bdf8', !source || loading)}>
+        <span style={{ color: 'var(--text3)', fontSize: 12 }}>o búsqueda manual:</span>
+        <input
+          value={manualSource}
+          onChange={(e) => setManualSource(e.target.value)}
+          list="zoho-users-list"
+          placeholder="correo de cualquier usuario Zoho (ej. developer)"
+          style={{ ...selectStyle, minWidth: 280 }}
+        />
+        <button onClick={loadLeads} disabled={!effectiveSource || loading} style={btn('#38bdf8', !effectiveSource || loading)}>
           {loading ? 'Cargando…' : 'Cargar cartera'}
         </button>
       </div>
@@ -237,7 +274,11 @@ export function AssignManager({ users }: { users: AssignUser[] }) {
               {/* Barra de asignación */}
               <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap', marginTop: 16, paddingTop: 14, borderTop: '1px solid var(--glass-border)' }}>
                 <span style={{ color: 'var(--text2)', fontSize: 13 }}>Asignar {selected.size} a:</span>
-                <select value={target} onChange={(e) => setTarget(e.target.value)} style={selectStyle}>
+                <select
+                  value={target}
+                  onChange={(e) => { setTarget(e.target.value); setManualTarget(''); }}
+                  style={selectStyle}
+                >
                   <option value="">— elige destino —</option>
                   {users.map((u) => (
                     <option key={u.email} value={u.email} style={{ background: '#0f1525' }}>
@@ -245,7 +286,15 @@ export function AssignManager({ users }: { users: AssignUser[] }) {
                     </option>
                   ))}
                 </select>
-                <button onClick={assign} disabled={busy || !target || selected.size === 0} style={btn('#F7941D', busy || !target || selected.size === 0)}>
+                <span style={{ color: 'var(--text3)', fontSize: 12 }}>o manual:</span>
+                <input
+                  value={manualTarget}
+                  onChange={(e) => setManualTarget(e.target.value)}
+                  list="zoho-users-list"
+                  placeholder="correo destino"
+                  style={{ ...selectStyle, minWidth: 220 }}
+                />
+                <button onClick={assign} disabled={busy || !effectiveTarget || selected.size === 0} style={btn('#F7941D', busy || !effectiveTarget || selected.size === 0)}>
                   {busy ? 'Asignando…' : `Reasignar ${selected.size}`}
                 </button>
               </div>

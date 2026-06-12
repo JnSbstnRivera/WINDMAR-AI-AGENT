@@ -16,13 +16,31 @@
 
 // Admins permanentes — hardcoded para garantía total de acceso.
 // Para QUITAR uno de aquí, hay que modificar este archivo (deploy).
+// d.riano@windmarhome.com retirada el 2026-06-12 (pedido del super admin).
 const HARDCODED_ADMINS = [
   'juan.s@windmarhome.com',
   'a.rengifo@windmarhome.com',
   'jesus.castro@windmarhome.com',
   'd.buitrago@windmarhome.com',
-  'd.riano@windmarhome.com',
 ];
+
+// SUPER ADMINS — pueden gestionar (suspender/eliminar/degradar) a otros admins.
+// Candado máximo: solo modificable por deploy + env var SUPERADMIN_EMAILS.
+const HARDCODED_SUPERADMINS = ['juan.s@windmarhome.com'];
+
+function getSuperAdminEmails(): Set<string> {
+  const fromEnv = (process.env.SUPERADMIN_EMAILS || '')
+    .split(',')
+    .map((e) => e.trim().toLowerCase())
+    .filter(Boolean);
+  return new Set([...HARDCODED_SUPERADMINS, ...fromEnv]);
+}
+
+/** ¿Este email es SUPER admin (puede gestionar a otros admins)? */
+export function isSuperAdmin(email: string | null | undefined): boolean {
+  if (!email) return false;
+  return getSuperAdminEmails().has(email.toLowerCase());
+}
 
 function getAdminEmails(): Set<string> {
   const fromEnv = (process.env.ADMIN_EMAILS || '')

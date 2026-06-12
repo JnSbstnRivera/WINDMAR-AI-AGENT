@@ -1,3 +1,5 @@
+import { auth } from '@/auth';
+import { isSuperAdmin } from '@/lib/admin-auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { UsersManager, type AdminUser } from '@/components/admin/UsersManager';
 
@@ -9,6 +11,10 @@ export const dynamic = 'force-dynamic';
  * La autorización (allowlist por email) ya la aplica src/app/admin/layout.tsx.
  */
 export default async function AdminUsersPage() {
+  const session = await auth();
+  const viewerEmail = session?.user?.email?.toLowerCase() || '';
+  const viewerIsSuper = isSuperAdmin(viewerEmail);
+
   const { data } = await getSupabaseAdmin()
     .from('user_roles')
     .select(
@@ -21,5 +27,5 @@ export default async function AdminUsersPage() {
     (a, b) => rank(a.status) - rank(b.status)
   );
 
-  return <UsersManager initialUsers={users} />;
+  return <UsersManager initialUsers={users} viewerEmail={viewerEmail} viewerIsSuper={viewerIsSuper} />;
 }
