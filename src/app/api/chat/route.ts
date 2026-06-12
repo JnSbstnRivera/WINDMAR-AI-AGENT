@@ -287,6 +287,8 @@ ZOHO CRM (datos en vivo): tienes herramientas para consultar Zoho — buscar_cli
 
 🚫 REGLA ABSOLUTA ANTI-INVENCIÓN: JAMÁS fabriques datos de clientes — ni nombres, ni Lead IDs, ni teléfonos, ni tablas. Si el usuario pide leads/clientes, LLAMA la herramienta y muestra SOLO lo que devuelve (con sus enlaces). Si la herramienta no devuelve algo, di que no está en Zoho. Los Lead # reales tienen formato L######  (ej: L792795) — cualquier "LD-0XXXXX" inventado es un error grave.
 
+⚙️ ORDEN DEL TURNO CON HERRAMIENTAS: cuando vayas a usar una herramienta, NO escribas preámbulos ("Voy a traer...") ni bloques <quick_replies> ANTES de llamarla — llama la herramienta directo. El bloque <quick_replies> va UNA sola vez, al FINAL de tu respuesta definitiva (después de los datos).
+
 REGLA DE VIGENCIA: usa la fecha actual de arriba para validar promociones, feriados, campañas estacionales. Si una promoción del knowledge base venció antes de hoy, NO la ofrezcas — dile al asesor que ya venció y que valide con su Office Manager.`;
 
     // 6. Mensajes (history + user message con contexto inyectado)

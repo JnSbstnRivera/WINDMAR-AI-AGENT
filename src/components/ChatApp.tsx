@@ -31,16 +31,26 @@ function generateId() {
  * Tolera variantes: con/sin guiones, con bullets, líneas vacías.
  */
 function extractQuickReplies(text: string): { cleanText: string; replies: string[] } {
-  const re = /<quick_replies>\s*([\s\S]*?)\s*<\/quick_replies>/i;
-  const match = text.match(re);
-  if (!match) return { cleanText: text, replies: [] };
-  const inner = match[1];
-  const replies = inner
-    .split('\n')
-    .map((l) => l.replace(/^[\s\-*•]+/, '').trim())
-    .filter((l) => l.length > 0 && l.length < 100)
-    .slice(0, 3);
-  const cleanText = text.replace(re, '').trim();
+  // GLOBAL: el loop agéntico puede producir VARIOS bloques (uno antes del
+  // tool call y otro al final). Quitamos todos del texto y nos quedamos con
+  // los chips del ÚLTIMO bloque con contenido.
+  const re = /<quick_replies>\s*([\s\S]*?)\s*<\/quick_replies>/gi;
+  let replies: string[] = [];
+  let match: RegExpExecArray | null;
+  while ((match = re.exec(text)) !== null) {
+    const parsed = match[1]
+      .split('\n')
+      .map((l) => l.replace(/^[\s\-*•]+/, '').trim())
+      .filter((l) => l.length > 0 && l.length < 100)
+      .slice(0, 3);
+    if (parsed.length > 0) replies = parsed;
+  }
+  // Limpiar también tags sueltos/incompletos (ej. bloque cortado por el stream)
+  const cleanText = text
+    .replace(re, '')
+    .replace(/<quick_replies>[\s\S]*$/i, '')
+    .replace(/<\/?quick_replies>/gi, '')
+    .trim();
   return { cleanText, replies };
 }
 

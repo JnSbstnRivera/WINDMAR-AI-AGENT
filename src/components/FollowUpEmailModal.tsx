@@ -137,6 +137,44 @@ export function FollowUpEmailModal({ asesorName, asesorEmail, asesorCargo, onClo
   const [customSubject, setCustomSubject] = useState<string>('');
   const [status, setStatus] = useState<Status>('idle');
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  // Autocompletar desde Zoho: Lead# (L######), email o teléfono → nombre + correo
+  const [zohoQuery, setZohoQuery] = useState('');
+  const [zohoLooking, setZohoLooking] = useState(false);
+  const [zohoMsg, setZohoMsg] = useState<{ ok: boolean; text: string } | null>(null);
+
+  async function lookupZoho() {
+    const q = zohoQuery.trim();
+    if (q.length < 3 || zohoLooking) return;
+    setZohoLooking(true);
+    setZohoMsg(null);
+    try {
+      const res = await fetch(`/api/zoho/search?q=${encodeURIComponent(q)}`);
+      const data = await res.json();
+      if (!res.ok) {
+        setZohoMsg({ ok: false, text: data.error || 'Error consultando Zoho' });
+        return;
+      }
+      const lead =
+        data.mode === 'single' ? data.client?.lead :
+        data.mode === 'list' ? data.leads?.[0] : null;
+      if (!lead) {
+        setZohoMsg({ ok: false, text: data.message || 'No se encontró el lead en Zoho' });
+        return;
+      }
+      setName(lead.fullName || '');
+      setEmail(lead.email || '');
+      setZohoMsg({
+        ok: true,
+        text: lead.email
+          ? `✓ ${lead.fullName} (${lead.leadNumber || 'lead'}) — nombre y correo completados`
+          : `✓ ${lead.fullName} — sin correo en Zoho, complétalo manual`,
+      });
+    } catch {
+      setZohoMsg({ ok: false, text: 'Error de conexión con Zoho' });
+    } finally {
+      setZohoLooking(false);
+    }
+  }
   const nameInputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -556,6 +594,42 @@ export function FollowUpEmailModal({ asesorName, asesorEmail, asesorCargo, onClo
               para mayor claridad. En la columna de 320px, esto da más aire
               al input y se lee mejor el label. */}
           <div className="space-y-3">
+            {/* Lead de Zoho (opcional) — PRIMERO: autocompleta nombre y correo */}
+            <div>
+              <label className="block text-xs font-semibold text-[#F7941D] mb-1.5 uppercase tracking-wider">
+                🔍 Lead de Zoho (opcional)
+              </label>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={zohoQuery}
+                  onChange={(e) => setZohoQuery(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      lookupZoho();
+                    }
+                  }}
+                  disabled={disabled || zohoLooking}
+                  placeholder="L792795, email o teléfono"
+                  className="flex-1 px-3.5 py-2.5 rounded-lg border border-[#F7941D]/40 bg-white dark:bg-[#0a1628] text-[#1B3A5C] dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#F7941D]/50 focus:border-[#F7941D] transition-all disabled:opacity-50"
+                />
+                <button
+                  type="button"
+                  onClick={lookupZoho}
+                  disabled={disabled || zohoLooking || zohoQuery.trim().length < 3}
+                  className="px-3.5 py-2.5 rounded-lg text-sm font-semibold bg-[#F7941D] text-[#1B3A5C] disabled:opacity-40 cursor-pointer whitespace-nowrap"
+                >
+                  {zohoLooking ? '…' : 'Buscar'}
+                </button>
+              </div>
+              {zohoMsg && (
+                <p className={`mt-1.5 text-[11px] leading-snug ${zohoMsg.ok ? 'text-green-600 dark:text-green-400' : 'text-red-500 dark:text-red-400'}`}>
+                  {zohoMsg.text}
+                </p>
+              )}
+            </div>
+
             <div>
               <label className="block text-xs font-semibold text-[#1B3A5C] dark:text-gray-300 mb-1.5 uppercase tracking-wider">
                 Nombre del cliente
