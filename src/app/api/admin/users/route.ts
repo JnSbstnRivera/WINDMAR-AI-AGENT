@@ -7,8 +7,10 @@ import { logAudit } from '@/lib/audit';
 export const runtime = 'nodejs';
 
 const ALLOWED_ROLES = ['Asesor', 'Líder', 'Channel', 'Project M', 'Admin'];
-const ALLOWED_ACTIONS = ['approve', 'reject', 'suspend', 'reactivate', 'set-role', 'delete'] as const;
+const ALLOWED_ACTIONS = ['create', 'approve', 'reject', 'suspend', 'reactivate', 'set-role', 'delete'] as const;
 type Action = (typeof ALLOWED_ACTIONS)[number];
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 /**
  * GET /api/admin/users
@@ -56,7 +58,13 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'No autorizado' }, { status: 403 });
   }
 
-  let body: { email?: string; action?: Action; rol?: string };
+  let body: {
+    email?: string;
+    action?: Action;
+    rol?: string;
+    display_name?: string;
+    departamento?: string;
+  };
   try {
     body = await req.json();
   } catch {
@@ -71,11 +79,70 @@ export async function POST(req: Request) {
   if (!action || !ALLOWED_ACTIONS.includes(action)) {
     return NextResponse.json({ error: 'Acción inválida' }, { status: 400 });
   }
-  if ((action === 'approve' || action === 'set-role') && rol && !ALLOWED_ROLES.includes(rol)) {
+  if ((action === 'create' || action === 'approve' || action === 'set-role') && rol && !ALLOWED_ROLES.includes(rol)) {
     return NextResponse.json({ error: `Rol inválido: ${rol}` }, { status: 400 });
   }
 
   const supabase = getSupabaseAdmin();
+
+  // ── CREATE: alta manual de un usuario por un admin ──
+  // El usuario nace YA aprobado (status 'active'), porque un admin lo está
+  // agregando a propósito. Cuando esa persona inicie sesión con Microsoft, el
+  // upsert de auth.ts usa ignoreDuplicates → respeta este rol y estado.
+  if (action === 'create') {
+    if (!EMAIL_RE.test(targetEmail)) {
+      return NextResponse.json({ error: 'Correo inválido' }, { status: 400 });
+    }
+    const newRol = rol && ALLOWED_ROLES.includes(rol) ? rol : 'Asesor';
+    const displayName = (body.display_name || '').trim() || targetEmail.split('@')[0];
+    const departamento = (body.departamento || '').trim() || null;
+
+    const { data: existing } = await supabase
+      .from('user_roles')
+      .select('user_email')
+      .eq('user_email', targetEmail)
+      .maybeSingle();
+    if (existing) {
+      return NextResponse.json({ error: 'Ese usuario ya existe.' }, { status: 409 });
+    }
+
+    const nowCreate = new Date().toISOString();
+    const { error: insErr } = await supabase.from('user_roles').insert({
+      user_email: targetEmail,
+      display_name: displayName,
+      departamento,
+      rol: newRol,
+      status: 'active',
+      is_superadmin: false,
+      assigned_by: adminEmail,
+      approved_by: adminEmail,
+      approved_at: nowCreate,
+    });
+    if (insErr) {
+      console.error('[admin/users] create error:', insErr.message);
+      return NextResponse.json({ error: 'No se pudo crear el usuario' }, { status: 500 });
+    }
+
+    await logAudit(adminEmail, 'access.create', targetEmail, { rol: newRol, departamento });
+
+    return NextResponse.json({
+      ok: true,
+      action,
+      user: {
+        user_email: targetEmail,
+        display_name: displayName,
+        departamento,
+        rol: newRol,
+        status: 'active',
+        is_superadmin: false,
+        approved_by: adminEmail,
+        approved_at: nowCreate,
+        created_at: nowCreate,
+        photo_url: null,
+        zoho_user_id: null,
+      },
+    });
+  }
 
   // Proteger a los superadmins: no se pueden rechazar/suspender ni degradar.
   const { data: target } = await supabase

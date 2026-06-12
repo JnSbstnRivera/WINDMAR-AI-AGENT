@@ -163,7 +163,8 @@ export default function LoginPage() {
 
           {/* Footer 1 — solo cuentas autorizadas (acento naranja) */}
           <p className="text-[12px] text-gray-500 dark:text-gray-400 text-center mt-6">
-            Solo cuentas <strong className="text-[#F7941D]">@windmarhome.com</strong>
+            Solo cuentas <strong className="text-[#F7941D]">@windmarhome.com</strong> y{' '}
+            <strong className="text-[#F7941D]">@windmarenergy.com</strong>
           </p>
         </div>
 

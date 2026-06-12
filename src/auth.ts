@@ -19,6 +19,25 @@ export function isAuthEnabled() {
   );
 }
 
+// Dominios corporativos del grupo Windmar autorizados para iniciar sesión.
+// La env var ALLOWED_EMAIL_DOMAINS (coma-separada) SUMA dominios sin reemplazar
+// los hardcoded — así nunca se pierde acceso si la env var se borra.
+const HARDCODED_DOMAINS = ['windmarhome.com', 'windmarenergy.com'];
+
+function getAllowedDomains(): Set<string> {
+  const fromEnv = (process.env.ALLOWED_EMAIL_DOMAINS || '')
+    .split(',')
+    .map((d) => d.trim().toLowerCase().replace(/^@/, ''))
+    .filter(Boolean);
+  return new Set([...HARDCODED_DOMAINS, ...fromEnv]);
+}
+
+/** ¿El correo pertenece a un dominio corporativo autorizado? */
+export function isAllowedDomain(email: string | null | undefined): boolean {
+  const domain = (email || '').toLowerCase().split('@')[1] || '';
+  return !!domain && getAllowedDomains().has(domain);
+}
+
 /**
  * Convierte "Juan Sebastian Rivera Jiménez" → "Juan Rivera" (primer nombre + primer apellido).
  * Útil para firmas formales de correo aunque el display_name del asesor sea un apodo.
@@ -129,8 +148,10 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       const email = user.email?.trim().toLowerCase();
       if (!email) return false;
 
-      // Restricción de dominio — solo correos corporativos
-      if (!email.endsWith('@windmarhome.com')) {
+      // Restricción de dominio — solo correos corporativos del grupo Windmar.
+      // Se aceptan windmarhome.com y windmarenergy.com (empresa hermana).
+      // Extensible sin tocar código vía env var ALLOWED_EMAIL_DOMAINS (coma-separados).
+      if (!isAllowedDomain(email)) {
         console.warn('[auth] Acceso rechazado por dominio:', email);
         return false;
       }

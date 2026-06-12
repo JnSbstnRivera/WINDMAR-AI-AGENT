@@ -18,6 +18,13 @@ export interface AdminUser {
 
 const ROLES = ['Asesor', 'Líder', 'Channel', 'Project M', 'Admin'];
 
+// Mismas áreas que el OnboardingModal. "Otro" abre un campo de texto libre.
+const DEPARTAMENTOS = ['Telemercadeo', 'Ventas', 'Vass', 'Calidad', 'Otro'];
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+const emptyForm = { email: '', display_name: '', departamento: '', departamentoCustom: '', rol: 'Asesor' };
+
 const STATUS_LABEL: Record<string, string> = {
   pending: 'Pendiente',
   active: 'Activo',
@@ -50,6 +57,50 @@ export function UsersManager({
   const [error, setError] = useState<string | null>(null);
   const [syncing, setSyncing] = useState(false);
   const [syncMsg, setSyncMsg] = useState<string | null>(null);
+  const [showCreate, setShowCreate] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const [createMsg, setCreateMsg] = useState<string | null>(null);
+  const [form, setForm] = useState(emptyForm);
+
+  async function createUser() {
+    const email = form.email.trim().toLowerCase();
+    if (!EMAIL_RE.test(email)) {
+      setError('Escribe un correo válido.');
+      return;
+    }
+    const departamento =
+      form.departamento === 'Otro' ? form.departamentoCustom.trim() : form.departamento.trim();
+
+    setCreating(true);
+    setError(null);
+    setCreateMsg(null);
+    try {
+      const res = await fetch('/api/admin/users', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'create',
+          email,
+          display_name: form.display_name.trim(),
+          departamento,
+          rol: form.rol,
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok) {
+        setError(json.error || 'No se pudo agregar el usuario');
+        return;
+      }
+      setUsers((prev) => [json.user as AdminUser, ...prev]);
+      setForm(emptyForm);
+      setShowCreate(false);
+      setCreateMsg(`${email} agregado y aprobado. Puede iniciar sesión con Microsoft.`);
+    } catch {
+      setError('Error de conexión');
+    } finally {
+      setCreating(false);
+    }
+  }
 
   async function syncZoho() {
     setSyncing(true);
@@ -220,19 +271,129 @@ export function UsersManager({
         <span style={{ fontFamily: 'Outfit, sans-serif', fontWeight: 600, color: 'var(--text1)', fontSize: 16 }}>
           Equipo ({rest.length})
         </span>
-        <button
-          onClick={syncZoho}
-          disabled={syncing}
-          style={{
-            fontSize: 12, fontWeight: 600, padding: '7px 13px', borderRadius: 8,
-            cursor: syncing ? 'not-allowed' : 'pointer',
-            border: '1px solid #38bdf8', background: 'transparent', color: '#38bdf8',
-          }}
-          title="Resuelve el Owner de Zoho de cada asesor (por correo) y lo guarda"
-        >
-          {syncing ? 'Sincronizando…' : '↻ Sincronizar IDs Zoho'}
-        </button>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          <button
+            onClick={() => {
+              setShowCreate((v) => !v);
+              setCreateMsg(null);
+              setError(null);
+            }}
+            style={{
+              fontSize: 12, fontWeight: 700, padding: '7px 13px', borderRadius: 8, cursor: 'pointer',
+              border: '1px solid #F7941D',
+              background: showCreate ? 'transparent' : '#F7941D',
+              color: showCreate ? '#F7941D' : '#0c1322',
+            }}
+            title="Agregar un usuario manualmente (queda aprobado)"
+          >
+            {showCreate ? '✕ Cancelar' : '＋ Agregar usuario'}
+          </button>
+          <button
+            onClick={syncZoho}
+            disabled={syncing}
+            style={{
+              fontSize: 12, fontWeight: 600, padding: '7px 13px', borderRadius: 8,
+              cursor: syncing ? 'not-allowed' : 'pointer',
+              border: '1px solid #38bdf8', background: 'transparent', color: '#38bdf8',
+            }}
+            title="Resuelve el Owner de Zoho de cada asesor (por correo) y lo guarda"
+          >
+            {syncing ? 'Sincronizando…' : '↻ Sincronizar IDs Zoho'}
+          </button>
+        </div>
       </div>
+
+      {/* ── Formulario de alta manual ── */}
+      {showCreate && (
+        <div style={{ ...card, marginBottom: 12, display: 'grid', gap: 12 }}>
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+              gap: 12,
+            }}
+          >
+            <label style={fieldLabel}>
+              Correo *
+              <input
+                type="email"
+                value={form.email}
+                onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
+                placeholder="nombre@windmarhome.com"
+                autoComplete="off"
+                style={fieldInput}
+              />
+            </label>
+            <label style={fieldLabel}>
+              Nombre
+              <input
+                type="text"
+                value={form.display_name}
+                onChange={(e) => setForm((f) => ({ ...f, display_name: e.target.value }))}
+                placeholder="Cómo se mostrará"
+                autoComplete="off"
+                style={fieldInput}
+              />
+            </label>
+            <label style={fieldLabel}>
+              Área
+              <select
+                value={form.departamento}
+                onChange={(e) => setForm((f) => ({ ...f, departamento: e.target.value }))}
+                style={fieldInput}
+              >
+                <option value="">— Selecciona —</option>
+                {DEPARTAMENTOS.map((d) => (
+                  <option key={d} value={d} style={{ background: '#0f1525' }}>
+                    {d}
+                  </option>
+                ))}
+              </select>
+            </label>
+            {form.departamento === 'Otro' && (
+              <label style={fieldLabel}>
+                Área (otra)
+                <input
+                  type="text"
+                  value={form.departamentoCustom}
+                  onChange={(e) => setForm((f) => ({ ...f, departamentoCustom: e.target.value }))}
+                  placeholder="Escribe el área"
+                  autoComplete="off"
+                  style={fieldInput}
+                />
+              </label>
+            )}
+            <label style={fieldLabel}>
+              Rol
+              <select
+                value={form.rol}
+                onChange={(e) => setForm((f) => ({ ...f, rol: e.target.value }))}
+                style={fieldInput}
+              >
+                {ROLES.map((r) => (
+                  <option key={r} value={r} style={{ background: '#0f1525' }}>
+                    {r}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            <button onClick={createUser} disabled={creating} style={btn('#22c55e')}>
+              {creating ? 'Agregando…' : 'Agregar y aprobar'}
+            </button>
+            <span style={{ color: 'var(--text3)', fontSize: 11 }}>
+              El usuario queda aprobado e iniciará sesión con su cuenta de Microsoft.
+            </span>
+          </div>
+        </div>
+      )}
+
+      {createMsg && (
+        <div style={{ ...card, borderColor: '#22c55e55', color: '#22c55e', marginBottom: 12, fontSize: 12 }}>
+          {createMsg}
+        </div>
+      )}
       {syncMsg && (
         <div style={{ ...card, borderColor: '#38bdf855', color: '#38bdf8', marginBottom: 12, fontSize: 12 }}>
           {syncMsg}
@@ -338,6 +499,30 @@ function Avatar({ user }: { user: AdminUser }) {
     </div>
   );
 }
+
+const fieldLabel: React.CSSProperties = {
+  display: 'flex',
+  flexDirection: 'column',
+  gap: 5,
+  fontSize: 11,
+  fontWeight: 600,
+  color: 'var(--text2)',
+  textTransform: 'uppercase',
+  letterSpacing: '.04em',
+};
+
+const fieldInput: React.CSSProperties = {
+  background: '#0f1525',
+  color: '#E8EAF0',
+  border: '1px solid var(--glass-border)',
+  borderRadius: 8,
+  padding: '8px 10px',
+  fontSize: 13,
+  fontWeight: 400,
+  textTransform: 'none',
+  letterSpacing: 'normal',
+  width: '100%',
+};
 
 function btn(color: string, outline = false): React.CSSProperties {
   return {
