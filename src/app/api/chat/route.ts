@@ -321,6 +321,17 @@ REGLA DE VIGENCIA: usa la fecha actual de arriba para validar promociones, feria
       ...zohoTools,
     ];
 
+    // INTENCIÓN ZOHO → FORZAR herramienta (tool_choice: any) en la 1ra iteración.
+    // Haiku a veces anuncia "voy a traer..." y termina el turno sin llamar la
+    // herramienta (visto en producción). Si el mensaje habla de leads/clientes/
+    // cartera, lo obligamos a nivel de API: no puede responder sin usar una tool.
+    const zohoIntent =
+      !useWebSearch &&
+      (/(mis|tus|los|las|el|la|dame|tr[áa]eme|busca|buscame|búscame|mu[ée]strame|listado|lista|cu[áa]nt[oa]s|qui[ée]n(es)?)[\s\S]{0,50}\b(leads?|casos?|cartera|vendid[oa]s?|clientes?|seguimientos?|pipeline|no contesta|citas?)\b/i.test(message) ||
+        /\bL\d{5,}\b/.test(message) ||
+        /(deja|agrega|pon|escribe)[\s\S]{0,25}\bnota\b/i.test(message) ||
+        /\b(re)?asigna(r|me|le)?\b/i.test(message));
+
     // 8. Loop agéntico con streaming: piped text deltas; si el modelo pide una
     // herramienta Zoho, la ejecutamos server-side (con scoping) y continuamos.
     const requestStart = Date.now();
@@ -338,12 +349,17 @@ REGLA DE VIGENCIA: usa la fecha actual de arriba para validar promociones, feria
           let finalMessage: Anthropic.Message | null = null;
 
           for (let iter = 0; iter < 6; iter++) {
+            // 1ra iteración con intención Zoho → el modelo DEBE llamar una
+            // herramienta (no puede "anunciar" y terminar sin datos).
+            // Iteraciones siguientes: auto (ya tiene el tool_result, redacta).
+            const forceTool = iter === 0 && zohoIntent;
             const stream = anthropic.messages.stream({
               model: 'claude-haiku-4-5',
               max_tokens: 1024,
               system: [{ type: 'text', text: SYSTEM_PROMPT, cache_control: { type: 'ephemeral' } }],
               messages: convo,
               tools,
+              ...(forceTool ? { tool_choice: { type: 'any' as const } } : {}),
             });
 
             for await (const event of stream) {
