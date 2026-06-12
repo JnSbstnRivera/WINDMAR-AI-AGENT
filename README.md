@@ -13,7 +13,7 @@
 
 ## 🎯 ¿Qué hace?
 
-Sun Bot es el agente de IA del call center de Windmar Home PR. Es un chat con login corporativo (Microsoft Entra ID) que responde dudas de los asesores sobre el producto, recomienda el cotizador correcto, genera coaching de ventas y — lo más nuevo — **opera el CRM de Zoho por lenguaje natural** (tool-use): busca clientes, trae carteras de leads en tabla, agrega notas y reasigna leads, todo con permisos por rol. Incluye además un **panel administrativo ejecutivo** (métricas, gestión, asignación, auditoría y administración de usuarios).
+Sun Bot es el agente de IA del call center de Windmar Home PR. Es un chat con login corporativo (Microsoft Entra ID) que responde dudas de los asesores sobre el producto, recomienda el cotizador correcto, genera coaching de ventas y — lo más nuevo — **opera el CRM de Zoho por lenguaje natural** (tool-use): busca clientes, trae carteras de leads en tabla, agrega notas y reasigna leads, todo con permisos por rol. Incluye además un **panel administrativo ejecutivo** (métricas, gestión, asignación, auditoría, administración de usuarios y **configuración/salud de Zoho** — los mapeos de estados se editan sin redeploy).
 
 App migrada del proyecto Vite original a Next.js. El motor LLM original era **Groq (`llama-3.3-70b-versatile`)** y actualmente corre sobre **Claude Haiku 4.5 (Anthropic)** vía `@anthropic-ai/sdk`, con prompt caching del SYSTEM_PROMPT, streaming y **tool-use agéntico** (loop de hasta 6 iteraciones) para las herramientas de Zoho.
 
@@ -38,6 +38,11 @@ App migrada del proyecto Vite original a Next.js. El motor LLM original era **Gr
   - `asignar_leads` — reasignación masiva de Owner. **Solo roles elevados.**
   - `agregar_nota` — 8 plantillas por escenario + **firma automática `🤖☀️ SUN BOT`**. **Solo roles elevados.**
   - **Scoping por rol** (`zoho-access.ts`): el Asesor es solo-lectura y ve solo su cartera; Líder/Channel/Project M/Admin ven todo y pueden escribir. Cuando hay intención de Zoho, se fuerza `tool_choice` para que el modelo ejecute (no solo "anuncie").
+  - **Resolución de asesor sin ambigüedad** (`resolveAsesor`): si un nombre matchea a varios usuarios de Zoho (ej. "juan" → 12 tocayos), el agente **pide elegir** en vez de adivinar; "mis leads" siempre resuelve al **propio usuario** por email→ID exacto (self-detection aunque el modelo mande el primer nombre). Mata el bug de carteras cruzadas entre tocayos.
+  - **Estados de venta reales**: en Windmar un Deal = **contrato firmado** (se paga a la primera firma; el lead pasa a "Caso Vendido"); solo `Cancelled` es pérdida. El resumen del cliente distingue *comprado* vs *en proceso de instalación* vs *energizado* (`dealStateOf` / `isDealCompleted`) — antes usaba "Closed Won/Lost" (inexistentes en la org) y `sistemaComprado` salía siempre vacío.
+  - **Mapeos editables sin deploy**: `Lead_Status → bucket` y `Deal Stage → estado` viven en Supabase (`zoho_status_map`, `zoho_deal_stage_map`) con cache de 5 min y **fallback a los defaults del código** (`zoho-config.ts`) — el chat nunca se rompe por config.
+  - **Telemetría** (`zoho_query_log`): cada operación del agente registra herramienta, latencia, éxito/error y usuario — alimenta el dashboard de salud.
+  - `max_tokens` dinámico (2048 en consultas Zoho) para que las tablas de leads **no se trunquen** a media respuesta.
 - **Coach de ventas IA** — sugerencias de qué ofrecer según el cliente y sus deals, como chips accionables.
 - **Envío de correos** de seguimiento al cliente (Microsoft Graph, firma corporativa, autocompletar desde Zoho).
 - **Panel administrativo** (tema ejecutivo neón, allowlist por email):
@@ -45,6 +50,7 @@ App migrada del proyecto Vite original a Next.js. El motor LLM original era **Gr
   - **Gestión** (`/admin/gestion`) — chat con el agente Zoho por lenguaje natural para líderes.
   - **Asignar** (`/admin/asignar`) — tablero para ver y reasignar carteras, con búsqueda manual de usuarios de Zoho.
   - **Usuarios** (`/admin/usuarios`) — aprobar/rechazar ingresos **y agregar usuarios manualmente** (correo, nombre, área, rol; quedan pre-aprobados). Roles y suspensión/eliminación con **jerarquía Super Admin**.
+  - **Zoho** (`/admin/zoho`) — **configuración y salud del agente Zoho**: editor de mapeos (qué estados de lead cuentan en cada grupo, qué etapas de deal son venta/completado) que aplica sin redeploy, + dashboard de salud con latencia p50/p95, % de error, consultas por herramienta y errores recientes (RPC `admin_zoho_health`).
   - **Auditoría** (`/admin/auditoria`) — registro append-only (`admin_audit`) de accesos, notas y asignaciones.
 - **Multidominio** — login para `@windmarhome.com` y `@windmarenergy.com` (extensible vía `ALLOWED_EMAIL_DOMAINS`).
 - **Comandos `/` (easter eggs)** sin gastar tokens (texto fijo, no llaman al LLM).
@@ -71,7 +77,7 @@ App migrada del proyecto Vite original a Next.js. El motor LLM original era **Gr
 |---|---|
 | Framework | Next.js 15 + React 19 + TypeScript |
 | Autenticación | NextAuth v5 + Microsoft Entra ID (SSO Windmar) |
-| Base de datos | Supabase (`conversations`, `messages`, `knowledge_base`, `user_roles`, `tools`) |
+| Base de datos | Supabase (`conversations`, `messages`, `knowledge_base`, `user_roles`, `tools`, `admin_audit`, `zoho_status_map`, `zoho_deal_stage_map`, `zoho_query_log`) |
 | Motor LLM | Claude Haiku 4.5 (Anthropic, `@anthropic-ai/sdk`) — migrado desde Groq (`llama-3.3-70b-versatile`) |
 | CRM | Zoho CRM (Self Client) |
 | UI/Markdown | react-markdown + remark-gfm, recharts |
@@ -105,6 +111,8 @@ windmar-ai-agent-next/
 │   │   │   ├── admin/users/route.ts           # Aprobar/rechazar/suspender/eliminar + CREATE (alta manual)
 │   │   │   ├── admin/zoho-sync/route.ts       # Resuelve y guarda zoho_user_id de cada asesor
 │   │   │   ├── admin/zoho-users/route.ts      # Lista usuarios activos de Zoho (asignación)
+│   │   │   ├── admin/zoho/config/route.ts     # GET/POST mapeos editables (status→bucket, stage→estado)
+│   │   │   ├── admin/zoho/health/route.ts     # Salud del agente Zoho (RPC admin_zoho_health)
 │   │   │   ├── zoho/search/route.ts           # Búsqueda de cliente en Zoho
 │   │   │   ├── zoho/client/route.ts           # Detalle de cliente Zoho
 │   │   │   ├── zoho/coach/route.ts            # Coach de ventas IA
@@ -117,6 +125,7 @@ windmar-ai-agent-next/
 │   │   ├── admin/asignar/page.tsx            # Tablero de asignación de carteras
 │   │   ├── admin/auditoria/page.tsx          # Visor del registro admin_audit
 │   │   ├── admin/usuarios/page.tsx           # Aprobar + agregar usuarios + roles
+│   │   ├── admin/zoho/page.tsx               # Config Zoho: mapeos editables + dashboard de salud
 │   │   ├── login/page.tsx                     # Botón Microsoft
 │   │   ├── layout.tsx                         # Esqueleto HTML
 │   │   ├── globals.css                        # Estilos globales (Tailwind v4)
@@ -137,9 +146,11 @@ windmar-ai-agent-next/
 │   │   ├── supabase.ts                        # Cliente admin
 │   │   ├── prompts.ts                         # SYSTEM_PROMPT del LLM
 │   │   ├── tools.ts                           # Herramientas del call center (tabla `tools`)
-│   │   ├── zoho.ts                            # Cliente Zoho (search, leads, deals, assign, note)
-│   │   ├── zoho-agent-tools.ts                # Defs + executor de las tools del agente (tool-use)
+│   │   ├── zoho.ts                            # Cliente Zoho (search, leads, deals, assign, note, resolveAsesor)
+│   │   ├── zoho-agent-tools.ts                # Defs + executor de las tools del agente (tool-use) + telemetría
 │   │   ├── zoho-access.ts                     # Scoping por rol (ViewerScope, canWrite, ownsLead)
+│   │   ├── zoho-status.ts                     # Defaults puros: Lead_Status→bucket, Deal Stage→estado (client-safe)
+│   │   ├── zoho-config.ts                     # Server-only: mapeos desde Supabase (cache 5min + fallback) + logZohoQuery
 │   │   ├── admin-auth.ts                      # Allowlist admin + super admin (por email)
 │   │   ├── audit.ts                           # logAudit() → admin_audit
 │   │   ├── email-templates.ts                # Plantillas de correo
@@ -159,7 +170,9 @@ windmar-ai-agent-next/
 │   ├── 011_admin_with_photos.sql
 │   ├── 012_access_control.sql                 # status/pending, approve flow
 │   ├── 013_admin_audit.sql                    # tabla admin_audit (append-only)
-│   └── 014_relax_departamento.sql             # área de texto libre (RH, etc.)
+│   ├── 014_relax_departamento.sql             # área de texto libre (RH, etc.)
+│   ├── 015_zoho_config.sql                    # zoho_status_map + zoho_deal_stage_map + zoho_query_log (+seeds)
+│   └── 016_admin_zoho_health.sql              # RPC admin_zoho_health (latencia p50/p95, % error)
 ├── public/                                     # Imágenes (sunbot, logo)
 ├── .env.local                                  # Variables locales (NO Git)
 ├── .env.example                                # Plantilla
@@ -250,6 +263,7 @@ En orden, en el SQL Editor de Supabase:
 6. `supabase/migrations/009_usage_by_month_for_all.sql`
 7. `supabase/migrations/010_usage_by_month_only_active.sql`
 8. `supabase/migrations/011_admin_with_photos.sql`
+9. `supabase/migrations/012_access_control.sql` → `016_admin_zoho_health.sql` — en orden (control de acceso, auditoría, áreas libres, config Zoho editable + telemetría, RPC de salud)
 
 ### 3. Probar localmente
 
