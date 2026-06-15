@@ -11,6 +11,11 @@
 
 export type DialerProvider = '3cx' | 'kixie';
 
+// En las máquinas de Windmar, `tel:` lo intercepta el softphone activo (3CX hoy;
+// Kixie cuando su extensión esté en Edge). `callto:` lo robaba Microsoft Teams
+// (que tiene las llamadas deshabilitadas) → se eliminó. Por eso AMBOS proveedores
+// usan `tel:`: el botón llega siempre al teléfono real, nunca a Teams.
+
 /**
  * Normaliza un teléfono de PR a formato marcable E.164.
  * "(787) 555-1234" → "+17875551234". Agrega +1 si son 10 dígitos (PR/US).
@@ -29,8 +34,10 @@ export function normalizeForDial(phone: string | null | undefined): string | nul
  * Construye el href de marcación para un proveedor específico.
  * Devuelve null si el teléfono no es válido.
  */
-export function callHref(phone: string | null | undefined, provider: DialerProvider): string | null {
+export function callHref(phone: string | null | undefined, _provider: DialerProvider): string | null {
   const n = normalizeForDial(phone);
   if (!n) return null;
-  return provider === '3cx' ? `callto:${n}` : `tel:${n}`;
+  // Ambos usan tel: (ver nota arriba). El _provider se mantiene solo para la
+  // etiqueta/tooltip del botón en la UI.
+  return `tel:${n}`;
 }
