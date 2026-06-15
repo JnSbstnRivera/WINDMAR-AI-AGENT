@@ -583,6 +583,8 @@ export interface MyLead {
   consultor: string | null;   // Sales_Rep (consultor de ventas)
   modifiedAt: string | null;
   createdAt: string | null;
+  appointmentAt: string | null; // Presenter_Appointment ("Cita Date/Time")
+  callDate: string | null;      // Llamar_de_esta_fecha ("Llamar Después de esta Fecha")
   zohoUrl: string;
   lastNote?: { content: string; createdAt: string | null } | null;
   /** true si está en bucket accionable y sin nota en las últimas 24h. */
@@ -596,9 +598,9 @@ export interface MyLead {
  * org de PR. Orden client-side por Modified_Time (search no soporta sort).
  */
 export async function getMyLeads(ownerId: string, limit = 1000): Promise<MyLead[]> {
-  const fields = `${LEAD_FIELDS},Modified_Time`;
+  const fields = `${LEAD_FIELDS},Modified_Time,Presenter_Appointment,Llamar_de_esta_fecha`;
   const maps = await getZohoMaps(); // mapeo Lead_Status → bucket (config DB + default)
-  type Raw = ZohoLeadRaw & { Modified_Time?: string };
+  type Raw = ZohoLeadRaw & { Modified_Time?: string; Presenter_Appointment?: string; Llamar_de_esta_fecha?: string };
 
   // Paginación: Zoho devuelve máx 200 por página. Traemos hasta 5 páginas
   // (1000 leads) para que filtros por meses viejos no pierdan registros.
@@ -626,6 +628,8 @@ export async function getMyLeads(ownerId: string, limit = 1000): Promise<MyLead[
     consultor: r.Sales_Rep?.name || null,
     modifiedAt: r.Modified_Time || null,
     createdAt: r.Created_Time || null,
+    appointmentAt: r.Presenter_Appointment || null,
+    callDate: r.Llamar_de_esta_fecha || null,
     zohoUrl: `https://crm.zoho.com/crm/org${ZOHO_ORG_ID}/tab/Leads/${r.id}`,
   }));
 }
