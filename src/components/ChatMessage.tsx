@@ -10,6 +10,7 @@ import { QualityCard } from './QualityCard';
 import { QuickReplies } from './QuickReplies';
 import { ZohoActionCard } from './ZohoActionCard';
 import { LeadsCard } from './LeadsCard';
+import { ClientCardChat } from './ClientCardChat';
 import { useTypewriter } from '@/hooks/useTypewriter';
 
 interface Props {
@@ -315,6 +316,11 @@ function ChatMessageImpl({
           <LeadsCard card={message.leads} onLeadClick={onQuickReply} />
         )}
 
+        {/* Ficha de cliente como tarjeta rica + acciones de 1 clic */}
+        {!isStreaming && message.client && (
+          <ClientCardChat card={message.client} onSend={onQuickReply} />
+        )}
+
         {/* Tarjeta de acción Zoho (nota/estado/seguimiento) a confirmar con 1 clic */}
         {!isStreaming && message.action && <ZohoActionCard action={message.action} />}
 
@@ -461,6 +467,11 @@ export const ChatMessage = memo(ChatMessageImpl, (prev, next) => {
       prev.message.leads?.rows.length === next.message.leads?.rows.length &&
       prev.message.leads?.title === next.message.leads?.title);
 
+  const clientEqual =
+    (!prev.message.client && !next.message.client) ||
+    (prev.message.client?.fullName === next.message.client?.fullName &&
+      prev.message.client?.leadId === next.message.client?.leadId);
+
   return (
     prev.message.id === next.message.id &&
     prev.message.content === next.message.content &&
@@ -468,6 +479,7 @@ export const ChatMessage = memo(ChatMessageImpl, (prev, next) => {
     qualityEqual &&
     actionEqual &&
     leadsEqual &&
+    clientEqual &&
     prev.isStreaming === next.isStreaming &&
     prev.asesorEmail === next.asesorEmail &&
     prev.asesorDisplayName === next.asesorDisplayName &&

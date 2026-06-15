@@ -27,15 +27,17 @@ import {
 } from '@/lib/zoho-access';
 import type { ZohoPendingAction } from '@/lib/zoho-actions';
 import type { ZohoLeadsCard, LeadCardRow } from '@/lib/zoho-leads-card';
+import type { ZohoClientCard, ClientDeal } from '@/lib/zoho-client-card';
 
 /**
  * Resultado de una tool: texto para el modelo + (opcional) datos estructurados
- * que el cliente renderiza como tarjeta (acción a confirmar o lista de leads).
+ * que el cliente renderiza como tarjeta (acción, lista de leads o ficha cliente).
  */
 export interface ZohoToolResult {
   content: string;
   action?: ZohoPendingAction;
   leads?: ZohoLeadsCard;
+  client?: ZohoClientCard;
 }
 
 const WRITE_PREPARE_TOOLS = new Set(['agregar_nota', 'actualizar_estado', 'programar_seguimiento']);
@@ -189,6 +191,8 @@ export async function executeZohoTool(
       ? await prepareWriteTool(name, input, scope)
       : name === 'mis_leads'
       ? await runMisLeads(input, scope)
+      : name === 'buscar_cliente'
+      ? await runBuscarCliente(input, scope)
       : { content: await runZohoTool(name, input, scope) };
     logZohoQuery({ tool: name, ok: true, durationMs: Date.now() - start, userEmail: scope.email });
     return out;
@@ -206,68 +210,6 @@ async function runZohoTool(
   scope: ViewerScope
 ): Promise<string> {
   switch (name) {
-      case 'buscar_cliente': {
-        const query = String(input.query || '').trim();
-        if (query.length < 3) return 'Query muy corta.';
-        const client = await getClientFull(query);
-
-        // FALLBACK — cliente CONVERTIDO: sin lead, pero con Contacto y/o Deals
-        // (ej. "38295 Carlos Manuel Munoz Arce WQ005165360"). Scoping por
-        // owner del contacto/deal para asesores no elevados.
-        if (!client) {
-          const [deals, contacts] = await Promise.all([getDealsByQuery(query), searchContacts(query)]);
-          const visDeals = scope.canSeeAll
-            ? deals
-            : deals.filter((d) => (d.ownerEmail || '').toLowerCase() === scope.email);
-          const visContacts = scope.canSeeAll
-            ? contacts
-            : contacts.filter((c) => (c.ownerEmail || '').toLowerCase() === scope.email);
-
-          if (visDeals.length === 0 && visContacts.length === 0) {
-            return `No se encontró "${query}" en Zoho (ni lead, ni contacto, ni deal${scope.canSeeAll ? '' : ' en tu cartera'}).`;
-          }
-
-          const c = visContacts[0];
-          const lines: string[] = [];
-          lines.push(`CLIENTE CONVERTIDO (ya no tiene lead — está como Contacto/Deal)${c ? `: ${c.fullName}` : ''}`);
-          if (c) {
-            lines.push(`Email: ${c.email || '—'} · Tel: ${c.phone || '—'}`);
-            lines.push(`Owner del contacto: ${c.owner || '—'}`);
-            lines.push(`Contacto en Zoho: ${c.zohoUrl}`);
-          }
-          if (visDeals.length > 0) {
-            lines.push(`DEALS (${visDeals.length}):`);
-            visDeals.slice(0, 6).forEach((d) =>
-              lines.push(
-                `  - ${d.name} · ${d.stage || '?'}${d.amount ? ' · ' + d.amount : ''}${d.closingDate ? ' · cierre ' + d.closingDate : ''} · owner ${d.owner || '—'} · ${d.zohoUrl}`
-              )
-            );
-          }
-          return lines.join('\n');
-        }
-
-        if (!ownsLead(client.lead, scope)) return NOT_IN_PORTFOLIO_MSG;
-        const l = client.lead;
-        const maps = await getZohoMaps();
-        const deals = client.deals
-          .slice(0, 6)
-          .map((d) => `  - ${d.name} · ${d.stage || '?'}${d.amount ? ' · ' + d.amount : ''}`)
-          .join('\n');
-        return [
-          `CLIENTE: ${l.fullName}`,
-          `Lead #: ${l.leadNumber || '—'} · enlace: ${l.zohoUrl}`,
-          `Estado: ${l.stage || 'sin estado'} (bucket: ${BUCKET_LABEL[maps.bucketOf(l.stage)]})`,
-          `Email: ${l.email || 'no registrado'} · Tel: ${l.mobile || l.phone || 'no registrado'}`,
-          `Consultor (Sales_Rep): ${l.consultor || 'sin asignar'}`,
-          `Owner (lead owner): ${l.owner || 'sin asignar'}`,
-          `Sistema comprado: ${client.summary.sistemaComprado}`,
-          `Cotizaciones: ${client.summary.totalDeals} (${client.summary.dealsAbiertos} en proceso de instalación)`,
-          deals ? `Deals:\n${deals}` : 'Sin deals.',
-          `Hipervínculo Zoho: ${l.zohoUrl}`,
-          `Lead ID: ${l.id}`,
-        ].join('\n');
-      }
-
       case 'asignar_leads': {
         if (!scope.canSeeAll) return 'No tienes permiso para asignar leads (acción de líder/admin).';
         const leadIds = Array.isArray(input.lead_ids) ? (input.lead_ids as unknown[]).map(String) : [];
@@ -436,6 +378,73 @@ async function runMisLeads(input: Record<string, unknown>, scope: ViewerScope): 
   ].join('\n');
 
   return { content, leads: card };
+}
+
+// ════════════════════════════════════════════════════════════════
+// BUSCAR CLIENTE — ficha como DATOS ESTRUCTURADOS (tarjeta rica)
+// ════════════════════════════════════════════════════════════════
+// Igual que mis_leads: ya no devuelve texto para que el modelo lo redacte. El
+// cliente pinta la ficha con ClientCardChat; el modelo solo da coaching breve.
+
+async function runBuscarCliente(input: Record<string, unknown>, scope: ViewerScope): Promise<ZohoToolResult> {
+  const query = String(input.query || '').trim();
+  if (query.length < 3) return { content: 'Query muy corta — pídele al asesor email, teléfono, nombre o Lead#.' };
+
+  const full = await getClientFull(query);
+  const maps = await getZohoMaps();
+
+  // FALLBACK — cliente CONVERTIDO (sin lead; Contacto/Deal). Scoping por owner.
+  if (!full) {
+    const [deals, contacts] = await Promise.all([getDealsByQuery(query), searchContacts(query)]);
+    const visDeals = scope.canSeeAll ? deals : deals.filter((d) => (d.ownerEmail || '').toLowerCase() === scope.email);
+    const visContacts = scope.canSeeAll ? contacts : contacts.filter((c) => (c.ownerEmail || '').toLowerCase() === scope.email);
+    if (visDeals.length === 0 && visContacts.length === 0) {
+      return { content: `No se encontró "${query}" en Zoho (ni lead, ni contacto, ni deal${scope.canSeeAll ? '' : ' en tu cartera'}). Dile al asesor que verifique el dato.` };
+    }
+    const c = visContacts[0];
+    const cardDeals: ClientDeal[] = visDeals.slice(0, 6).map((d) => ({ name: d.name, stage: d.stage, amount: d.amount, zohoUrl: d.zohoUrl }));
+    const comprados = visDeals.filter((d) => maps.isDealCompleted(d.stage)).map((d) => d.name);
+    const card: ZohoClientCard = {
+      kind: 'convertido',
+      fullName: c?.fullName || (visDeals[0]?.contactName ?? 'Cliente'),
+      leadId: null, leadNumber: null, status: null, bucket: null,
+      email: c?.email ?? null, phone: c?.phone ?? null,
+      owner: c?.owner ?? visDeals[0]?.owner ?? null, consultor: null,
+      zohoUrl: c?.zohoUrl || visDeals[0]?.zohoUrl || '',
+      sistemaComprado: comprados.length ? comprados.join(', ') : (visDeals.length ? 'En proceso de instalación' : '—'),
+      totalDeals: visDeals.length,
+      dealsAbiertos: visDeals.filter((d) => !maps.isDealCompleted(d.stage) && maps.dealStateOf(d.stage) !== 'perdido').length,
+      deals: cardDeals,
+    };
+    return {
+      content: `FICHA mostrada como tarjeta: cliente CONVERTIDO ${card.fullName} (ya es Contacto/Deal, sin lead). NO repitas los datos. En 1-2 frases di el próximo paso (postventa, referidos, ampliación). Cierra con <quick_replies> de 3 chips.`,
+      client: card,
+    };
+  }
+
+  if (!ownsLead(full.lead, scope)) return { content: NOT_IN_PORTFOLIO_MSG };
+  const l = full.lead;
+  const card: ZohoClientCard = {
+    kind: 'lead',
+    fullName: l.fullName,
+    leadId: l.id,
+    leadNumber: l.leadNumber,
+    status: l.stage,
+    bucket: maps.bucketOf(l.stage),
+    email: l.email,
+    phone: l.mobile || l.phone,
+    owner: l.owner,
+    consultor: l.consultor,
+    zohoUrl: l.zohoUrl,
+    sistemaComprado: full.summary.sistemaComprado,
+    totalDeals: full.summary.totalDeals,
+    dealsAbiertos: full.summary.dealsAbiertos,
+    deals: full.deals.slice(0, 6).map((d) => ({ name: d.name, stage: d.stage, amount: d.amount, zohoUrl: d.zohoUrl })),
+  };
+  return {
+    content: `FICHA de ${l.fullName} (Lead ${l.leadNumber || l.id}, estado "${l.stage || 'sin estado'}") mostrada como tarjeta — NO repitas los datos ni escribas tabla. En 1-2 frases da el PRÓXIMO PASO de gestión según su estado y lo comprado (${full.summary.sistemaComprado}). Cierra con <quick_replies> de 3 chips accionables (ej. dejar nota, marcar estado, programar seguimiento).`,
+    client: card,
+  };
 }
 
 // ════════════════════════════════════════════════════════════════

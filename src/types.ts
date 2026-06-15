@@ -1,5 +1,6 @@
 import type { ZohoPendingAction } from '@/lib/zoho-actions';
 import type { ZohoLeadsCard } from '@/lib/zoho-leads-card';
+import type { ZohoClientCard } from '@/lib/zoho-client-card';
 
 export interface ToolRef {
   slug: string;
@@ -37,6 +38,8 @@ export interface Message {
   action?: ZohoPendingAction;
   /** Lista de leads a renderizar como tarjeta rica (no markdown del modelo). */
   leads?: ZohoLeadsCard;
+  /** Ficha de cliente a renderizar como tarjeta rica. */
+  client?: ZohoClientCard;
 }
 
 export interface Conversation {

@@ -22,6 +22,7 @@ import { useInactivityLogout } from '@/hooks/useInactivityLogout';
 import { extractQuickReplies, stripQuickRepliesForStream } from '@/lib/quick-replies';
 import { extractZohoAction, stripZohoActionForStream } from '@/lib/zoho-actions';
 import { extractZohoLeads, stripZohoLeadsForStream } from '@/lib/zoho-leads-card';
+import { extractZohoClient, stripZohoClientForStream } from '@/lib/zoho-client-card';
 import type { Message, Conversation, ToolRef, QualityMeta } from '@/types';
 
 function generateId() {
@@ -839,7 +840,7 @@ export function ChatApp({ user, onSignOut }: Props) {
       // Oculta bloques especiales (<quick_replies>, <zoho_action>, <zoho_leads>)
       // mientras se transmiten, para que el asesor nunca vea XML/JSON crudo.
       const stripSpecial = (t: string) =>
-        stripZohoLeadsForStream(stripZohoActionForStream(stripQuickRepliesForStream(t)));
+        stripZohoClientForStream(stripZohoLeadsForStream(stripZohoActionForStream(stripQuickRepliesForStream(t))));
 
       while (true) {
         const { done, value } = await reader.read();
@@ -860,7 +861,8 @@ export function ChatApp({ user, onSignOut }: Props) {
       // Extraer Quick Replies, acción Zoho y lista de leads del texto, y limpiarlo.
       const { cleanText: noReplies, replies: quickReplies } = extractQuickReplies(fullText);
       const { cleanText: noAction, action: zohoAction } = extractZohoAction(noReplies);
-      const { cleanText, leads: zohoLeads } = extractZohoLeads(noAction);
+      const { cleanText: noLeads, leads: zohoLeads } = extractZohoLeads(noAction);
+      const { cleanText, client: zohoClientCard } = extractZohoClient(noLeads);
 
       // FILTRO CRÍTICO: solo se renderizan cards de herramientas que el LLM
       // mencionó REALMENTE en el texto (por URL o por [Nombre]). Esto elimina
@@ -886,6 +888,7 @@ export function ChatApp({ user, onSignOut }: Props) {
                         ...(quickReplies.length > 0 ? { quickReplies } : {}),
                         ...(zohoAction ? { action: zohoAction } : {}),
                         ...(zohoLeads ? { leads: zohoLeads } : {}),
+                        ...(zohoClientCard ? { client: zohoClientCard } : {}),
                       }
                     : m
                 ),
