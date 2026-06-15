@@ -2,6 +2,7 @@
 
 import { BUCKET_LABEL, type Bucket } from '@/lib/zoho-status';
 import type { ZohoLeadsCard } from '@/lib/zoho-leads-card';
+import { buildCallHref } from '@/lib/dialer';
 
 const BUCKET_COLOR: Record<Bucket, string> = {
   nuevo: '#38bdf8',
@@ -108,6 +109,15 @@ export function LeadsCard({
             )}
 
             <div className="flex items-center gap-3" style={{ marginTop: 5, paddingLeft: 26 }}>
+              {buildCallHref(l.phone) && (
+                <a
+                  href={buildCallHref(l.phone)!}
+                  style={{ fontSize: 11.5, color: '#22c55e', fontWeight: 600 }}
+                  title={`Llamar a ${l.phone} (3CX)`}
+                >
+                  📞 Llamar
+                </a>
+              )}
               {onLeadClick && (
                 <button
                   onClick={() => onLeadClick(`Busca a ${l.fullName}${l.leadNumber ? ` (${l.leadNumber})` : ''} y dime qué pasó`)}

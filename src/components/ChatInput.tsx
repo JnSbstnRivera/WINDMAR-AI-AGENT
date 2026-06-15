@@ -1,6 +1,18 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+
+// Tipos mínimos de la Web Speech API (no están en el lib DOM de TS).
+interface SpeechRecognitionLike {
+  lang: string;
+  continuous: boolean;
+  interimResults: boolean;
+  start: () => void;
+  stop: () => void;
+  onresult: ((e: { resultIndex: number; results: ArrayLike<ArrayLike<{ transcript: string }>> }) => void) | null;
+  onend: (() => void) | null;
+  onerror: (() => void) | null;
+}
 
 interface Props {
   onSend: (text: string) => void;
@@ -18,11 +30,64 @@ export function ChatInput({ onSend, disabled, onTypingChange, isStreaming, onSto
   const [text, setText] = useState('');
   const [focused, setFocused] = useState(false);
   const [attachedFile, setAttachedFile] = useState<File | null>(null);
+  const [listening, setListening] = useState(false);
+  const [speechSupported, setSpeechSupported] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
+  const baseTextRef = useRef('');
+
+  // ════════════════════════════════════════
+  // DICTADO POR VOZ — Web Speech API nativa del navegador (sin Deepgram).
+  // Gratis, on-device, soporta español. Mejor en Chrome/Edge (lo que usan
+  // los asesores). El texto reconocido cae en el input para editar/enviar.
+  // ════════════════════════════════════════
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const w = window as unknown as { SpeechRecognition?: new () => SpeechRecognitionLike; webkitSpeechRecognition?: new () => SpeechRecognitionLike };
+    const SR = w.SpeechRecognition || w.webkitSpeechRecognition;
+    if (!SR) return;
+    setSpeechSupported(true);
+    const rec = new SR();
+    rec.lang = 'es-US'; // español Puerto Rico/US
+    rec.continuous = true;
+    rec.interimResults = true;
+    rec.onresult = (e) => {
+      let transcript = '';
+      for (let i = 0; i < e.results.length; i++) transcript += e.results[i][0].transcript;
+      const base = baseTextRef.current;
+      const next = base ? `${base} ${transcript}` : transcript;
+      setText(next);
+      onTypingChange?.(next.length > 0);
+      const el = textareaRef.current;
+      if (el) { el.style.height = 'auto'; el.style.height = Math.min(el.scrollHeight, 140) + 'px'; }
+    };
+    rec.onend = () => setListening(false);
+    rec.onerror = () => setListening(false);
+    recognitionRef.current = rec;
+    return () => { try { rec.stop(); } catch { /* noop */ } };
+  }, [onTypingChange]);
+
+  function toggleMic() {
+    const rec = recognitionRef.current;
+    if (!rec) return;
+    if (listening) {
+      rec.stop();
+      setListening(false);
+      return;
+    }
+    baseTextRef.current = text.trim();
+    try {
+      rec.start();
+      setListening(true);
+      textareaRef.current?.focus();
+    } catch { /* ya iniciado */ }
+  }
 
   function handleSend() {
     if (disabled) return;
+    // Si está dictando, detener el micrófono antes de enviar.
+    if (listening) { try { recognitionRef.current?.stop(); } catch { /* noop */ } setListening(false); }
 
     // Si hay archivo adjunto → manda archivo (+ texto opcional)
     if (attachedFile && onAttach) {
@@ -149,6 +214,28 @@ export function ChatInput({ onSend, disabled, onTypingChange, isStreaming, onSto
             )}
 
             <div className="flex gap-2 items-end">
+              {/* Botón de dictado por voz (Web Speech API nativa) */}
+              {speechSupported && (
+                <button
+                  type="button"
+                  onClick={toggleMic}
+                  disabled={disabled || isStreaming}
+                  className={`disabled:opacity-40 disabled:cursor-not-allowed transition-colors w-10 h-10 flex items-center justify-center rounded-lg cursor-pointer flex-shrink-0 ${
+                    listening ? 'text-white bg-red-500 hover:bg-red-600' : 'text-gray-500 hover:text-[#F7941D] hover:bg-[#F7941D]/10'
+                  }`}
+                  aria-label={listening ? 'Detener dictado' : 'Dictar por voz'}
+                  title={listening ? 'Escuchando… toca para detener' : 'Dictar por voz'}
+                  style={listening ? { animation: 'micPulse 1.3s ease-in-out infinite' } : undefined}
+                >
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="9" y="2" width="6" height="12" rx="3" />
+                    <path d="M5 10a7 7 0 0 0 14 0" />
+                    <line x1="12" y1="19" x2="12" y2="22" />
+                  </svg>
+                  <style>{`@keyframes micPulse { 0%,100% { box-shadow: 0 0 0 0 rgba(239,68,68,0.5); } 50% { box-shadow: 0 0 0 6px rgba(239,68,68,0); } }`}</style>
+                </button>
+              )}
+
               {/* Botón correo de seguimiento (atajo al modal — equivale a /@) */}
               {onEmail && (
                 <button
