@@ -51,8 +51,13 @@ export function BriefingCard({ onSend }: { onSend: (text: string) => void }) {
 
   if (!data || data.empty || hidden) return null;
 
-  const citas = data.citasHoy ?? [];
-  const segs = data.seguimientos ?? [];
+  // Compacto: mostramos máx 3 por sección para no tapar la pantalla de inicio.
+  // El resto se ve con los chips ("Ver todos mis urgentes" / "Mi cartera").
+  const MAX_ROWS = 3;
+  const citas = (data.citasHoy ?? []).slice(0, MAX_ROWS);
+  const segs = (data.seguimientos ?? []).slice(0, MAX_ROWS);
+  const citasTotal = data.citasHoyTotal ?? citas.length;
+  const segsTotal = data.seguimientosTotal ?? segs.length;
   const nada = citas.length === 0 && segs.length === 0;
 
   const Row = ({ l, tag }: { l: LeadBrief; tag: string | null }) => (
@@ -79,7 +84,7 @@ export function BriefingCard({ onSend }: { onSend: (text: string) => void }) {
   );
 
   return (
-    <div className="mx-auto mb-4 w-full max-w-2xl rounded-xl border-2 px-4 py-3 text-left" style={{ background: '#0a1628', borderColor: 'rgba(247,148,29,0.4)' }}>
+    <div className="mx-auto mb-3 w-full max-w-2xl rounded-xl border-2 px-4 py-2.5 text-left" style={{ background: '#0a1628', borderColor: 'rgba(247,148,29,0.4)' }}>
       <div className="flex items-start justify-between gap-2">
         <div>
           <div style={{ color: '#F7941D', fontWeight: 700, fontSize: 15 }}>
@@ -95,20 +100,26 @@ export function BriefingCard({ onSend }: { onSend: (text: string) => void }) {
       </div>
 
       {citas.length > 0 && (
-        <div style={{ marginTop: 10 }}>
+        <div style={{ marginTop: 8 }}>
           <div style={{ color: '#a78bfa', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>
-            📅 Citas de hoy ({data.citasHoyTotal})
+            📅 Citas de hoy ({citasTotal})
           </div>
           <div className="flex flex-col gap-1.5">{citas.map((l) => <Row key={l.id} l={l} tag={l.when} />)}</div>
+          {citasTotal > citas.length && (
+            <div style={{ color: '#64748b', fontSize: 11, marginTop: 3 }}>+{citasTotal - citas.length} más — toca “Ver todos mis urgentes”</div>
+          )}
         </div>
       )}
 
       {segs.length > 0 && (
-        <div style={{ marginTop: 10 }}>
+        <div style={{ marginTop: 8 }}>
           <div style={{ color: '#F7941D', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>
-            ⏰ Para llamar hoy o antes ({data.seguimientosTotal})
+            ⏰ Para llamar hoy o antes ({segsTotal})
           </div>
           <div className="flex flex-col gap-1.5">{segs.map((l) => <Row key={l.id} l={l} tag={l.when} />)}</div>
+          {segsTotal > segs.length && (
+            <div style={{ color: '#64748b', fontSize: 11, marginTop: 3 }}>+{segsTotal - segs.length} más — toca “Ver todos mis urgentes”</div>
+          )}
         </div>
       )}
 
