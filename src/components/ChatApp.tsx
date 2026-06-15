@@ -19,39 +19,12 @@ import { MyLeadsPanel, type MyLeadsData } from './MyLeadsPanel';
 import type { ZohoClientFull, ZohoLead } from '@/lib/zoho';
 import { SUNBOT_ART, TEMBLOR_TEXT, ABOUT_TEXT } from '@/lib/easter-eggs';
 import { useInactivityLogout } from '@/hooks/useInactivityLogout';
+import { extractQuickReplies, stripQuickRepliesForStream } from '@/lib/quick-replies';
+import { extractZohoAction, stripZohoActionForStream } from '@/lib/zoho-actions';
 import type { Message, Conversation, ToolRef, QualityMeta } from '@/types';
 
 function generateId() {
   return Math.random().toString(36).slice(2) + Date.now().toString(36);
-}
-
-/**
- * Extrae el bloque <quick_replies>...</quick_replies> del texto del LLM.
- * Devuelve { cleanText, replies }. Si no hay bloque, replies = [].
- * Tolera variantes: con/sin guiones, con bullets, líneas vacías.
- */
-function extractQuickReplies(text: string): { cleanText: string; replies: string[] } {
-  // GLOBAL: el loop agéntico puede producir VARIOS bloques (uno antes del
-  // tool call y otro al final). Quitamos todos del texto y nos quedamos con
-  // los chips del ÚLTIMO bloque con contenido.
-  const re = /<quick_replies>\s*([\s\S]*?)\s*<\/quick_replies>/gi;
-  let replies: string[] = [];
-  let match: RegExpExecArray | null;
-  while ((match = re.exec(text)) !== null) {
-    const parsed = match[1]
-      .split('\n')
-      .map((l) => l.replace(/^[\s\-*•]+/, '').trim())
-      .filter((l) => l.length > 0 && l.length < 100)
-      .slice(0, 3);
-    if (parsed.length > 0) replies = parsed;
-  }
-  // Limpiar también tags sueltos/incompletos (ej. bloque cortado por el stream)
-  const cleanText = text
-    .replace(re, '')
-    .replace(/<quick_replies>[\s\S]*$/i, '')
-    .replace(/<\/?quick_replies>/gi, '')
-    .trim();
-  return { cleanText, replies };
 }
 
 /**
@@ -862,11 +835,15 @@ export function ChatApp({ user, onSignOut }: Props) {
         );
       };
 
+      // Oculta bloques especiales (<quick_replies> y <zoho_action>) mientras
+      // se transmiten, para que el asesor nunca vea XML/JSON crudo.
+      const stripSpecial = (t: string) => stripZohoActionForStream(stripQuickRepliesForStream(t));
+
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
         fullText += decoder.decode(value, { stream: true });
-        pendingText = fullText;
+        pendingText = stripSpecial(fullText);
         if (!rafScheduled) {
           rafScheduled = true;
           requestAnimationFrame(flushUpdate);
@@ -875,11 +852,12 @@ export function ChatApp({ user, onSignOut }: Props) {
 
       // Flush final garantizado: el último chunk SIEMPRE se renderiza,
       // aunque el rAF anterior aún no haya disparado.
-      pendingText = fullText;
+      pendingText = stripSpecial(fullText);
       flushUpdate();
 
-      // Extraer Quick Replies del texto y limpiarlo
-      const { cleanText, replies: quickReplies } = extractQuickReplies(fullText);
+      // Extraer Quick Replies y la acción Zoho del texto, y limpiarlo.
+      const { cleanText: noReplies, replies: quickReplies } = extractQuickReplies(fullText);
+      const { cleanText, action: zohoAction } = extractZohoAction(noReplies);
 
       // FILTRO CRÍTICO: solo se renderizan cards de herramientas que el LLM
       // mencionó REALMENTE en el texto (por URL o por [Nombre]). Esto elimina
@@ -899,10 +877,11 @@ export function ChatApp({ user, onSignOut }: Props) {
                   m.id === assistantMsgId
                     ? {
                         ...m,
-                        content: cleanText, // texto sin el bloque <quick_replies>
+                        content: cleanText, // texto sin bloques especiales
                         ...(mentionedTools.length > 0 ? { tools: mentionedTools } : {}),
                         ...(qualityMeta ? { quality: qualityMeta } : {}),
                         ...(quickReplies.length > 0 ? { quickReplies } : {}),
+                        ...(zohoAction ? { action: zohoAction } : {}),
                       }
                     : m
                 ),

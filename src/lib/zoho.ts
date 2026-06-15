@@ -712,6 +712,77 @@ export async function addLeadNote(
   return r?.code === 'SUCCESS' || r?.status === 'success';
 }
 
+// ════════════════════════════════════════════════════════════════
+// LECTURA PUNTUAL + ESCRITURAS DEL ASESOR (estado, seguimiento)
+// ════════════════════════════════════════════════════════════════
+// Estas escrituras son scoped por dueño en la capa de tools/endpoint: el asesor
+// solo puede tocar SUS leads. Aquí solo van las llamadas crudas a Zoho.
+
+export interface LeadBasic {
+  id: string;
+  fullName: string;
+  leadNumber: string | null;
+  status: string | null;
+  ownerEmail: string | null;
+  ownerName: string | null;
+  zohoUrl: string;
+}
+
+/**
+ * Trae los datos mínimos de UN lead por su ID (para validar dueño/estado antes
+ * de escribir). Devuelve null si no existe o si Zoho rechaza.
+ */
+export async function getLeadBasic(leadId: string): Promise<LeadBasic | null> {
+  try {
+    const res = (await zohoFetch(
+      `/Leads/${leadId}?fields=Full_Name,First_Name,Last_Name,Lead_Number,Lead_Status,Owner`
+    )) as { data?: ZohoLeadRaw[] };
+    const r = res.data?.[0];
+    if (!r) return null;
+    return {
+      id: r.id,
+      fullName: r.Full_Name || [r.First_Name, r.Last_Name].filter(Boolean).join(' ').trim() || 'Sin nombre',
+      leadNumber: r.Lead_Number || null,
+      status: r.Lead_Status || null,
+      ownerEmail: r.Owner?.email?.toLowerCase() || null,
+      ownerName: r.Owner?.name || null,
+      zohoUrl: `https://crm.zoho.com/crm/org${ZOHO_ORG_ID}/tab/Leads/${r.id}`,
+    };
+  } catch {
+    return null;
+  }
+}
+
+/** Cambia el Lead_Status de un lead. El valor DEBE ser del picklist oficial. */
+export async function updateLeadStatus(leadId: string, status: string): Promise<boolean> {
+  const res = (await zohoPut('/Leads', { data: [{ id: leadId, Lead_Status: status }] })) as {
+    data?: Array<{ code?: string; status?: string }>;
+  };
+  const r = res.data?.[0];
+  return r?.code === 'SUCCESS' || r?.status === 'success';
+}
+
+/**
+ * Programa el seguimiento de un lead en campos NATIVOS de Zoho:
+ *   - callDate (YYYY-MM-DD)     → Llamar_de_esta_fecha ("Llamar Después de esta Fecha")
+ *   - appointmentAt (ISO 8601)  → Presenter_Appointment ("Cita Date/Time")
+ * Al menos uno es requerido. Devuelve true si Zoho aceptó.
+ */
+export async function setLeadFollowup(
+  leadId: string,
+  opts: { callDate?: string | null; appointmentAt?: string | null }
+): Promise<boolean> {
+  const record: Record<string, unknown> = { id: leadId };
+  if (opts.callDate) record.Llamar_de_esta_fecha = opts.callDate;
+  if (opts.appointmentAt) record.Presenter_Appointment = opts.appointmentAt;
+  if (Object.keys(record).length === 1) return false; // nada que escribir
+  const res = (await zohoPut('/Leads', { data: [record] })) as {
+    data?: Array<{ code?: string; status?: string }>;
+  };
+  const r = res.data?.[0];
+  return r?.code === 'SUCCESS' || r?.status === 'success';
+}
+
 /** Última nota de un lead (la más reciente), o null si no tiene. */
 export async function getLeadLastNote(
   leadId: string

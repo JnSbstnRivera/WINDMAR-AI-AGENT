@@ -8,6 +8,7 @@ import { UserAvatar } from './UserAvatar';
 import { ToolCards } from './ToolCards';
 import { QualityCard } from './QualityCard';
 import { QuickReplies } from './QuickReplies';
+import { ZohoActionCard } from './ZohoActionCard';
 import { useTypewriter } from '@/hooks/useTypewriter';
 
 interface Props {
@@ -308,6 +309,9 @@ function ChatMessageImpl({
           <ToolCards tools={message.tools} />
         )}
 
+        {/* Tarjeta de acción Zoho (nota/estado/seguimiento) a confirmar con 1 clic */}
+        {!isStreaming && message.action && <ZohoActionCard action={message.action} />}
+
         {/* Quick Replies — chips clicables con preguntas de seguimiento sugeridas */}
         {!isStreaming && message.quickReplies && message.quickReplies.length > 0 && onQuickReply && (
           <QuickReplies replies={message.quickReplies} onSelect={onQuickReply} />
@@ -440,11 +444,17 @@ export const ChatMessage = memo(ChatMessageImpl, (prev, next) => {
     (prev.message.quality?.highlight === next.message.quality?.highlight &&
       prev.message.quality?.area === next.message.quality?.area);
 
+  const actionEqual =
+    (!prev.message.action && !next.message.action) ||
+    (prev.message.action?.leadId === next.message.action?.leadId &&
+      prev.message.action?.type === next.message.action?.type);
+
   return (
     prev.message.id === next.message.id &&
     prev.message.content === next.message.content &&
     toolsEqual &&
     qualityEqual &&
+    actionEqual &&
     prev.isStreaming === next.isStreaming &&
     prev.asesorEmail === next.asesorEmail &&
     prev.asesorDisplayName === next.asesorDisplayName &&

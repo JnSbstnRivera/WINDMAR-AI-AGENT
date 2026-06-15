@@ -4,6 +4,7 @@ import { SYSTEM_PROMPT } from '@/lib/prompts';
 import { pickRelevantTools, buildToolsContext, toClientCards } from '@/lib/tools';
 import { getViewerScope } from '@/lib/zoho-access';
 import { getZohoToolDefs, executeZohoTool } from '@/lib/zoho-agent-tools';
+import { serializeZohoAction } from '@/lib/zoho-actions';
 import Anthropic from '@anthropic-ai/sdk';
 
 export const runtime = 'nodejs';
@@ -283,7 +284,12 @@ ${rol ? `- Rol: ${rol}` : ''}
 - ¿Es el primer mensaje de la conversación? ${isFirstMessage ? 'SÍ — saluda al asesor con: "¡' + greeting + ', ' + asesorName + '! 👋"' : 'NO — NO saludes de nuevo. Mantén el HILO temático.'}
 ${useWebSearch ? '- ⚠️ WEB SEARCH ACTIVADO: el asesor usó una palabra clave de búsqueda en internet. Cuando uses información de internet, indícalo claramente con 🌐 al inicio y cita la fuente.' : ''}
 
-ZOHO CRM (datos en vivo): tienes herramientas para consultar Zoho — buscar_cliente, mis_leads${rol && rol !== 'Asesor' ? ', asignar_leads, agregar_nota' : ''}. Úsalas cuando el asesor pregunte por clientes, su cartera o seguimientos, en lenguaje natural (NO necesita comandos). Tras traer los datos, actúa como COACH: resume breve y di el próximo paso. ${rol === 'Asesor' ? 'Este usuario es Asesor: solo ve SUS leads (las herramientas ya lo filtran).' : 'Este usuario puede ver todo y asignar/anotar.'}
+ZOHO CRM (datos en vivo): tienes herramientas para CONSULTAR (buscar_cliente, mis_leads) y para GESTIONAR la cartera del asesor — agregar_nota, actualizar_estado, programar_seguimiento${rol && rol !== 'Asesor' ? ', asignar_leads' : ''}. Úsalas cuando el asesor hable en lenguaje natural (NO necesita comandos). Tras traer datos, actúa como COACH: resume breve y di el próximo paso. ${rol === 'Asesor' ? 'Este usuario es Asesor: solo ve y gestiona SUS leads (las herramientas ya lo filtran).' : 'Este usuario puede ver, gestionar y asignar cualquier cartera.'}
+
+✍️ ESCRITURAS CON CONFIRMACIÓN (importante): agregar_nota, actualizar_estado y programar_seguimiento NO escriben de inmediato — PREPARAN una acción que el asesor confirma con un botón (tarjeta abajo de tu respuesta). Por eso, cuando uses una de ellas:
+- Necesitas el lead_id REAL. Si no lo tienes del turno, primero busca el cliente (buscar_cliente / mis_leads) y usa el id que devuelva. JAMÁS inventes un id.
+- Cuando el asesor narre una gestión ("llamé a X y no contestó", "quedó en cita el jueves", "cerró la venta"), interpreta y prepara la(s) acción(es) que correspondan (ej. "no contestó" → actualizar_estado a "No Contesta" + opcional programar_seguimiento).
+- Después de preparar, di UNA frase corta ("Te dejé listo el cambio, confírmalo abajo 👇") y NO repitas los datos ni pongas <quick_replies> (la tarjeta ya tiene sus botones).
 
 🧭 GUÍA PARA PETICIONES DE ZOHO (sigue esto al pie):
 - "mis leads", "mi cartera", "los míos", "mis leads urgentes" → llama mis_leads SIN el parámetro "asesor" (es la cartera del PROPIO usuario, ${asesorName}). JAMÁS pongas su nombre en "asesor".
@@ -406,7 +412,12 @@ REGLA DE VIGENCIA: usa la fecha actual de arriba para validar promociones, feria
                   (tu.input as Record<string, unknown>) || {},
                   scope
                 );
-                results.push({ type: 'tool_result', tool_use_id: tu.id, content: out });
+                results.push({ type: 'tool_result', tool_use_id: tu.id, content: out.content });
+                // Escritura preparada → inyectar la acción en el stream para que
+                // el cliente la renderice como tarjeta de confirmación (1 clic).
+                if (out.action) {
+                  controller.enqueue(encoder.encode(serializeZohoAction(out.action)));
+                }
               }
               convo.push({ role: 'assistant', content: finalMessage.content });
               convo.push({ role: 'user', content: results });

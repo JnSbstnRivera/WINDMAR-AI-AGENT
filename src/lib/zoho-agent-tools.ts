@@ -15,15 +15,25 @@ import {
   getDealsByQuery,
   searchContacts,
   assignLeads,
-  addLeadNote,
+  getLeadBasic,
+  type LeadBasic,
 } from '@/lib/zoho';
-import { isActionable, BUCKET_LABEL } from '@/lib/zoho-status';
+import { isActionable, BUCKET_LABEL, VALID_LEAD_STATUSES, resolveLeadStatus } from '@/lib/zoho-status';
 import { getZohoMaps, logZohoQuery } from '@/lib/zoho-config';
 import {
   type ViewerScope,
   ownsLead,
   NOT_IN_PORTFOLIO_MSG,
 } from '@/lib/zoho-access';
+import type { ZohoPendingAction } from '@/lib/zoho-actions';
+
+/** Resultado de una tool: texto para el modelo + (opcional) acción a confirmar. */
+export interface ZohoToolResult {
+  content: string;
+  action?: ZohoPendingAction;
+}
+
+const WRITE_PREPARE_TOOLS = new Set(['agregar_nota', 'actualizar_estado', 'programar_seguimiento']);
 
 /** Definiciones de las herramientas según permiso de escritura. */
 export function getZohoToolDefs(canWrite: boolean): Anthropic.Tool[] {
@@ -80,49 +90,76 @@ export function getZohoToolDefs(canWrite: boolean): Anthropic.Tool[] {
         required: [],
       },
     },
-  ];
+    // ── ESCRITURAS (disponibles para TODOS, incl. asesores) ──────────────
+    // No escriben de inmediato: PREPARAN una acción que el usuario confirma con
+    // un botón en el chat. El scoping (solo SU cartera para el asesor) se aplica
+    // al preparar y de nuevo al ejecutar en /api/zoho/action.
+    {
+      name: 'agregar_nota',
+      description: `Prepara una nota para el historial de un lead en Zoho. NO se guarda hasta que el usuario CONFIRME con el botón. Úsala cuando el asesor cuente qué pasó con un cliente ("llamé a X y no contestó", "quedó en pensarlo", "cerré la venta"). Necesitas el lead_id REAL (de una búsqueda de ESTE turno; JAMÁS lo inventes — si no lo tienes, busca el cliente primero).
 
-  if (canWrite) {
-    tools.push(
-      {
-        name: 'asignar_leads',
-        description:
-          'Reasigna uno o varios leads a un asesor (cambia el Owner en Zoho). SOLO para líderes/admins. Confirma con el usuario antes de asignar muchos leads.',
-        input_schema: {
-          type: 'object',
-          properties: {
-            lead_ids: { type: 'array', items: { type: 'string' }, description: 'IDs de los leads a reasignar' },
-            asesor_email: { type: 'string', description: 'Correo del asesor destino (@windmarhome.com)' },
-          },
-          required: ['lead_ids', 'asesor_email'],
-        },
-      },
-      {
-        name: 'agregar_nota',
-        description: `Agrega una nota a un lead en Zoho (queda en el historial del cliente). SOLO para líderes/admins.
-
-PLANTILLAS — elige la que corresponda al escenario y rellena los {placeholders} con datos de la conversación (pregunta si falta algo clave). El sistema firma automáticamente con el sello SUN BOT, NO agregues firma:
-- ✅ VENTA CERRADA — Caso vendido por {asesor} ({área}). Método de pago: {cash/loan/lease}. {detalle opcional}
-- 🤝 ASISTENCIA COORDINADA — Gestión conjunta: apoyo a {asesor original} ({área}). Venta cerrada por {asesor que cierra} ({área}). {detalle}
+PLANTILLAS — elige la que corresponda y rellena los {placeholders} con datos de la conversación. El sistema firma solo con el sello SUN BOT + el nombre del asesor, NO agregues firma:
+- ✅ VENTA CERRADA — Caso vendido por {asesor} ({área}). Método de pago: {cash/loan/lease}. {detalle}
+- 🤝 ASISTENCIA COORDINADA — Apoyo a {asesor original}. Venta cerrada por {asesor que cierra}. {detalle}
 - 📞 SEGUIMIENTO — Contacto el {fecha}: {resultado}. Próximo paso: {acción y fecha}.
-- 📵 NO CONTESTA — Intento #{n} el {fecha/hora}. Reintentar: {cuándo / otra hora o canal}.
+- 📵 NO CONTESTA — Intento #{n} el {fecha/hora}. Reintentar: {cuándo}.
 - 📅 CITA COORDINADA — Cita para {fecha/hora} con {consultor}. {detalle}
 - ⏰ LLAMAR DESPUÉS — Cliente pide contacto el {fecha/hora}. Motivo: {motivo}.
 - ❌ NO INTERESADO / DQ — Motivo: {motivo}. {qué se intentó}
-- ℹ️ INFO — {dato relevante del cliente o la gestión}`,
-        input_schema: {
-          type: 'object',
-          properties: {
-            lead_id: { type: 'string', description: 'ID del lead' },
-            contenido: {
-              type: 'string',
-              description: 'Texto de la nota siguiendo la plantilla del escenario. SIN firma (se agrega sola).',
-            },
-          },
-          required: ['lead_id', 'contenido'],
+- ℹ️ INFO — {dato relevante}`,
+      input_schema: {
+        type: 'object',
+        properties: {
+          lead_id: { type: 'string', description: 'ID real del lead (de una búsqueda de este turno).' },
+          contenido: { type: 'string', description: 'Texto de la nota según la plantilla. SIN firma (se agrega sola).' },
         },
-      }
-    );
+        required: ['lead_id', 'contenido'],
+      },
+    },
+    {
+      name: 'actualizar_estado',
+      description: `Prepara el cambio de estado (Lead_Status) de un lead. NO se aplica hasta que el usuario CONFIRME con el botón. Úsala cuando el asesor diga el resultado de la gestión ("márcalo como no contesta", "ya es cita coordinada", "el cliente no está interesado", "quedó vendido"). Necesitas el lead_id REAL de una búsqueda de este turno.
+
+Estados válidos (usa el texto del asesor, el sistema lo mapea al oficial): ${VALID_LEAD_STATUSES.join(' · ')}.`,
+      input_schema: {
+        type: 'object',
+        properties: {
+          lead_id: { type: 'string', description: 'ID real del lead.' },
+          estado: { type: 'string', description: 'Nuevo estado en lenguaje natural (ej. "no contesta", "cita coordinada", "vendido").' },
+        },
+        required: ['lead_id', 'estado'],
+      },
+    },
+    {
+      name: 'programar_seguimiento',
+      description: `Prepara un recordatorio de seguimiento en campos nativos de Zoho. NO se guarda hasta que el usuario CONFIRME. Úsala cuando el asesor diga cuándo volver a contactar ("lo llamo mañana", "reintentar el viernes", "cita el jueves a las 2pm"). Necesitas el lead_id REAL de una búsqueda de este turno. Pasa al menos una fecha. Usa la fecha actual del contexto para resolver "mañana", "el viernes", etc.`,
+      input_schema: {
+        type: 'object',
+        properties: {
+          lead_id: { type: 'string', description: 'ID real del lead.' },
+          fecha_llamada: { type: 'string', description: 'Fecha para "llamar después de" (YYYY-MM-DD).' },
+          fecha_cita: { type: 'string', description: 'Fecha/hora de una cita agendada (ISO: YYYY-MM-DDTHH:mm:ss).' },
+          nota: { type: 'string', description: 'Opcional: nota breve del seguimiento (se guarda junto al recordatorio).' },
+        },
+        required: ['lead_id'],
+      },
+    },
+  ];
+
+  if (canWrite) {
+    tools.push({
+      name: 'asignar_leads',
+      description:
+        'Reasigna uno o varios leads a un asesor (cambia el Owner en Zoho). SOLO para líderes/admins. Confirma con el usuario antes de asignar muchos leads.',
+      input_schema: {
+        type: 'object',
+        properties: {
+          lead_ids: { type: 'array', items: { type: 'string' }, description: 'IDs de los leads a reasignar' },
+          asesor_email: { type: 'string', description: 'Correo del asesor destino (@windmarhome.com)' },
+        },
+        required: ['lead_ids', 'asesor_email'],
+      },
+    });
   }
 
   return tools;
@@ -140,16 +177,18 @@ export async function executeZohoTool(
   name: string,
   input: Record<string, unknown>,
   scope: ViewerScope
-): Promise<string> {
+): Promise<ZohoToolResult> {
   const start = Date.now();
   try {
-    const out = await runZohoTool(name, input, scope);
+    const out = WRITE_PREPARE_TOOLS.has(name)
+      ? await prepareWriteTool(name, input, scope)
+      : { content: await runZohoTool(name, input, scope) };
     logZohoQuery({ tool: name, ok: true, durationMs: Date.now() - start, userEmail: scope.email });
     return out;
   } catch (err) {
     const msg = err instanceof Error ? err.message : 'desconocido';
     logZohoQuery({ tool: name, ok: false, durationMs: Date.now() - start, error: msg, userEmail: scope.email });
-    return `Error ejecutando ${name}: ${msg}`;
+    return { content: `Error ejecutando ${name}: ${msg}` };
   }
 }
 
@@ -373,16 +412,116 @@ async function runZohoTool(
         return `Asignados ${r.success}/${r.total} leads a ${ownerEmail}.${r.failed ? ` Fallaron ${r.failed}.` : ''}`;
       }
 
-      case 'agregar_nota': {
-        if (!scope.canSeeAll) return 'No tienes permiso para escribir notas (acción de líder/admin).';
-        const leadId = String(input.lead_id || '').trim();
-        const contenido = String(input.contenido || '').trim();
-        if (!leadId || contenido.length < 2) return 'Falta el lead o el texto de la nota.';
-        const ok = await addLeadNote(leadId, contenido, `Nota de ${scope.email}`);
-        return ok ? 'Nota guardada en Zoho.' : 'Zoho no aceptó la nota.';
-      }
-
       default:
         return `Herramienta desconocida: ${name}`;
     }
+}
+
+// ════════════════════════════════════════════════════════════════
+// PREPARADOR DE ESCRITURAS — valida + arma la acción a confirmar (no escribe)
+// ════════════════════════════════════════════════════════════════
+// Aplica el scoping por dueño: el asesor solo puede preparar acciones sobre SUS
+// leads. La escritura real ocurre en /api/zoho/action tras el clic de confirmar
+// (que VUELVE a validar el dueño — esta capa no es la única defensa).
+
+/** Valida que el lead exista y sea del usuario; devuelve el lead o un error. */
+async function loadOwnedLead(
+  leadId: string,
+  scope: ViewerScope
+): Promise<{ lead: LeadBasic } | { error: string }> {
+  if (!leadId) return { error: 'Falta el lead. Busca el cliente primero y reintenta con su Lead#.' };
+  const lead = await getLeadBasic(leadId);
+  if (!lead) return { error: `No encontré el lead ${leadId} en Zoho. Búscalo de nuevo y reintenta.` };
+  if (!ownsLead({ ownerEmail: lead.ownerEmail }, scope)) return { error: NOT_IN_PORTFOLIO_MSG };
+  return { lead };
+}
+
+/** Mensaje estándar para el modelo cuando una acción quedó lista para confirmar. */
+function preparedMsg(resumen: string): string {
+  return `ACCIÓN PREPARADA (todavía NO se guardó en Zoho): ${resumen}. En UNA frase corta dile al asesor que revise y confirme con el botón de abajo. NO repitas los datos ni agregues bloque <quick_replies> (la tarjeta ya tiene sus botones).`;
+}
+
+async function prepareWriteTool(
+  name: string,
+  input: Record<string, unknown>,
+  scope: ViewerScope
+): Promise<ZohoToolResult> {
+  const leadId = String(input.lead_id || '').trim();
+  const owned = await loadOwnedLead(leadId, scope);
+  if ('error' in owned) return { content: owned.error };
+  const { lead } = owned;
+  const who = `${lead.fullName}${lead.leadNumber ? ` (${lead.leadNumber})` : ''}`;
+
+  switch (name) {
+    case 'agregar_nota': {
+      const contenido = String(input.contenido || '').trim();
+      if (contenido.length < 2) return { content: 'Falta el texto de la nota.' };
+      const resumen = `nota para ${who}`;
+      return {
+        content: preparedMsg(resumen),
+        action: {
+          type: 'nota',
+          leadId: lead.id,
+          leadNumber: lead.leadNumber,
+          fullName: lead.fullName,
+          summary: resumen,
+          nota: { contenido },
+        },
+      };
+    }
+
+    case 'actualizar_estado': {
+      const raw = String(input.estado || '').trim();
+      const nuevoEstado = resolveLeadStatus(raw);
+      if (!nuevoEstado) {
+        return {
+          content: `No reconocí el estado "${raw}". Pídele al asesor que elija uno válido: ${VALID_LEAD_STATUSES.join(' · ')}.`,
+        };
+      }
+      const resumen = `cambiar estado de ${who}: ${lead.status || 'sin estado'} → ${nuevoEstado}`;
+      return {
+        content: preparedMsg(resumen),
+        action: {
+          type: 'estado',
+          leadId: lead.id,
+          leadNumber: lead.leadNumber,
+          fullName: lead.fullName,
+          summary: resumen,
+          estado: { nuevoEstado },
+        },
+      };
+    }
+
+    case 'programar_seguimiento': {
+      const callDate = String(input.fecha_llamada || '').trim() || null;
+      const appointmentAt = String(input.fecha_cita || '').trim() || null;
+      const nota = String(input.nota || '').trim() || null;
+      if (!callDate && !appointmentAt) {
+        return { content: 'Dime para cuándo: una fecha para llamar (ej. "mañana") o una fecha/hora de cita.' };
+      }
+      // Validación ligera de formato (Zoho rechaza formatos malos)
+      if (callDate && !/^\d{4}-\d{2}-\d{2}$/.test(callDate)) {
+        return { content: `La fecha de llamada debe ser YYYY-MM-DD (recibí "${callDate}").` };
+      }
+      const partes = [
+        callDate ? `llamar desde ${callDate}` : '',
+        appointmentAt ? `cita ${appointmentAt.replace('T', ' ').slice(0, 16)}` : '',
+      ].filter(Boolean).join(' · ');
+      const resumen = `seguimiento de ${who}: ${partes}`;
+      return {
+        content: preparedMsg(resumen),
+        action: {
+          type: 'seguimiento',
+          leadId: lead.id,
+          leadNumber: lead.leadNumber,
+          fullName: lead.fullName,
+          summary: resumen,
+          seguimiento: { callDate, appointmentAt, nota },
+        },
+      };
+    }
+
+    default:
+      return { content: `Herramienta de escritura desconocida: ${name}` };
+  }
 }

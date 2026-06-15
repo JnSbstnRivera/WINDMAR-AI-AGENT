@@ -1,3 +1,5 @@
+import type { ZohoPendingAction } from '@/lib/zoho-actions';
+
 export interface ToolRef {
   slug: string;
   name: string;
@@ -30,6 +32,8 @@ export interface Message {
   quality?: QualityMeta;
   /** Preguntas de seguimiento sugeridas — se muestran como chips clicables. */
   quickReplies?: string[];
+  /** Acción de escritura en Zoho preparada por el agente, a confirmar con 1 clic. */
+  action?: ZohoPendingAction;
 }
 
 export interface Conversation {

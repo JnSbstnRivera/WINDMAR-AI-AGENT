@@ -46,6 +46,32 @@ export function bucketOf(status: string | null | undefined): Bucket {
   return STATUS_TO_BUCKET[status] ?? 'seguimiento';
 }
 
+// Los 18 valores oficiales del picklist Lead_Status (verificados en vivo
+// 2026-06-15). Usado para validar el cambio de estado que hace el asesor — Zoho
+// rechaza un valor fuera del picklist, así que validamos ANTES de escribir.
+export const VALID_LEAD_STATUSES: string[] = Object.keys(STATUS_TO_BUCKET).filter((s) => s !== '-None-');
+
+/**
+ * Resuelve un texto libre del asesor ("no contesta", "cita", "vendido") al valor
+ * EXACTO del picklist de Zoho. Match por igualdad normalizada y luego por
+ * inclusión. Devuelve null si es ambiguo o no matchea.
+ */
+export function resolveLeadStatus(input: string): string | null {
+  const norm = (s: string) => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').trim();
+  const q = norm(input);
+  if (!q) return null;
+  // 1) Igualdad exacta normalizada
+  const exact = VALID_LEAD_STATUSES.find((s) => norm(s) === q);
+  if (exact) return exact;
+  // 2) El picklist contiene la query (ej. "cita coordinada" → "Cita Coordinada")
+  const contains = VALID_LEAD_STATUSES.filter((s) => norm(s).includes(q));
+  if (contains.length === 1) return contains[0];
+  // 3) La query contiene el picklist (ej. "marcalo como no contesta ya")
+  const within = VALID_LEAD_STATUSES.filter((s) => q.includes(norm(s)));
+  if (within.length === 1) return within[0];
+  return null;
+}
+
 // Buckets "accionables": leads donde el asesor debería estar trabajando.
 // Se excluyen vendido / descartado / frío / sin estado del triage por defecto.
 const ACTIONABLE = new Set<Bucket>(['nuevo', 'seguimiento', 'cita_pendiente', 'cita_realizada']);
