@@ -11,7 +11,48 @@ estado: planificación
 
 ---
 
+## ✅ Entregado (jun 11–15 2026) — Zoho + autonomía
+
+> [!success] La gran actualización ya está EN PRODUCCIÓN (commit `33b7c8f`)
+> El bot dejó de ser solo chat y ahora **opera el CRM**. Lo que antes era roadmap aquí ya está hecho.
+
+- [x] **Integración Zoho CRM (lectura)** — `buscar_cliente` + `mis_leads` en lenguaje natural (sin comandos), con triage "sin nota en 24h".
+- [x] **Resolución de asesor sin ambigüedad** (`resolveAsesor`) — arreglado el bug de los 12 "Juan"; "mis leads" resuelve por email → ID exacto.
+- [x] **Stages de Deals reales** — Deal = contrato firmado = venta cerrada; solo "Cancelled" es pérdida.
+- [x] **Autonomía del asesor (escritura con confirmación de 1 clic)** — `agregar_nota`, `actualizar_estado`, `programar_seguimiento`, scoped a su cartera (`ownsLead`), patrón preparar → confirmar (`ZohoActionCard` → `/api/zoho/action`, re-valida dueño + audita en `admin_audit`).
+- [x] **Tarjetas ricas estructuradas** — `LeadsCard`, `ClientCardChat`, acciones de 1-clic y flujos compuestos en una sola tarjeta combinada.
+- [x] **Briefing matutino** (`BriefingCard`) — citas de hoy + seguimientos vencidos vía `/api/zoho/briefing`.
+- [x] **Config editable en `/admin/zoho`** — mapeos sin redeploy + dashboard de salud (tabla `zoho_query_log`).
+- [x] **Dictado por voz** — Web Speech API **nativa** del navegador (on-device, gratis), reemplaza al "Modo dictado mejorado" que estaba pausado. Deepgram **descartado** para esta app.
+- [x] **Productividad en el input** — botón de correo en la barra + dos botones de llamada por lead (3CX `callto:` / Kixie `tel:`, `lib/dialer.ts`).
+
+Infra nueva: libs `zoho-actions.ts`, `zoho-leads-card.ts`, `zoho-client-card.ts`, `zoho-config.ts`, `zoho-status.ts`, `quick-replies.ts`, `dialer.ts`; endpoints `/api/zoho/action`, `/api/zoho/briefing`, `/api/admin/zoho/config`, `/api/admin/zoho/health`; migraciones **015** (`zoho_status_map`, `zoho_deal_stage_map`, `zoho_query_log`) y **016** (RPC `admin_zoho_health`).
+
+Detalle de features: [[07 - Features#🤝 Zoho CRM — consulta + gestión autónoma]]
+
+---
+
 ## 🔴 Prioridad alta
+
+### 🤖 Fase E — Automatización proactiva
+**Estado:** Pendiente (requiere credenciales del usuario).
+
+Sacar las alertas del chat hacia canales pasivos:
+- **n8n** — sync nocturno Zoho → Supabase + alertas automáticas.
+- **botmaker** — briefing / recordatorios por WhatsApp.
+- Flujo: **Zoho → n8n → botmaker**.
+
+### 🔧 Fase F — Afinamiento
+**Estado:** Pendiente.
+
+- **Latencia** — traer notas en bloque vía **COQL** (de ~30 llamadas a 1-2).
+- **"Líder ve solo su equipo"** — hoy el líder ve todo.
+- **Limpieza** — ocultar los juegos bajo `/sobre` (ver [[09 - Comandos slash]] y [[10 - Easter eggs]]) + fix del `<select>` de Usuarios.
+
+### 📲 B.2 — Push PWA matutino
+**Estado:** Pendiente.
+
+Briefing matutino como notificación push de la PWA. Requiere **llaves VAPID** + suscripción por usuario + cron.
 
 ### 🌍 Replicar para Florida
 **Estado:** Documentación lista (`GUIA-MAESTRA-REPLICACION-WINMARD-AGENT-AI.md` en raíz del repo). Pendiente que el colega de Florida arranque.
@@ -63,14 +104,10 @@ Después de cada conversación, llamar a Claude con el historial y pedirle tags:
 
 Para que el asesor pueda "instalar" el agente en su celular como app nativa. Útil si trabajan en campo.
 
-### 🎙️ Modo dictado mejorado
-**Estado:** Pausado por sensibilidad de privacidad.
+### 🎙️ ~~Modo dictado mejorado~~ → ✅ ENTREGADO
+**Estado:** Hecho (jun 2026). Ver sección [[#✅ Entregado (jun 11–15 2026) — Zoho + autonomía|Entregado]].
 
-Web Speech API podría permitir dictar la pregunta sin teclear. Pausado porque:
-- Privacidad: el micrófono captaría también la voz del cliente
-- Precisión: español PR vs español neutro no siempre se transcribe bien
-
-Posible reactivación si encontramos un STT que respete privacidad (on-device).
+Se resolvió con **Web Speech API nativa on-device** (gratis, en español, sin enviar audio a terceros), que justamente atiende la preocupación de privacidad que lo tenía pausado. Deepgram quedó **descartado** para esta app.
 
 ---
 
@@ -109,6 +146,11 @@ Costo/beneficio no cierra. PWA es suficiente.
 ### ❌ Versión pública para clientes finales
 Riesgo de info filtrada + REGLA SUPREMA. Por ahora solo interna.
 
+### ❌ Descartados por el usuario (jun 2026)
+- **Deepgram** (para esta app) — reemplazado por Web Speech API nativa.
+- **Power BI**
+- **Supermetrics**
+
 ---
 
 ## Cómo proponer una idea
@@ -133,6 +175,8 @@ Riesgo de info filtrada + REGLA SUPREMA. Por ahora solo interna.
 > - **May 2026** — Sistema de correos vía Microsoft Graph (no SendGrid)
 > - **May 2026** — Vault Obsidian creado para documentación viva
 > - **May 2026** — Guía de replicación AI-DLC para Florida
+> - **Jun 2026** — Integración Zoho CRM + **autonomía del asesor** (escritura con confirmación de 1 clic); el bot pasó de chat a operar el CRM (commit `33b7c8f`)
+> - **Jun 2026** — Dictado por voz con **Web Speech API nativa** (Deepgram descartado por privacidad/costo)
 
 ---
 

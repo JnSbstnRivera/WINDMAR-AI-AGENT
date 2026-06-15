@@ -32,19 +32,21 @@ App migrada del proyecto Vite original a Next.js. El motor LLM original era **Gr
 - **Web search opt-in**: ciertas palabras clave (`investiga`, `busca online`, `noticias`, `tarifa actual`, `última versión`, etc.) activan la herramienta `web_search` de Anthropic (`web_search_20250305`, `max_uses: 3`).
 - **Cards de matriz de calidad**: detección de intent (`matrix` · `criticals` · `times`) para renderizar cards visuales (INICIO 30% · ACTITUD 50% · SEG 20%, 8 items críticos, tiempos de espera por área).
 - **Subida de documentos** (`/api/upload-document`) — analiza imágenes/PDF con Claude (el archivo se manda a Anthropic y se descarta, no se persiste).
-- **Agente Zoho CRM en lenguaje natural** (tool-use) — el LLM decide y ejecuta herramientas server-side:
-  - `buscar_cliente` — por email/teléfono/nombre/Lead#/deal; encuentra hasta clientes **convertidos** (Contacto + Deal sin lead).
-  - `mis_leads` — la cartera en **tabla** con Lead# enlazado, owner, consultor, creado y última nota; filtros por cantidad, orden (creación/actividad), estado y fechas; paginación hasta 1000. Los líderes pueden pedir la cartera de **cualquier asesor** por su nombre.
+- **Agente Zoho CRM en lenguaje natural** (tool-use) — el LLM decide y ejecuta herramientas server-side. El asesor **gestiona su cartera** desde el chat (no solo consulta):
+  - `buscar_cliente` — por email/teléfono/nombre/Lead#/deal; encuentra hasta clientes **convertidos** (Contacto + Deal sin lead). Devuelve **ficha rica estructurada** (`ClientCardChat`), no texto que el modelo redacte.
+  - `mis_leads` — la cartera como **tarjeta rica** (`LeadsCard`, móvil-friendly) con estado por color, última nota y botones; filtros por cantidad, orden, estado y fechas; triage "sin nota en 24h". Los líderes pueden pedir la cartera de **cualquier asesor** por su nombre completo.
+  - **Escrituras del asesor con confirmación de 1 clic** — `agregar_nota`, `actualizar_estado`, `programar_seguimiento`. **Disponibles para todos pero scoped** a SU cartera (`ownsLead`). Patrón **preparar→confirmar**: NO tocan Zoho hasta que el asesor da clic en la tarjeta (`ZohoActionCard`) → `POST /api/zoho/action` re-valida dueño + audita. Notas con plantillas + firma `🤖☀️ SUN BOT`.
+  - **Flujos compuestos** — *"no contestó, lo llamo mañana 10am"* prepara estado + seguimiento en **una sola tarjeta** con un único Confirmar (`makeCompoundAction`).
   - `asignar_leads` — reasignación masiva de Owner. **Solo roles elevados.**
-  - `agregar_nota` — 8 plantillas por escenario + **firma automática `🤖☀️ SUN BOT`**. **Solo roles elevados.**
-  - **Scoping por rol** (`zoho-access.ts`): el Asesor es solo-lectura y ve solo su cartera; Líder/Channel/Project M/Admin ven todo y pueden escribir. Cuando hay intención de Zoho, se fuerza `tool_choice` para que el modelo ejecute (no solo "anuncie").
-  - **Resolución de asesor sin ambigüedad** (`resolveAsesor`): si un nombre matchea a varios usuarios de Zoho (ej. "juan" → 12 tocayos), el agente **pide elegir** en vez de adivinar; "mis leads" siempre resuelve al **propio usuario** por email→ID exacto (self-detection aunque el modelo mande el primer nombre). Mata el bug de carteras cruzadas entre tocayos.
-  - **Estados de venta reales**: en Windmar un Deal = **contrato firmado** (se paga a la primera firma; el lead pasa a "Caso Vendido"); solo `Cancelled` es pérdida. El resumen del cliente distingue *comprado* vs *en proceso de instalación* vs *energizado* (`dealStateOf` / `isDealCompleted`) — antes usaba "Closed Won/Lost" (inexistentes en la org) y `sistemaComprado` salía siempre vacío.
-  - **Mapeos editables sin deploy**: `Lead_Status → bucket` y `Deal Stage → estado` viven en Supabase (`zoho_status_map`, `zoho_deal_stage_map`) con cache de 5 min y **fallback a los defaults del código** (`zoho-config.ts`) — el chat nunca se rompe por config.
-  - **Telemetría** (`zoho_query_log`): cada operación del agente registra herramienta, latencia, éxito/error y usuario — alimenta el dashboard de salud.
-  - `max_tokens` dinámico (2048 en consultas Zoho) para que las tablas de leads **no se trunquen** a media respuesta.
+  - **Resolución de asesor sin ambigüedad** (`resolveAsesor`): si un nombre matchea a varios usuarios (ej. "juan" → 12 tocayos), el agente **pide elegir**; "mis leads" resuelve al **propio usuario** por email→ID exacto. Mata el bug de carteras cruzadas.
+  - **Estados de venta reales**: un Deal = **contrato firmado** (pago a la 1ra firma → "Caso Vendido"); solo `Cancelled` es pérdida (`dealStateOf`/`isDealCompleted`). Antes usaba "Closed Won/Lost" (inexistentes) → `sistemaComprado` salía siempre vacío.
+  - **Tarjetas estructuradas, no markdown** — listas y fichas viajan como datos (`<zoho_leads>` / `<zoho_client>` / `<zoho_action>` en el stream) y el cliente las pinta; el modelo solo agrega coaching. Resolvió el bug "aquí están tus 29 leads" sin mostrarlos.
+  - **Mapeos editables sin deploy** (`zoho_status_map`, `zoho_deal_stage_map`, `zoho-config.ts`, cache 5 min + fallback a defaults) + **telemetría** (`zoho_query_log`).
+- **☀️ Briefing matutino** — al abrir el chat, `BriefingCard` muestra **citas de hoy + seguimientos vencidos + accionables** (campos nativos `Presenter_Appointment` / `Llamar_de_esta_fecha`). Endpoint `/api/zoho/briefing` (rápido, sin consultar notas).
+- **🎙️ Dictado por voz** — botón de micrófono con Web Speech API nativa del navegador (gratis, on-device, español; Edge/Chrome). El texto reconocido cae en el input.
+- **📞 Llamar 3CX / Kixie** — dos botones por lead/ficha que lanzan el softphone (3CX vía `callto:`, Kixie vía `tel:`; `lib/dialer.ts`).
 - **Coach de ventas IA** — sugerencias de qué ofrecer según el cliente y sus deals, como chips accionables.
-- **Envío de correos** de seguimiento al cliente (Microsoft Graph, firma corporativa, autocompletar desde Zoho).
+- **Envío de correos** de seguimiento al cliente (Microsoft Graph, firma corporativa, autocompletar desde Zoho). Atajo: ícono de **sobre** en la barra del chat (además de `/@`).
 - **Panel administrativo** (tema ejecutivo neón, allowlist por email):
   - **Dashboard** — KPIs, gráficas de uso, departamentos, hora pico, satisfacción y comparativas (Recharts).
   - **Gestión** (`/admin/gestion`) — chat con el agente Zoho por lenguaje natural para líderes.
@@ -118,7 +120,9 @@ windmar-ai-agent-next/
 │   │   │   ├── zoho/coach/route.ts            # Coach de ventas IA
 │   │   │   ├── zoho/my-leads/route.ts         # Cartera de leads (propia o de un asesor)
 │   │   │   ├── zoho/assign/route.ts           # Reasignación masiva de Owner (gateado)
-│   │   │   └── zoho/note/route.ts             # Crear nota en lead (gateado)
+│   │   │   ├── zoho/note/route.ts             # Crear nota en lead (gateado)
+│   │   │   ├── zoho/action/route.ts           # Ejecuta escritura confirmada (nota/estado/seguimiento/compound) scoped+auditada
+│   │   │   └── zoho/briefing/route.ts         # Briefing del asesor (citas hoy + seguimientos vencidos)
 │   │   ├── admin/page.tsx                     # Dashboard ejecutivo (KPIs + gráficas)
 │   │   ├── admin/layout.tsx                   # Layout neón + allowlist server-side
 │   │   ├── admin/gestion/page.tsx            # Chat de gestión con el agente Zoho
@@ -136,6 +140,10 @@ windmar-ai-agent-next/
 │   │   ├── ChatMessage.tsx
 │   │   ├── ChatWindow.tsx
 │   │   ├── MascotPanel.tsx                    # SUN BOT
+│   │   ├── ZohoActionCard.tsx                 # Tarjeta de confirmación de escritura (1 clic) + compound
+│   │   ├── LeadsCard.tsx                      # Lista de leads como tarjeta rica (móvil-friendly)
+│   │   ├── ClientCardChat.tsx                 # Ficha de cliente rica + acciones 1-clic
+│   │   ├── BriefingCard.tsx                   # Briefing matutino al abrir el chat
 │   │   ├── ProfileModal.tsx
 │   │   ├── Sidebar.tsx
 │   │   ├── TopBar.tsx
@@ -151,6 +159,11 @@ windmar-ai-agent-next/
 │   │   ├── zoho-access.ts                     # Scoping por rol (ViewerScope, canWrite, ownsLead)
 │   │   ├── zoho-status.ts                     # Defaults puros: Lead_Status→bucket, Deal Stage→estado (client-safe)
 │   │   ├── zoho-config.ts                     # Server-only: mapeos desde Supabase (cache 5min + fallback) + logZohoQuery
+│   │   ├── zoho-actions.ts                    # Acciones de escritura (tipos + serialize/extract <zoho_action> + compound)
+│   │   ├── zoho-leads-card.ts                 # Tarjeta estructurada de lista de leads (<zoho_leads>)
+│   │   ├── zoho-client-card.ts                # Tarjeta estructurada de ficha de cliente (<zoho_client>)
+│   │   ├── quick-replies.ts                   # Extractor compartido de <quick_replies> (chat + admin)
+│   │   ├── dialer.ts                          # Click-to-call 3CX (callto:) / Kixie (tel:)
 │   │   ├── admin-auth.ts                      # Allowlist admin + super admin (por email)
 │   │   ├── audit.ts                           # logAudit() → admin_audit
 │   │   ├── email-templates.ts                # Plantillas de correo

@@ -27,6 +27,23 @@ Muestra el manifiesto del bot — qué es, qué hace, créditos, lista de comand
 
 ---
 
+## Zoho CRM — atajos opcionales
+
+> [!important] La gestión Zoho es por LENGUAJE NATURAL, no por comandos
+> Desde la actualización de junio 2026, el asesor consulta y **gestiona su cartera hablando normal** (tool-use): *"búscame el cliente con teléfono 787...", "mis leads de esta semana sin nota", "no contestó, lo llamo mañana 10am"*. **No hace falta memorizar comandos.** Ver [[07 - Features#🤝 Zoho CRM — consulta + gestión autónoma]].
+
+Estos slash son solo **accesos rápidos** que disparan la misma consulta en lenguaje natural (comodidad, no requisito):
+
+| Comando | Equivale a |
+|---------|------------|
+| `/misleads` · `/cartera` | "muéstrame mis leads" → `LeadsCard` |
+| `/pendientes` · `/triage` | "mis leads sin nota en 24h" (triage) |
+
+> [!tip] A diferencia de los demás slash
+> Estos SÍ pasan por el LLM (gatillan tool-use de Zoho); los de abajo (juegos, correos, estáticos) se interceptan client-side y no gastan tokens.
+
+---
+
 ## Estáticos (sin LLM)
 
 ### `/sunbot`

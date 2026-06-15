@@ -26,6 +26,55 @@ Detalle técnico: [[03 - Flujo de pregunta]]
 
 ---
 
+## 🤝 Zoho CRM — consulta + gestión autónoma
+
+> [!success] Junio 2026 — el salto grande
+> El bot pasó de SOLO chat a operar el CRM. El asesor consulta y **gestiona su cartera en lenguaje natural** (tool-use), sin memorizar comandos. Todo en producción (commit `33b7c8f`).
+
+**Consultas (lenguaje natural, sin comandos):**
+
+- **`buscar_cliente`** — por email / teléfono / nombre / Lead# (`L######`) / deal. Encuentra incluso clientes **convertidos** (contacto + deal sin lead).
+- **`mis_leads`** — tu cartera con filtros de estado / fecha / orden / cantidad + **triage** "sin nota en 24h".
+
+> [!info] Resolución de asesor sin ambigüedad (`resolveAsesor`)
+> Hay **12 usuarios "Juan"** en Zoho. Antes "juan" traía la cartera de otro Juan; ahora desambigua y "mis leads" siempre resuelve a TU propio usuario (email → ID exacto).
+
+> [!info] Stages de Deals reales de Windmar
+> En Windmar un **Deal = contrato firmado = venta cerrada** (pagan a la 1ra firma → el lead pasa a "Caso Vendido"). Solo **"Cancelled"** es pérdida. (Antes el código usaba "Closed Won/Lost" inexistentes y "sistema comprado" salía siempre vacío.)
+
+**Autonomía del asesor (escritura con confirmación de 1 clic):**
+
+El asesor pasó de **solo-lectura** a **gestionar** su cartera. Tools scoped a SU cartera (`ownsLead`):
+
+| Tool | Qué hace |
+|------|----------|
+| `agregar_nota` | Nota en el lead (firma SUN BOT) |
+| `actualizar_estado` | Cambia el estado del lead |
+| `programar_seguimiento` | Agenda un seguimiento |
+| `asignar_leads` | Solo líderes / admins |
+
+> [!warning] Patrón preparar → confirmar
+> NO se escribe en Zoho hasta que el asesor da clic en una **tarjeta de confirmación** (`ZohoActionCard`). Esta ejecuta `/api/zoho/action`, que **re-valida el dueño** y **audita todo** (`admin_audit`).
+
+**Tarjetas ricas estructuradas (no markdown parafraseado):**
+
+- **`LeadsCard`** — lista de leads, y **`ClientCardChat`** — ficha de cliente. Se renderizan SIEMPRE desde datos estructurados, móvil-friendly, con enlaces y Lead# reales. (Resolvió el bug donde el bot decía "aquí están tus 29 leads" pero no mostraba ninguno.)
+- **Acciones de 1-clic en la ficha:** No contestó · Cita coordinada · Vendido · Nota · Seguimiento.
+- **Flujos compuestos:** *"no contestó, lo llamo mañana 10am"* genera en UN turno estado + seguimiento (+nota) en UNA tarjeta combinada con un solo **Confirmar**.
+
+**Briefing matutino (`BriefingCard`):**
+
+Al abrir el chat muestra **citas de HOY** + **seguimientos vencidos / para hoy** + accionables. Usa campos nativos de Zoho (`Presenter_Appointment`, `Llamar_de_esta_fecha`). Endpoint `/api/zoho/briefing` (rápido, sin consultar notas).
+
+**Config editable en `/admin/zoho`:**
+
+- Mapeos `Lead_Status → grupo` y `Deal Stage → estado` editables **sin redeploy**.
+- Dashboard de **salud**: latencia p50/p95, % error, consultas por herramienta (tabla telemetría `zoho_query_log`).
+
+Detalle del agente Zoho: [[03 - Flujo de pregunta]] · Roadmap proactivo: [[16 - Roadmap]]
+
+---
+
 ## 📄 Análisis de cualquier documento (visión IA)
 
 Upload de imagen (JPG/PNG/WebP/GIF) o PDF — máximo 10MB.
@@ -57,6 +106,16 @@ Endpoint: `/api/upload-document`
 6 plantillas formales, firma corporativa automática, adjuntos PDF/JPG/PNG.
 
 Detalle completo: [[08 - Sistema de correos]]
+
+---
+
+## ⚡ Productividad en el input
+
+Atajos físicos en la barra del chat para no romper el flujo de la llamada.
+
+- **🎙️ Dictado por voz** — botón de micrófono con **Web Speech API nativa** del navegador (NO Deepgram). Gratis, on-device, en español; funciona en Edge/Chrome.
+- **📧 Botón de correo** — ícono de sobre en la barra (chat activo y pantalla de bienvenida) → abre el modal de plantillas de seguimiento (equivale a `/@`).
+- **📞 Dos botones de llamada por lead** — **"3CX"** (esquema `callto:`) y **"Kixie"** (esquema `tel:`), independientes: el asesor elige softphone. Centralizado en `lib/dialer.ts` (mayormente Edge; Kixie requiere su extensión instalada).
 
 ---
 

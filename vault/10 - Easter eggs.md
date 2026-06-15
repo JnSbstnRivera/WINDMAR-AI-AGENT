@@ -8,6 +8,9 @@ fecha: 2026-05-26
 > [!quote] Por qué hay juegos en una app de trabajo
 > *"Pequeños momentos de descanso entre llamadas. Es un guiño cultural y refuerza el branding del SUN BOT como mascota viva. El asesor que descubre `/snake` por accidente se ríe y se lo cuenta al equipo."*
 
+> [!note] Cambio planeado (Fase F — limpieza)
+> Hoy los juegos se invocan con sus comandos sueltos (`/snake`, `/pong`, `/invaders`…). Se planea **moverlos bajo `/sobre`** para no saturar la lista principal de comandos. Ver [[16 - Roadmap#🔧 Fase F — Afinamiento]].
+
 ---
 
 ## 🐍 `/snake` o `/serpiente`

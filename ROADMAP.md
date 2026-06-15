@@ -1,7 +1,7 @@
 # 🗺️ Roadmap Visual — WINDMAR AI AGENT
 
-> Mapa conceptual del proyecto. **Última actualización: 5 junio 2026 (v5)**
-> Estado: **🟢 EN PRODUCCIÓN — Uso activo + Panel admin operativo + 5 admins + PWA instalable**
+> Mapa conceptual del proyecto. **Última actualización: 15 junio 2026 (v6 — era Zoho + Autonomía del asesor)**
+> Estado: **🟢 EN PRODUCCIÓN — Agente Zoho en lenguaje natural · asesor gestiona su cartera con confirmación · tarjetas ricas · briefing matutino · dictado por voz · llamar 3CX/Kixie**
 
 ---
 
@@ -383,6 +383,52 @@ flowchart LR
 
 ## 📅 Bitácora de Cambios
 
+### 11–15 junio 2026 — 🟧 Era Zoho CRM + Autonomía del asesor
+
+El salto más grande desde el lanzamiento: el agente pasó de "responder dudas" a
+**operar el CRM en lenguaje natural**, y el asesor pasó de **solo-lectura** a
+**gestionar su cartera** desde el chat. Todo **EN PRODUCCIÓN** (commit `33b7c8f`).
+
+**🔍 Consultar Zoho (lenguaje natural, tool-use — sin comandos):**
+- `buscar_cliente` (email/teléfono/nombre/Lead# `L######`/deal; encuentra clientes
+  CONVERTIDOS contacto+deal sin lead) y `mis_leads` (cartera con filtros de
+  estado/fecha/orden/cantidad + triage "sin nota en 24h").
+- 🐛 **Fix crítico del filtro por asesor** (`resolveAsesor`): "juan" traía la
+  cartera de OTRO Juan (hay 12 "Juan" en Zoho). Ahora desambigua y "mis leads"
+  resuelve al propio usuario por email→ID exacto.
+- 🐛 **Fix stages de Deals**: un Deal = contrato firmado = venta (pagan a la 1ra
+  firma → "Caso Vendido"); solo `Cancelled` es pérdida. Antes usaba `Closed
+  Won/Lost` (inexistentes) → "sistema comprado" salía siempre vacío.
+
+**✍️ Autonomía del asesor (escritura con confirmación de 1 clic):**
+- Tools `agregar_nota`, `actualizar_estado`, `programar_seguimiento` — scoped a
+  SU cartera (`ownsLead`). Patrón **preparar→confirmar**: nada se escribe en Zoho
+  hasta el clic en la tarjeta (`ZohoActionCard`) → `POST /api/zoho/action`
+  re-valida el dueño + audita (`admin_audit`). `asignar_leads` sigue solo líderes.
+- **Flujos compuestos**: *"no contestó, lo llamo mañana 10am"* → estado +
+  seguimiento en UNA tarjeta combinada con un solo Confirmar.
+
+**🃏 Tarjetas ricas estructuradas (no markdown que Haiku parafrasea):**
+- `LeadsCard` (lista de leads) y `ClientCardChat` (ficha de cliente) se renderizan
+  SIEMPRE desde datos estructurados, móvil-friendly, con Lead#/enlaces reales.
+  Resolvió el bug "aquí están tus 29 leads" sin mostrar ninguno.
+- **Acciones de 1-clic** en la ficha (No contestó/Cita/Vendido/Nota/Seguimiento).
+
+**☀️ Briefing matutino + productividad:**
+- `BriefingCard` al abrir el chat: citas de HOY + seguimientos vencidos +
+  accionables (campos nativos `Presenter_Appointment` / `Llamar_de_esta_fecha`).
+- **Dictado por voz** (Web Speech API nativa, sin Deepgram), **botón de correo**
+  en la barra, y **dos botones de llamada** por lead: 3CX (`callto:`) y Kixie (`tel:`).
+
+**⚙️ Config editable + observabilidad (`/admin/zoho`):**
+- Mapeos `Lead_Status→grupo` y `Deal Stage→estado` editables sin redeploy.
+- Dashboard de salud: latencia p50/p95, % error, consultas por herramienta
+  (telemetría `zoho_query_log`). Migraciones 015–016.
+
+**Infra nueva:** libs `zoho-{agent-tools,actions,leads-card,client-card,config,status}.ts`,
+`quick-replies.ts`, `dialer.ts`; componentes `ZohoActionCard`/`LeadsCard`/`ClientCardChat`/`BriefingCard`;
+endpoints `/api/zoho/{action,briefing}` + `/api/admin/zoho/{config,health}`.
+
 ### 5 junio 2026 — PWA instalable (SUN BOT como app) 📲
 
 Se formalizó el agente como **PWA (Progressive Web App)** para que los asesores
@@ -621,35 +667,30 @@ Sistema de login email/password con flip card 3D, registro con depto/rol/T&C, Pr
 
 ## 🔮 PENDIENTES — Roadmap futuro
 
-### 🟠 Esta semana (validación post-lanzamiento)
-| # | Tarea | Tiempo |
-|---|---|---|
-| 1 | Asesores prueban en uso real | 5-7 días |
-| 2 | Recolección feedback cualitativo | continua |
-| 3 | Monitor logs Vercel para errores | continua |
-| 4 | Métricas Anthropic (cache hit rate, RPM) | continua |
+> Hoja de ruta acordada el 15 jun 2026. **Fases A–D ya están EN PRODUCCIÓN.**
+> **Descartado por decisión del negocio:** Deepgram (para esta app), Power BI, Supermetrics.
 
-### 🟡 Próxima semana (capacidades avanzadas)
-| # | Capacidad | Esfuerzo |
+### ✅ Hecho y en producción (Fases A–D)
+| Fase | Qué | Estado |
 |---|---|---|
-| 1 | 📸 Vision: subir factura LUMA | 1h dev |
-| 2 | 📊 Code execution: gráficos ROI | 1h dev |
-| 3 | 🗺️ Maps/direcciones via web search | 30min dev |
+| 🔵 Zoho base | Consultar + filtros + resolveAsesor + deal stages + config editable | ✅ Prod |
+| 🅰️ Autonomía + productividad | Escritura con confirmación · dictado por voz · llamar 3CX/Kixie · ícono correo | ✅ Prod |
+| 🅑 Briefing | Resumen matutino al abrir (citas hoy + seguimientos vencidos) | ✅ Prod |
+| 🅒 Ficha rica | Cliente como tarjeta + acciones 1-clic | ✅ Prod |
+| 🅓 Flujos compuestos | "No contestó, lo llamo mañana" → estado+seguimiento en 1 tarjeta | ✅ Prod |
 
-### 🟢 Mes próximo (integraciones)
-| # | Capacidad | Esfuerzo |
-|---|---|---|
-| 1 | 🔌 Integración Zoho CRM | 3h dev |
-| 2 | 📊 Dashboard métricas Project M | 1d dev |
-| 3 | 👍👎 Sistema feedback de respuestas | 4h dev |
-| 4 | 📄 PDF processing (contratos) | 30min dev |
+### ⏳ Próximas fases
+| Fase | Capacidad | Necesita | Esfuerzo |
+|---|---|---|---|
+| 🅔 Automatización | **n8n** (sync nocturno Zoho→Supabase + alertas) + **botmaker** (briefing/recordatorios por WhatsApp) | credenciales n8n + botmaker; plantillas WhatsApp aprobadas | sesión conjunta |
+| 🅕 Afinamiento | Latencia (notas en bloque COQL) · "líder ve solo su equipo" · limpieza (juegos bajo `/sobre`, fix `<select>` Usuarios) | decisión: equipos vía Zoho `Reporting_To` o tabla admin | medio, solo |
+| 🅑.2 Push PWA | Notificación push del briefing en la mañana | llaves VAPID + suscripción por usuario + cron | medio |
 
 ### 🔮 Backlog (cuando haya bandwidth)
-- Foto de perfil desde Microsoft Graph
-- Renombrar conversaciones
-- Multi-idioma (futuro lejano)
-- Notificaciones push (la base PWA ya está lista — solo falta backend de push)
-- Reportes semanales automatizados
+- Tracking de respuestas a correos enviados
+- Renombrar conversaciones · auto-tagging por categoría
+- Replicar para Florida (ver `GUIA-MAESTRA-REPLICACION-WINMARD-AGENT-AI.md`)
+- Predicción de cierre por conversación (ML sobre feedback)
 
 ---
 
@@ -673,5 +714,5 @@ Sistema de login email/password con flip card 3D, registro con depto/rol/T&C, Pr
 
 ---
 
-**Última actualización**: 5 junio 2026 — PWA instalable (SUN BOT como app)
-**Próxima revisión sugerida**: después de 1 semana de uso real, basado en feedback de asesores
+**Última actualización**: 15 junio 2026 — Era Zoho CRM + Autonomía del asesor (Fases A–D en producción)
+**Próxima revisión sugerida**: al arrancar Fase E (n8n + botmaker) o Fase F (afinamiento)
