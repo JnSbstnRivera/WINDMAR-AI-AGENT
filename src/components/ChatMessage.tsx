@@ -321,8 +321,10 @@ function ChatMessageImpl({
           <ClientCardChat card={message.client} onSend={onQuickReply} />
         )}
 
-        {/* Tarjeta de acción Zoho (nota/estado/seguimiento) a confirmar con 1 clic */}
-        {!isStreaming && message.action && <ZohoActionCard action={message.action} />}
+        {/* Tarjetas de acción Zoho (nota/estado/seguimiento/compuesta) a confirmar */}
+        {!isStreaming && message.actions?.map((a, i) => (
+          <ZohoActionCard key={`${a.leadId}-${a.type}-${i}`} action={a} />
+        ))}
 
         {/* Quick Replies — chips clicables con preguntas de seguimiento sugeridas */}
         {!isStreaming && message.quickReplies && message.quickReplies.length > 0 && onQuickReply && (
@@ -457,9 +459,8 @@ export const ChatMessage = memo(ChatMessageImpl, (prev, next) => {
       prev.message.quality?.area === next.message.quality?.area);
 
   const actionEqual =
-    (!prev.message.action && !next.message.action) ||
-    (prev.message.action?.leadId === next.message.action?.leadId &&
-      prev.message.action?.type === next.message.action?.type);
+    (prev.message.actions?.length ?? 0) === (next.message.actions?.length ?? 0) &&
+    (prev.message.actions?.[0]?.leadId === next.message.actions?.[0]?.leadId);
 
   const leadsEqual =
     (!prev.message.leads && !next.message.leads) ||

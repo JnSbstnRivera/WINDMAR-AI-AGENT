@@ -4,7 +4,7 @@ import { useRef, useState, useEffect } from 'react';
 import ReactMarkdown, { type Components } from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { extractQuickReplies, stripQuickRepliesForStream } from '@/lib/quick-replies';
-import { extractZohoAction, stripZohoActionForStream, type ZohoPendingAction } from '@/lib/zoho-actions';
+import { extractZohoActions, stripZohoActionForStream, type ZohoPendingAction } from '@/lib/zoho-actions';
 import { extractZohoLeads, stripZohoLeadsForStream, type ZohoLeadsCard } from '@/lib/zoho-leads-card';
 import { extractZohoClient, stripZohoClientForStream, type ZohoClientCard } from '@/lib/zoho-client-card';
 import { ZohoActionCard } from '@/components/ZohoActionCard';
@@ -41,7 +41,7 @@ interface Msg {
   role: 'user' | 'assistant';
   content: string;
   quickReplies?: string[];
-  action?: ZohoPendingAction;
+  actions?: ZohoPendingAction[];
   leads?: ZohoLeadsCard;
   client?: ZohoClientCard;
 }
@@ -112,14 +112,14 @@ export function AdminChat() {
       }
       // Al terminar: separar texto limpio, chips, acción, lista de leads y ficha.
       const { cleanText: noReplies, replies } = extractQuickReplies(acc);
-      const { cleanText: noAction, action } = extractZohoAction(noReplies);
+      const { cleanText: noAction, actions } = extractZohoActions(noReplies);
       const { cleanText: noLeads, leads } = extractZohoLeads(noAction);
       const { cleanText, client } = extractZohoClient(noLeads);
       setMsgs((prev) => {
         const copy = [...prev];
         copy[copy.length - 1] = {
           role: 'assistant', content: cleanText, quickReplies: replies,
-          action: action ?? undefined, leads: leads ?? undefined, client: client ?? undefined,
+          actions: actions.length ? actions : undefined, leads: leads ?? undefined, client: client ?? undefined,
         };
         return copy;
       });
@@ -206,8 +206,10 @@ export function AdminChat() {
             {m.role === 'assistant' && m.leads && <LeadsCard card={m.leads} onLeadClick={send} />}
             {/* Ficha de cliente como tarjeta rica + acciones 1 clic */}
             {m.role === 'assistant' && m.client && <ClientCardChat card={m.client} onSend={send} />}
-            {/* Tarjeta de acción Zoho a confirmar (nota / estado / seguimiento) */}
-            {m.role === 'assistant' && m.action && <ZohoActionCard action={m.action} />}
+            {/* Tarjetas de acción Zoho a confirmar (nota / estado / seguimiento / compuesta) */}
+            {m.role === 'assistant' && m.actions?.map((a, idx) => (
+              <ZohoActionCard key={`${a.leadId}-${a.type}-${idx}`} action={a} />
+            ))}
             {/* Chips de coach (quick replies) — seleccionables */}
             {m.role === 'assistant' && (m.quickReplies?.length ?? 0) > 0 && (
               <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 6 }}>

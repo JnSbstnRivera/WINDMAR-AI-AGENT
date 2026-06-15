@@ -42,21 +42,29 @@ export function ZohoActionCard({ action }: { action: ZohoPendingAction }) {
     }
   }
 
+  // Resumen legible de un paso (usado en detalle simple y en compound)
+  const stepLine = (a: ZohoPendingAction): string => {
+    if (a.type === 'estado') return `🏷️ Estado → ${a.estado?.nuevoEstado || ''}`;
+    if (a.type === 'nota') return `📝 Nota: ${a.nota?.contenido || ''}`;
+    if (a.type === 'seguimiento') {
+      return [
+        a.seguimiento?.callDate ? `📞 Llamar desde ${a.seguimiento.callDate}` : '',
+        a.seguimiento?.appointmentAt ? `📅 Cita ${a.seguimiento.appointmentAt.replace('T', ' ').slice(0, 16)}` : '',
+        a.seguimiento?.nota ? `📝 ${a.seguimiento.nota}` : '',
+      ].filter(Boolean).join('  ·  ');
+    }
+    return a.summary;
+  };
+
   // Detalle legible según el tipo
   const detalle =
     action.type === 'nota'
       ? null // se muestra en el textarea / preview
       : action.type === 'estado'
       ? action.estado?.nuevoEstado
-      : [
-          action.seguimiento?.callDate ? `📞 Llamar desde ${action.seguimiento.callDate}` : '',
-          action.seguimiento?.appointmentAt
-            ? `📅 Cita ${action.seguimiento.appointmentAt.replace('T', ' ').slice(0, 16)}`
-            : '',
-          action.seguimiento?.nota ? `📝 ${action.seguimiento.nota}` : '',
-        ]
-          .filter(Boolean)
-          .join('  ·  ');
+      : action.type === 'seguimiento'
+      ? stepLine(action)
+      : null; // compound se renderiza como lista aparte
 
   const done = status === 'done';
   const closed = done || status === 'cancelled'; // estado final: oculta botones/cuerpo
@@ -97,8 +105,15 @@ export function ZohoActionCard({ action }: { action: ZohoPendingAction }) {
           <div style={{ color: '#e8eaf0', fontSize: 13, lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>{nota}</div>
         )
       )}
-      {!closed && action.type !== 'nota' && (
+      {!closed && (action.type === 'estado' || action.type === 'seguimiento') && (
         <div style={{ color: '#e8eaf0', fontSize: 13, lineHeight: 1.5 }}>{detalle}</div>
+      )}
+      {!closed && action.type === 'compound' && (
+        <div className="flex flex-col gap-1">
+          {(action.steps || []).map((s, i) => (
+            <div key={i} style={{ color: '#e8eaf0', fontSize: 13, lineHeight: 1.5 }}>• {stepLine(s)}</div>
+          ))}
+        </div>
       )}
 
       {/* Mensaje de resultado */}

@@ -34,8 +34,8 @@ export interface Message {
   quality?: QualityMeta;
   /** Preguntas de seguimiento sugeridas — se muestran como chips clicables. */
   quickReplies?: string[];
-  /** Acción de escritura en Zoho preparada por el agente, a confirmar con 1 clic. */
-  action?: ZohoPendingAction;
+  /** Acciones de escritura en Zoho preparadas por el agente, a confirmar con 1 clic. */
+  actions?: ZohoPendingAction[];
   /** Lista de leads a renderizar como tarjeta rica (no markdown del modelo). */
   leads?: ZohoLeadsCard;
   /** Ficha de cliente a renderizar como tarjeta rica. */

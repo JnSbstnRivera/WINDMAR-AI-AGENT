@@ -9,7 +9,7 @@
 // Este módulo es PURO (sin imports de servidor): lo usan el executor de tools,
 // el route del chat, el endpoint de acción y los componentes de cliente.
 
-export type ZohoActionType = 'nota' | 'estado' | 'seguimiento';
+export type ZohoActionType = 'nota' | 'estado' | 'seguimiento' | 'compound';
 
 export interface ZohoPendingAction {
   type: ZohoActionType;
@@ -22,6 +22,21 @@ export interface ZohoPendingAction {
   nota?: { contenido: string };
   estado?: { nuevoEstado: string };
   seguimiento?: { callDate?: string | null; appointmentAt?: string | null; nota?: string | null };
+  /** Solo para 'compound': varios pasos sobre el MISMO lead, un solo confirmar. */
+  steps?: ZohoPendingAction[];
+}
+
+/** Combina varias acciones del mismo lead en UNA sola acción compuesta. */
+export function makeCompoundAction(steps: ZohoPendingAction[]): ZohoPendingAction {
+  const first = steps[0];
+  return {
+    type: 'compound',
+    leadId: first.leadId,
+    leadNumber: first.leadNumber,
+    fullName: first.fullName,
+    summary: steps.map((s) => s.summary).join(' · '),
+    steps,
+  };
 }
 
 const OPEN = '<zoho_action>';
@@ -33,17 +48,18 @@ export function serializeZohoAction(action: ZohoPendingAction): string {
 }
 
 /**
- * Extrae la acción pendiente del texto del LLM y devuelve el texto limpio.
- * Si hay varias, se queda con la ÚLTIMA válida (igual criterio que quick_replies).
+ * Extrae TODAS las acciones pendientes del texto del LLM y devuelve el texto
+ * limpio. Devuelve un array: un turno puede preparar varias acciones (p. ej.
+ * estado + seguimiento, o acciones sobre leads distintos).
  */
-export function extractZohoAction(text: string): { cleanText: string; action: ZohoPendingAction | null } {
+export function extractZohoActions(text: string): { cleanText: string; actions: ZohoPendingAction[] } {
   const re = /<zoho_action>([\s\S]*?)<\/zoho_action>/gi;
-  let action: ZohoPendingAction | null = null;
+  const actions: ZohoPendingAction[] = [];
   let match: RegExpExecArray | null;
   while ((match = re.exec(text)) !== null) {
     try {
       const parsed = JSON.parse(match[1]) as ZohoPendingAction;
-      if (parsed && parsed.type && parsed.leadId) action = parsed;
+      if (parsed && parsed.type && parsed.leadId) actions.push(parsed);
     } catch {
       /* bloque incompleto/cortado por el stream — se ignora */
     }
@@ -53,7 +69,7 @@ export function extractZohoAction(text: string): { cleanText: string; action: Zo
     .replace(/<zoho_action>[\s\S]*$/i, '') // bloque incompleto al final del stream
     .replace(/<\/?zoho_action>/gi, '')
     .trim();
-  return { cleanText, action };
+  return { cleanText, actions };
 }
 
 /** Oculta el bloque (completo o parcial) durante el stream, sin tocar el resto. */
@@ -69,4 +85,5 @@ export const ACTION_META: Record<ZohoActionType, { label: string; emoji: string 
   nota: { label: 'Agregar nota', emoji: '📝' },
   estado: { label: 'Cambiar estado', emoji: '🏷️' },
   seguimiento: { label: 'Programar seguimiento', emoji: '⏰' },
+  compound: { label: 'Gestión del lead', emoji: '⚡' },
 };

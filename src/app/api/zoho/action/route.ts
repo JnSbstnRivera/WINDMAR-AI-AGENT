@@ -55,56 +55,63 @@ export async function POST(req: Request) {
   }
 
   try {
-    switch (action.type) {
-      case 'nota': {
-        const contenido = (action.nota?.contenido || '').trim();
-        if (contenido.length < 2) return NextResponse.json({ error: 'La nota está vacía' }, { status: 400 });
-        if (contenido.length > 5000) return NextResponse.json({ error: 'Nota demasiado larga (máx 5000)' }, { status: 400 });
-        // Atribución del asesor en el cuerpo (la firma SUN BOT la agrega addLeadNote).
-        const conAtribucion = `${contenido}\n— Gestión: ${asesorName}`;
-        const ok = await addLeadNote(action.leadId, conAtribucion, `Nota de ${asesorName}`);
-        if (!ok) return NextResponse.json({ error: 'Zoho no aceptó la nota' }, { status: 502 });
-        await logAudit(scope.email, 'zoho.note', action.leadId, { via: 'chat', chars: contenido.length });
-        return NextResponse.json({ ok: true, message: `Nota guardada en ${lead.fullName}.` });
-      }
+    // Flujo compuesto: varios pasos sobre el mismo lead, ejecutados en orden.
+    const steps = action.type === 'compound' ? (action.steps || []) : [action];
+    if (steps.length === 0) return NextResponse.json({ error: 'Acción vacía' }, { status: 400 });
 
-      case 'estado': {
-        const nuevoEstado = (action.estado?.nuevoEstado || '').trim();
-        if (!VALID_LEAD_STATUSES.includes(nuevoEstado)) {
-          return NextResponse.json({ error: `Estado no válido: "${nuevoEstado}"` }, { status: 400 });
-        }
-        const ok = await updateLeadStatus(action.leadId, nuevoEstado);
-        if (!ok) return NextResponse.json({ error: 'Zoho no aceptó el cambio de estado' }, { status: 502 });
-        await logAudit(scope.email, 'zoho.status', action.leadId, { from: lead.status, to: nuevoEstado });
-        return NextResponse.json({ ok: true, message: `${lead.fullName}: estado → ${nuevoEstado}.` });
-      }
-
-      case 'seguimiento': {
-        const callDate = action.seguimiento?.callDate || null;
-        const appointmentAt = action.seguimiento?.appointmentAt || null;
-        const nota = (action.seguimiento?.nota || '').trim();
-        if (!callDate && !appointmentAt) {
-          return NextResponse.json({ error: 'Falta la fecha de seguimiento' }, { status: 400 });
-        }
-        if (callDate && !/^\d{4}-\d{2}-\d{2}$/.test(callDate)) {
-          return NextResponse.json({ error: 'Formato de fecha inválido (YYYY-MM-DD)' }, { status: 400 });
-        }
-        const ok = await setLeadFollowup(action.leadId, { callDate, appointmentAt });
-        if (!ok) return NextResponse.json({ error: 'Zoho no aceptó el seguimiento' }, { status: 502 });
-        // Nota opcional que documenta el seguimiento en el historial.
-        if (nota.length >= 2) {
-          await addLeadNote(action.leadId, `📅 Seguimiento: ${nota}\n— Gestión: ${asesorName}`, `Seguimiento de ${asesorName}`);
-        }
-        await logAudit(scope.email, 'zoho.followup', action.leadId, { callDate, appointmentAt });
-        return NextResponse.json({ ok: true, message: `Seguimiento programado para ${lead.fullName}.` });
-      }
-
-      default:
-        return NextResponse.json({ error: 'Tipo de acción no soportado' }, { status: 400 });
+    const messages: string[] = [];
+    for (const step of steps) {
+      messages.push(await executeStep(step, lead.fullName, lead.status, scope.email, asesorName));
     }
+    return NextResponse.json({ ok: true, message: messages.join(' · ') });
   } catch (err) {
     const msg = err instanceof Error ? err.message : 'Error ejecutando la acción';
     console.error('[zoho/action]', action.type, msg);
     return NextResponse.json({ error: msg }, { status: 502 });
+  }
+}
+
+/** Ejecuta un paso individual (nota/estado/seguimiento). Lanza Error si falla. */
+async function executeStep(
+  step: ZohoPendingAction,
+  fullName: string,
+  prevStatus: string | null,
+  actorEmail: string,
+  asesorName: string
+): Promise<string> {
+  switch (step.type) {
+    case 'nota': {
+      const contenido = (step.nota?.contenido || '').trim();
+      if (contenido.length < 2) throw new Error('La nota está vacía');
+      if (contenido.length > 5000) throw new Error('Nota demasiado larga (máx 5000)');
+      const ok = await addLeadNote(step.leadId, `${contenido}\n— Gestión: ${asesorName}`, `Nota de ${asesorName}`);
+      if (!ok) throw new Error('Zoho no aceptó la nota');
+      await logAudit(actorEmail, 'zoho.note', step.leadId, { via: 'chat', chars: contenido.length });
+      return `Nota guardada en ${fullName}`;
+    }
+    case 'estado': {
+      const nuevoEstado = (step.estado?.nuevoEstado || '').trim();
+      if (!VALID_LEAD_STATUSES.includes(nuevoEstado)) throw new Error(`Estado no válido: "${nuevoEstado}"`);
+      const ok = await updateLeadStatus(step.leadId, nuevoEstado);
+      if (!ok) throw new Error('Zoho no aceptó el cambio de estado');
+      await logAudit(actorEmail, 'zoho.status', step.leadId, { from: prevStatus, to: nuevoEstado });
+      return `estado → ${nuevoEstado}`;
+    }
+    case 'seguimiento': {
+      const callDate = step.seguimiento?.callDate || null;
+      const appointmentAt = step.seguimiento?.appointmentAt || null;
+      const nota = (step.seguimiento?.nota || '').trim();
+      if (!callDate && !appointmentAt) throw new Error('Falta la fecha de seguimiento');
+      if (callDate && !/^\d{4}-\d{2}-\d{2}$/.test(callDate)) throw new Error('Formato de fecha inválido (YYYY-MM-DD)');
+      const ok = await setLeadFollowup(step.leadId, { callDate, appointmentAt });
+      if (!ok) throw new Error('Zoho no aceptó el seguimiento');
+      if (nota.length >= 2) {
+        await addLeadNote(step.leadId, `📅 Seguimiento: ${nota}\n— Gestión: ${asesorName}`, `Seguimiento de ${asesorName}`);
+      }
+      await logAudit(actorEmail, 'zoho.followup', step.leadId, { callDate, appointmentAt });
+      return 'seguimiento programado';
+    }
+    default:
+      throw new Error('Tipo de acción no soportado');
   }
 }

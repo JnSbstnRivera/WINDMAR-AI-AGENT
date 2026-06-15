@@ -4,7 +4,7 @@ import { SYSTEM_PROMPT } from '@/lib/prompts';
 import { pickRelevantTools, buildToolsContext, toClientCards } from '@/lib/tools';
 import { getViewerScope } from '@/lib/zoho-access';
 import { getZohoToolDefs, executeZohoTool } from '@/lib/zoho-agent-tools';
-import { serializeZohoAction } from '@/lib/zoho-actions';
+import { serializeZohoAction, makeCompoundAction, type ZohoPendingAction } from '@/lib/zoho-actions';
 import { serializeZohoLeads } from '@/lib/zoho-leads-card';
 import { serializeZohoClient } from '@/lib/zoho-client-card';
 import Anthropic from '@anthropic-ai/sdk';
@@ -290,8 +290,12 @@ ZOHO CRM (datos en vivo): tienes herramientas para CONSULTAR (buscar_cliente, mi
 
 ✍️ ESCRITURAS CON CONFIRMACIÓN (importante): agregar_nota, actualizar_estado y programar_seguimiento NO escriben de inmediato — PREPARAN una acción que el asesor confirma con un botón (tarjeta abajo de tu respuesta). Por eso, cuando uses una de ellas:
 - Necesitas el lead_id REAL. Si no lo tienes del turno, primero busca el cliente (buscar_cliente / mis_leads) y usa el id que devuelva. JAMÁS inventes un id.
-- Cuando el asesor narre una gestión ("llamé a X y no contestó", "quedó en cita el jueves", "cerró la venta"), interpreta y prepara la(s) acción(es) que correspondan (ej. "no contestó" → actualizar_estado a "No Contesta" + opcional programar_seguimiento).
-- Después de preparar, di UNA frase corta ("Te dejé listo el cambio, confírmalo abajo 👇") y NO repitas los datos ni pongas <quick_replies> (la tarjeta ya tiene sus botones).
+- Cuando el asesor narre una gestión, interpreta y prepara TODAS las acciones que correspondan EN EL MISMO TURNO (llama varias herramientas a la vez sobre el mismo lead). Ejemplos:
+  · "llamé a X y no contestó, lo llamo mañana 10am" → actualizar_estado("No Contesta") + programar_seguimiento(fecha_cita mañana 10am). Se combinan solas en UNA tarjeta.
+  · "cerró la venta, déjale nota que paga cash" → actualizar_estado("Caso Vendido") + agregar_nota(...).
+  · "quedó cita el jueves 2pm" → actualizar_estado("Cita Coordinada") + programar_seguimiento(fecha_cita jueves 2pm).
+- Usa la fecha actual del contexto para resolver "mañana", "el viernes", etc. (formato fecha_cita: YYYY-MM-DDTHH:mm:ss; fecha_llamada: YYYY-MM-DD).
+- Después de preparar, di UNA frase corta ("Te dejé todo listo, confírmalo abajo 👇") y NO repitas los datos ni pongas <quick_replies> (la tarjeta ya tiene sus botones).
 
 🧭 GUÍA PARA PETICIONES DE ZOHO (sigue esto al pie):
 - "mis leads", "mi cartera", "los míos", "mis leads urgentes" → llama mis_leads SIN el parámetro "asesor" (es la cartera del PROPIO usuario, ${asesorName}). JAMÁS pongas su nombre en "asesor".
@@ -408,6 +412,7 @@ REGLA DE VIGENCIA: usa la fecha actual de arriba para validar promociones, feria
             // Herramientas de cliente (Zoho) → ejecutar y continuar el turno
             if (finalMessage.stop_reason === 'tool_use' && toolUses.length > 0) {
               const results: Anthropic.ToolResultBlockParam[] = [];
+              const turnActions: ZohoPendingAction[] = [];
               for (const tu of toolUses) {
                 const out = await executeZohoTool(
                   tu.name,
@@ -415,11 +420,8 @@ REGLA DE VIGENCIA: usa la fecha actual de arriba para validar promociones, feria
                   scope
                 );
                 results.push({ type: 'tool_result', tool_use_id: tu.id, content: out.content });
-                // Escritura preparada → inyectar la acción en el stream para que
-                // el cliente la renderice como tarjeta de confirmación (1 clic).
-                if (out.action) {
-                  controller.enqueue(encoder.encode(serializeZohoAction(out.action)));
-                }
+                // Escrituras preparadas → se recolectan para combinar abajo.
+                if (out.action) turnActions.push(out.action);
                 // Lista de leads → inyectar la tarjeta rica (el modelo NO la dibuja).
                 if (out.leads) {
                   controller.enqueue(encoder.encode(serializeZohoLeads(out.leads)));
@@ -427,6 +429,23 @@ REGLA DE VIGENCIA: usa la fecha actual de arriba para validar promociones, feria
                 // Ficha de cliente → inyectar la tarjeta rica.
                 if (out.client) {
                   controller.enqueue(encoder.encode(serializeZohoClient(out.client)));
+                }
+              }
+              // FLUJO COMPUESTO: si el turno preparó varias acciones sobre el MISMO
+              // lead (ej. "no contestó, lo llamo mañana" → estado + seguimiento),
+              // se combinan en UNA tarjeta con un solo Confirmar. Leads distintos →
+              // una tarjeta por cada uno.
+              if (turnActions.length === 1) {
+                controller.enqueue(encoder.encode(serializeZohoAction(turnActions[0])));
+              } else if (turnActions.length > 1) {
+                const byLead = new Map<string, ZohoPendingAction[]>();
+                for (const a of turnActions) {
+                  const arr = byLead.get(a.leadId) || [];
+                  arr.push(a);
+                  byLead.set(a.leadId, arr);
+                }
+                for (const arr of byLead.values()) {
+                  controller.enqueue(encoder.encode(serializeZohoAction(arr.length > 1 ? makeCompoundAction(arr) : arr[0])));
                 }
               }
               convo.push({ role: 'assistant', content: finalMessage.content });

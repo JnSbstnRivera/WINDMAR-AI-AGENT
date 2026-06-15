@@ -20,7 +20,7 @@ import type { ZohoClientFull, ZohoLead } from '@/lib/zoho';
 import { SUNBOT_ART, TEMBLOR_TEXT, ABOUT_TEXT } from '@/lib/easter-eggs';
 import { useInactivityLogout } from '@/hooks/useInactivityLogout';
 import { extractQuickReplies, stripQuickRepliesForStream } from '@/lib/quick-replies';
-import { extractZohoAction, stripZohoActionForStream } from '@/lib/zoho-actions';
+import { extractZohoActions, stripZohoActionForStream } from '@/lib/zoho-actions';
 import { extractZohoLeads, stripZohoLeadsForStream } from '@/lib/zoho-leads-card';
 import { extractZohoClient, stripZohoClientForStream } from '@/lib/zoho-client-card';
 import type { Message, Conversation, ToolRef, QualityMeta } from '@/types';
@@ -860,7 +860,7 @@ export function ChatApp({ user, onSignOut }: Props) {
 
       // Extraer Quick Replies, acción Zoho y lista de leads del texto, y limpiarlo.
       const { cleanText: noReplies, replies: quickReplies } = extractQuickReplies(fullText);
-      const { cleanText: noAction, action: zohoAction } = extractZohoAction(noReplies);
+      const { cleanText: noAction, actions: zohoActions } = extractZohoActions(noReplies);
       const { cleanText: noLeads, leads: zohoLeads } = extractZohoLeads(noAction);
       const { cleanText, client: zohoClientCard } = extractZohoClient(noLeads);
 
@@ -886,7 +886,7 @@ export function ChatApp({ user, onSignOut }: Props) {
                         ...(mentionedTools.length > 0 ? { tools: mentionedTools } : {}),
                         ...(qualityMeta ? { quality: qualityMeta } : {}),
                         ...(quickReplies.length > 0 ? { quickReplies } : {}),
-                        ...(zohoAction ? { action: zohoAction } : {}),
+                        ...(zohoActions.length > 0 ? { actions: zohoActions } : {}),
                         ...(zohoLeads ? { leads: zohoLeads } : {}),
                         ...(zohoClientCard ? { client: zohoClientCard } : {}),
                       }
