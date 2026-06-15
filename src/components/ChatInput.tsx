@@ -10,9 +10,11 @@ interface Props {
   onStop?: () => void;
   /** Handler para enviar archivo + (opcional) texto del usuario. */
   onAttach?: (file: File, message?: string) => void;
+  /** Abre el modal de correo de seguimiento (atajo, equivale al comando /@). */
+  onEmail?: () => void;
 }
 
-export function ChatInput({ onSend, disabled, onTypingChange, isStreaming, onStop, onAttach }: Props) {
+export function ChatInput({ onSend, disabled, onTypingChange, isStreaming, onStop, onAttach, onEmail }: Props) {
   const [text, setText] = useState('');
   const [focused, setFocused] = useState(false);
   const [attachedFile, setAttachedFile] = useState<File | null>(null);
@@ -147,6 +149,23 @@ export function ChatInput({ onSend, disabled, onTypingChange, isStreaming, onSto
             )}
 
             <div className="flex gap-2 items-end">
+              {/* Botón correo de seguimiento (atajo al modal — equivale a /@) */}
+              {onEmail && (
+                <button
+                  type="button"
+                  onClick={onEmail}
+                  disabled={disabled}
+                  className="text-gray-500 hover:text-[#F7941D] disabled:opacity-40 disabled:cursor-not-allowed transition-colors w-10 h-10 flex items-center justify-center rounded-lg hover:bg-[#F7941D]/10 cursor-pointer flex-shrink-0"
+                  aria-label="Enviar correo de seguimiento al cliente"
+                  title="Correo de seguimiento al cliente (busca el lead en Zoho y autocompleta)"
+                >
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="2" y="4" width="20" height="16" rx="2" />
+                    <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
+                  </svg>
+                </button>
+              )}
+
               {/* Botón attach (foto/PDF LUMA) */}
               {onAttach && (
                 <>
