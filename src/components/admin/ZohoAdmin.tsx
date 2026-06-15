@@ -23,9 +23,14 @@ const card: React.CSSProperties = {
 };
 const label: React.CSSProperties = { fontSize: 10, letterSpacing: '0.15em', textTransform: 'uppercase', color: 'var(--text3)' };
 const selectStyle: React.CSSProperties = {
-  background: 'var(--glass-bg)', border: '1px solid var(--glass-border)', color: 'var(--text1)',
+  // Fondo SÓLIDO (no glass translúcido): el popup nativo del <select> hereda
+  // este color; con glass-bg caía a blanco del sistema y el texto se perdía.
+  background: 'var(--bg2)', border: '1px solid var(--glass-border)', color: 'var(--text1)',
   borderRadius: 8, padding: '4px 8px', fontSize: 13,
 };
+// Las <option> necesitan fondo/color explícitos y SÓLIDOS o el desplegable se
+// ve ilegible en modo oscuro (texto claro sobre blanco del sistema).
+const optionStyle: React.CSSProperties = { background: 'var(--bg2)', color: 'var(--text1)' };
 
 export function ZohoAdmin({
   initialStatusMap, initialStageMap, initialHealth, buckets, bucketLabels,
@@ -137,7 +142,7 @@ export function ZohoAdmin({
                 <div key={r.status} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, padding: '6px 10px', background: 'rgba(255,255,255,0.03)', borderRadius: 8 }}>
                   <span style={{ color: 'var(--text1)', fontSize: 13 }}>{r.status}</span>
                   <select value={r.bucket} onChange={(e) => setStatusBucket(r.status, e.target.value)} style={selectStyle}>
-                    {buckets.map((b) => <option key={b} value={b}>{bucketLabels[b] || b}</option>)}
+                    {buckets.map((b) => <option key={b} value={b} style={optionStyle}>{bucketLabels[b] || b}</option>)}
                   </select>
                 </div>
               ))}
@@ -155,7 +160,7 @@ export function ZohoAdmin({
                 <div key={r.stage} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: '6px 10px', background: 'rgba(255,255,255,0.03)', borderRadius: 8, flexWrap: 'wrap' }}>
                   <span style={{ color: 'var(--text1)', fontSize: 13, flex: 1, minWidth: 160 }}>{r.stage}</span>
                   <select value={r.state} onChange={(e) => setStageState(r.stage, e.target.value)} style={{ ...selectStyle, color: STATE_COLOR[r.state] || 'var(--text1)' }}>
-                    {STATES.map((s) => <option key={s} value={s}>{s}</option>)}
+                    {STATES.map((s) => <option key={s} value={s} style={optionStyle}>{s}</option>)}
                   </select>
                   <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--text2)', cursor: 'pointer' }}>
                     <input type="checkbox" checked={r.completed} onChange={(e) => setStageCompleted(r.stage, e.target.checked)} />
