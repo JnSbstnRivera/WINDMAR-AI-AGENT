@@ -2,7 +2,7 @@
 
 import { BUCKET_LABEL, type Bucket } from '@/lib/zoho-status';
 import type { ZohoLeadsCard } from '@/lib/zoho-leads-card';
-import { buildCallHref } from '@/lib/dialer';
+import { callHref } from '@/lib/dialer';
 
 const BUCKET_COLOR: Record<Bucket, string> = {
   nuevo: '#38bdf8',
@@ -109,14 +109,23 @@ export function LeadsCard({
             )}
 
             <div className="flex items-center gap-3" style={{ marginTop: 5, paddingLeft: 26 }}>
-              {buildCallHref(l.phone) && (
-                <a
-                  href={buildCallHref(l.phone)!}
-                  style={{ fontSize: 11.5, color: '#22c55e', fontWeight: 600 }}
-                  title={`Llamar a ${l.phone} (3CX)`}
-                >
-                  📞 Llamar
-                </a>
+              {callHref(l.phone, '3cx') && (
+                <>
+                  <a
+                    href={callHref(l.phone, '3cx')!}
+                    style={{ fontSize: 11.5, color: '#22c55e', fontWeight: 600 }}
+                    title={`Llamar a ${l.phone} con 3CX`}
+                  >
+                    📞 3CX
+                  </a>
+                  <a
+                    href={callHref(l.phone, 'kixie')!}
+                    style={{ fontSize: 11.5, color: '#22c55e', fontWeight: 600 }}
+                    title={`Llamar a ${l.phone} con Kixie`}
+                  >
+                    📞 Kixie
+                  </a>
+                </>
               )}
               {onLeadClick && (
                 <button
