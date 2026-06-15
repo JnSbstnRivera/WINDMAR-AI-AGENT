@@ -1,4 +1,5 @@
 import type { ZohoPendingAction } from '@/lib/zoho-actions';
+import type { ZohoLeadsCard } from '@/lib/zoho-leads-card';
 
 export interface ToolRef {
   slug: string;
@@ -34,6 +35,8 @@ export interface Message {
   quickReplies?: string[];
   /** Acción de escritura en Zoho preparada por el agente, a confirmar con 1 clic. */
   action?: ZohoPendingAction;
+  /** Lista de leads a renderizar como tarjeta rica (no markdown del modelo). */
+  leads?: ZohoLeadsCard;
 }
 
 export interface Conversation {

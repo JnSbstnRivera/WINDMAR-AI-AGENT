@@ -21,6 +21,7 @@ import { SUNBOT_ART, TEMBLOR_TEXT, ABOUT_TEXT } from '@/lib/easter-eggs';
 import { useInactivityLogout } from '@/hooks/useInactivityLogout';
 import { extractQuickReplies, stripQuickRepliesForStream } from '@/lib/quick-replies';
 import { extractZohoAction, stripZohoActionForStream } from '@/lib/zoho-actions';
+import { extractZohoLeads, stripZohoLeadsForStream } from '@/lib/zoho-leads-card';
 import type { Message, Conversation, ToolRef, QualityMeta } from '@/types';
 
 function generateId() {
@@ -835,9 +836,10 @@ export function ChatApp({ user, onSignOut }: Props) {
         );
       };
 
-      // Oculta bloques especiales (<quick_replies> y <zoho_action>) mientras
-      // se transmiten, para que el asesor nunca vea XML/JSON crudo.
-      const stripSpecial = (t: string) => stripZohoActionForStream(stripQuickRepliesForStream(t));
+      // Oculta bloques especiales (<quick_replies>, <zoho_action>, <zoho_leads>)
+      // mientras se transmiten, para que el asesor nunca vea XML/JSON crudo.
+      const stripSpecial = (t: string) =>
+        stripZohoLeadsForStream(stripZohoActionForStream(stripQuickRepliesForStream(t)));
 
       while (true) {
         const { done, value } = await reader.read();
@@ -855,9 +857,10 @@ export function ChatApp({ user, onSignOut }: Props) {
       pendingText = stripSpecial(fullText);
       flushUpdate();
 
-      // Extraer Quick Replies y la acción Zoho del texto, y limpiarlo.
+      // Extraer Quick Replies, acción Zoho y lista de leads del texto, y limpiarlo.
       const { cleanText: noReplies, replies: quickReplies } = extractQuickReplies(fullText);
-      const { cleanText, action: zohoAction } = extractZohoAction(noReplies);
+      const { cleanText: noAction, action: zohoAction } = extractZohoAction(noReplies);
+      const { cleanText, leads: zohoLeads } = extractZohoLeads(noAction);
 
       // FILTRO CRÍTICO: solo se renderizan cards de herramientas que el LLM
       // mencionó REALMENTE en el texto (por URL o por [Nombre]). Esto elimina
@@ -882,6 +885,7 @@ export function ChatApp({ user, onSignOut }: Props) {
                         ...(qualityMeta ? { quality: qualityMeta } : {}),
                         ...(quickReplies.length > 0 ? { quickReplies } : {}),
                         ...(zohoAction ? { action: zohoAction } : {}),
+                        ...(zohoLeads ? { leads: zohoLeads } : {}),
                       }
                     : m
                 ),

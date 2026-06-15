@@ -5,6 +5,7 @@ import { pickRelevantTools, buildToolsContext, toClientCards } from '@/lib/tools
 import { getViewerScope } from '@/lib/zoho-access';
 import { getZohoToolDefs, executeZohoTool } from '@/lib/zoho-agent-tools';
 import { serializeZohoAction } from '@/lib/zoho-actions';
+import { serializeZohoLeads } from '@/lib/zoho-leads-card';
 import Anthropic from '@anthropic-ai/sdk';
 
 export const runtime = 'nodejs';
@@ -417,6 +418,10 @@ REGLA DE VIGENCIA: usa la fecha actual de arriba para validar promociones, feria
                 // el cliente la renderice como tarjeta de confirmación (1 clic).
                 if (out.action) {
                   controller.enqueue(encoder.encode(serializeZohoAction(out.action)));
+                }
+                // Lista de leads → inyectar la tarjeta rica (el modelo NO la dibuja).
+                if (out.leads) {
+                  controller.enqueue(encoder.encode(serializeZohoLeads(out.leads)));
                 }
               }
               convo.push({ role: 'assistant', content: finalMessage.content });

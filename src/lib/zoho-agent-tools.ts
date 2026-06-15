@@ -26,11 +26,16 @@ import {
   NOT_IN_PORTFOLIO_MSG,
 } from '@/lib/zoho-access';
 import type { ZohoPendingAction } from '@/lib/zoho-actions';
+import type { ZohoLeadsCard, LeadCardRow } from '@/lib/zoho-leads-card';
 
-/** Resultado de una tool: texto para el modelo + (opcional) acción a confirmar. */
+/**
+ * Resultado de una tool: texto para el modelo + (opcional) datos estructurados
+ * que el cliente renderiza como tarjeta (acción a confirmar o lista de leads).
+ */
 export interface ZohoToolResult {
   content: string;
   action?: ZohoPendingAction;
+  leads?: ZohoLeadsCard;
 }
 
 const WRITE_PREPARE_TOOLS = new Set(['agregar_nota', 'actualizar_estado', 'programar_seguimiento']);
@@ -182,6 +187,8 @@ export async function executeZohoTool(
   try {
     const out = WRITE_PREPARE_TOOLS.has(name)
       ? await prepareWriteTool(name, input, scope)
+      : name === 'mis_leads'
+      ? await runMisLeads(input, scope)
       : { content: await runZohoTool(name, input, scope) };
     logZohoQuery({ tool: name, ok: true, durationMs: Date.now() - start, userEmail: scope.email });
     return out;
@@ -261,145 +268,6 @@ async function runZohoTool(
         ].join('\n');
       }
 
-      case 'mis_leads': {
-        const soloSeguimiento = input.solo_seguimiento === true;
-        const cantidad = Math.min(Math.max(Number(input.cantidad) || 15, 1), 25);
-        const ordenarPor = input.ordenar_por === 'creacion' ? 'creacion' : 'actividad';
-        const estadoFiltro = String(input.estado || '').trim().toLowerCase();
-
-        // ── Resolución del DUEÑO de la cartera (el bug crítico del filtro) ──
-        // Por defecto: cartera propia. Líderes/admins pueden pedir la de otro.
-        const asesorQ = String(input.asesor || '').trim();
-        let ownerId: string | null;
-        let dueño = 'tu cartera';
-
-        // Resolvemos SIEMPRE al usuario propio (id + nombre) — sirve de fallback
-        // y para detectar cuando el modelo manda el primer nombre del PROPIO
-        // usuario en "mis leads" (no debe traer la cartera de un tocayo).
-        const self = await resolveAsesor(scope.email);
-        const selfUser = self.kind === 'one' ? self.user : null;
-
-        if (asesorQ && !scope.canSeeAll) {
-          return 'Solo los líderes/admins pueden ver la cartera de otro asesor. Pídeme "mis leads" (sin nombre) y te muestro la tuya.';
-        }
-
-        if (asesorQ && scope.canSeeAll) {
-          const norm = (s: string) => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').trim();
-          const qWords = norm(asesorQ).split(/\s+/).filter(Boolean);
-          const selfName = selfUser ? norm(selfUser.name) : '';
-          // ¿La query se refiere al propio usuario? (ej. Haiku mandó "juan" y el
-          // usuario es "Juan Sebastián Rivera" → es ÉL, no otro Juan.)
-          const refersToSelf = !!selfUser && qWords.length > 0 && qWords.every((w) => selfName.includes(w));
-
-          if (refersToSelf) {
-            ownerId = selfUser!.id; // cartera propia; dueño se mantiene "tu cartera"
-          } else {
-            const r = await resolveAsesor(asesorQ);
-            if (r.kind === 'none') {
-              return `No encontré a ningún asesor que coincida con "${asesorQ}" en Zoho. Verifica el nombre completo o usa su correo (@windmarhome.com).`;
-            }
-            if (r.kind === 'many') {
-              const lista = r.candidates.map((c) => `- ${c.name} (${c.email})`).join('\n');
-              return `Hay ${r.candidates.length} asesores que coinciden con "${asesorQ}". Dime el NOMBRE COMPLETO o el correo de cuál quieres la cartera:\n${lista}`;
-            }
-            ownerId = r.user.id;
-            dueño = `cartera de ${r.user.name}`;
-          }
-        } else {
-          ownerId = selfUser?.id ?? (await getZohoUserIdByEmail(scope.email));
-          if (!ownerId) {
-            return `No se encontró tu usuario de Zoho (${scope.email}). Pídele a un admin que sincronice los IDs de Zoho en /admin/usuarios.`;
-          }
-        }
-        let leads = await getMyLeads(ownerId);
-        if (leads.length === 0) return `No hay leads en la ${dueño}.`;
-
-        // Filtro por estado (match parcial, sin acentos ni mayúsculas)
-        const norm = (s: string) => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
-        if (estadoFiltro) {
-          const f = norm(estadoFiltro);
-          leads = leads.filter((l) => norm(l.status || '').includes(f));
-          if (leads.length === 0) return `No tienes leads con estado que contenga "${input.estado}".`;
-        }
-
-        // Filtro por fecha de creación (YYYY-MM-DD, comparación lexicográfica sobre ISO)
-        const desde = String(input.creado_desde || '').trim();
-        const hasta = String(input.creado_hasta || '').trim();
-        if (desde) leads = leads.filter((l) => (l.createdAt || '') >= desde);
-        if (hasta) leads = leads.filter((l) => (l.createdAt || '').slice(0, 10) <= hasta);
-        if ((desde || hasta) && leads.length === 0) {
-          return `No tienes leads creados en ese rango de fechas (${desde || '…'} a ${hasta || 'hoy'}).`;
-        }
-
-        // Orden: por defecto última actividad (ya viene así); 'creacion' = más nuevos primero
-        if (ordenarPor === 'creacion') {
-          leads = [...leads].sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
-        }
-
-        // Helpers de formato para la tabla
-        const fmtFecha = (iso: string | null) => (iso ? iso.slice(0, 10) : '—');
-        const fmtNota = (note: { content: string; createdAt: string | null } | null) => {
-          if (!note) return '⚠️ sin notas';
-          const txt = note.content.replace(/\s+/g, ' ').trim();
-          const preview = txt.length > 60 ? txt.slice(0, 57) + '…' : txt;
-          return `${preview} (${fmtFecha(note.createdAt)})`;
-        };
-        // Escapar pipes para no romper la tabla markdown
-        const esc = (s: string) => s.replace(/\|/g, '/');
-
-        const buildTable = (rows: typeof leads, notes: Map<string, Awaited<ReturnType<typeof getLeadLastNote>>>) => {
-          const header = '| Lead | Cliente | Estado | Owner | Consultor | Creado | Última nota |\n|---|---|---|---|---|---|---|';
-          const body = rows
-            .map((l) => {
-              const nota = notes.has(l.id) ? fmtNota(notes.get(l.id) ?? null) : '—';
-              const leadLink = `[${esc(l.leadNumber || 'abrir')}](${l.zohoUrl})`;
-              return `| ${leadLink} | [${esc(l.fullName)}](${l.zohoUrl}) | ${esc(l.status || 'sin estado')} | ${esc(l.owner || '—')} | ${esc(l.consultor || '—')} | ${fmtFecha(l.createdAt)} | ${esc(nota)} |`;
-            })
-            .join('\n');
-          return `${header}\n${body}`;
-        };
-
-        // Trae las últimas notas de un conjunto de leads (chunks de 8)
-        const fetchNotes = async (rows: typeof leads) => {
-          const map = new Map<string, Awaited<ReturnType<typeof getLeadLastNote>>>();
-          for (let i = 0; i < rows.length; i += 8) {
-            const chunk = rows.slice(i, i + 8);
-            const notes = await Promise.all(chunk.map((l) => getLeadLastNote(l.id)));
-            chunk.forEach((l, idx) => map.set(l.id, notes[idx]));
-          }
-          return map;
-        };
-
-        const FORMATO =
-          'INSTRUCCIÓN DE FORMATO (OBLIGATORIA — RESPUESTA PLANA): tu respuesta es SOLO: 1 línea corta de contexto + la TABLA markdown de abajo TAL CUAL (enlaces [..](..) intactos). La TABLA es obligatoria SIEMPRE — aunque tenga 1 SOLA fila, NUNCA la conviertas en prosa; el formato debe ser idéntico en cada consulta de leads de la conversación. NADA MÁS de texto: cero análisis, cero secciones tipo "CALIENTE/REVISAR", cero recomendaciones en prosa, cero preguntas al final. PROHIBIDO inventar o agregar filas, columnas, Lead IDs, teléfonos o totales que no estén abajo. Todo tu COACHING va EXCLUSIVAMENTE en el bloque <quick_replies> como 3 chips accionables sobre estos leads concretos (ej: "Busca a {nombre} y dime qué pasó", "¿A quién llamo primero?", "Dame solo los No Contesta") — el asesor selecciona el que quiera.';
-
-        if (!soloSeguimiento) {
-          const shown = leads.slice(0, cantidad);
-          const notes = await fetchNotes(shown);
-          const byBucket: Record<string, number> = {};
-          for (const l of leads) byBucket[l.bucket] = (byBucket[l.bucket] || 0) + 1;
-          const resumen = Object.entries(byBucket)
-            .map(([b, n]) => `${BUCKET_LABEL[b as keyof typeof BUCKET_LABEL] || b}: ${n}`)
-            .join(' · ');
-          const ordenTxt = ordenarPor === 'creacion' ? 'más recién creados' : 'con actividad más reciente';
-          const filtroTxt = estadoFiltro ? ` con estado "${input.estado}"` : '';
-          const duenoTxt = dueño === 'tu cartera' ? '' : ` (${dueño})`;
-          return `${FORMATO}\n\nCARTERA${duenoTxt}${filtroTxt}: ${leads.length} leads (${resumen})${leads.length > shown.length ? ` — mostrando los ${shown.length} ${ordenTxt}` : ''}\n\n${buildTable(shown, notes)}`;
-        }
-
-        // Triage: leads accionables SIN nota en las últimas 24h
-        const actionable = leads.filter((l) => isActionable(l.bucket)).slice(0, TRIAGE_LIMIT);
-        const cutoff = Date.now() - STALE_HOURS * 3600 * 1000;
-        const notes = await fetchNotes(actionable);
-        const stale = actionable.filter((l) => {
-          const note = notes.get(l.id);
-          const t = note?.createdAt ? Date.parse(note.createdAt) : 0;
-          return !note || isNaN(t) || t < cutoff;
-        });
-        if (stale.length === 0) return '¡Todo al día! Ningún lead accionable sin nota en las últimas 24h.';
-        return `${FORMATO}\n\nLEADS QUE NECESITAN SEGUIMIENTO (sin nota en ${STALE_HOURS}h): ${stale.length} de ${actionable.length} accionables revisados\n\n${buildTable(stale, notes)}`;
-      }
-
       case 'asignar_leads': {
         if (!scope.canSeeAll) return 'No tienes permiso para asignar leads (acción de líder/admin).';
         const leadIds = Array.isArray(input.lead_ids) ? (input.lead_ids as unknown[]).map(String) : [];
@@ -415,6 +283,159 @@ async function runZohoTool(
       default:
         return `Herramienta desconocida: ${name}`;
     }
+}
+
+// ════════════════════════════════════════════════════════════════
+// MIS LEADS — devuelve la lista como DATOS ESTRUCTURADOS (tarjeta rica)
+// ════════════════════════════════════════════════════════════════
+// Antes devolvía una tabla markdown que el modelo debía copiar; Haiku la
+// parafraseaba y se la saltaba (visto en prod: "aquí están tus 29 leads" SIN
+// lista). Ahora el cliente renderiza la tarjeta desde estos datos — siempre.
+
+const NOTE_PREVIEW_LEN = 70;
+
+/** Trae las últimas notas de un conjunto de leads (chunks de 8 en paralelo). */
+async function fetchLastNotes(rows: Array<{ id: string }>) {
+  const map = new Map<string, Awaited<ReturnType<typeof getLeadLastNote>>>();
+  for (let i = 0; i < rows.length; i += 8) {
+    const chunk = rows.slice(i, i + 8);
+    const notes = await Promise.all(chunk.map((l) => getLeadLastNote(l.id)));
+    chunk.forEach((l, idx) => map.set(l.id, notes[idx]));
+  }
+  return map;
+}
+
+async function runMisLeads(input: Record<string, unknown>, scope: ViewerScope): Promise<ZohoToolResult> {
+  const soloSeguimiento = input.solo_seguimiento === true;
+  const cantidad = Math.min(Math.max(Number(input.cantidad) || 15, 1), 25);
+  const ordenarPor = input.ordenar_por === 'creacion' ? 'creacion' : 'actividad';
+  const estadoFiltro = String(input.estado || '').trim().toLowerCase();
+
+  // ── Resolución del DUEÑO de la cartera (anti-tocayo, ver resolveAsesor) ──
+  const asesorQ = String(input.asesor || '').trim();
+  let ownerId: string | null;
+  let dueño = 'tu cartera';
+  const self = await resolveAsesor(scope.email);
+  const selfUser = self.kind === 'one' ? self.user : null;
+
+  if (asesorQ && !scope.canSeeAll) {
+    return { content: 'Solo los líderes/admins pueden ver la cartera de otro asesor. Pídeme "mis leads" (sin nombre) y te muestro la tuya.' };
+  }
+  if (asesorQ && scope.canSeeAll) {
+    const norm = (s: string) => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').trim();
+    const qWords = norm(asesorQ).split(/\s+/).filter(Boolean);
+    const selfName = selfUser ? norm(selfUser.name) : '';
+    const refersToSelf = !!selfUser && qWords.length > 0 && qWords.every((w) => selfName.includes(w));
+    if (refersToSelf) {
+      ownerId = selfUser!.id;
+    } else {
+      const r = await resolveAsesor(asesorQ);
+      if (r.kind === 'none') {
+        return { content: `No encontré a ningún asesor que coincida con "${asesorQ}" en Zoho. Verifica el nombre completo o usa su correo (@windmarhome.com).` };
+      }
+      if (r.kind === 'many') {
+        const lista = r.candidates.map((c) => `- ${c.name} (${c.email})`).join('\n');
+        return { content: `Hay ${r.candidates.length} asesores que coinciden con "${asesorQ}". Dime el NOMBRE COMPLETO o el correo de cuál quieres la cartera:\n${lista}` };
+      }
+      ownerId = r.user.id;
+      dueño = `cartera de ${r.user.name}`;
+    }
+  } else {
+    ownerId = selfUser?.id ?? (await getZohoUserIdByEmail(scope.email));
+    if (!ownerId) {
+      return { content: `No se encontró tu usuario de Zoho (${scope.email}). Pídele a un admin que sincronice los IDs de Zoho en /admin/usuarios.` };
+    }
+  }
+
+  let leads = await getMyLeads(ownerId);
+  if (leads.length === 0) return { content: `No hay leads en la ${dueño}.` };
+
+  const norm = (s: string) => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+  if (estadoFiltro) {
+    const f = norm(estadoFiltro);
+    leads = leads.filter((l) => norm(l.status || '').includes(f));
+    if (leads.length === 0) return { content: `No tienes leads con estado que contenga "${input.estado}".` };
+  }
+  const desde = String(input.creado_desde || '').trim();
+  const hasta = String(input.creado_hasta || '').trim();
+  if (desde) leads = leads.filter((l) => (l.createdAt || '') >= desde);
+  if (hasta) leads = leads.filter((l) => (l.createdAt || '').slice(0, 10) <= hasta);
+  if ((desde || hasta) && leads.length === 0) {
+    return { content: `No tienes leads creados en ese rango de fechas (${desde || '…'} a ${hasta || 'hoy'}).` };
+  }
+  if (ordenarPor === 'creacion') {
+    leads = [...leads].sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
+  }
+
+  // Selección a mostrar: triage (accionables sin nota 24h) o cartera normal.
+  let rows = leads;
+  let title: string;
+  let subtitleBase: string;
+  if (soloSeguimiento) {
+    const actionable = leads.filter((l) => isActionable(l.bucket)).slice(0, TRIAGE_LIMIT);
+    const notesA = await fetchLastNotes(actionable);
+    const cutoff = Date.now() - STALE_HOURS * 3600 * 1000;
+    rows = actionable.filter((l) => {
+      const note = notesA.get(l.id);
+      const t = note?.createdAt ? Date.parse(note.createdAt) : 0;
+      return !note || isNaN(t) || t < cutoff;
+    });
+    if (rows.length === 0) {
+      return { content: '¡Todo al día! Ningún lead accionable sin nota en las últimas 24h. Felicítalo brevemente y NO muestres tabla.' };
+    }
+    title = dueño === 'tu cartera' ? 'Leads que necesitan seguimiento' : `Seguimiento — ${dueño}`;
+    subtitleBase = `${rows.length} sin nota en ${STALE_HOURS}h${estadoFiltro ? ` · ${input.estado}` : ''}`;
+  } else {
+    rows = leads.slice(0, cantidad);
+    title = dueño === 'tu cartera' ? 'Mi cartera' : dueño.charAt(0).toUpperCase() + dueño.slice(1);
+    const ordenTxt = ordenarPor === 'creacion' ? 'más recientes' : 'con actividad reciente';
+    subtitleBase = `${leads.length} leads${estadoFiltro ? ` · ${input.estado}` : ''}${leads.length > rows.length ? ` · mostrando ${rows.length} ${ordenTxt}` : ''}`;
+  }
+
+  // Notas de las filas a mostrar + armado de la tarjeta estructurada.
+  const notes = await fetchLastNotes(rows);
+  const cardRows: LeadCardRow[] = rows.map((l) => {
+    const n = notes.get(l.id) ?? null;
+    const preview = n ? n.content.replace(/\s+/g, ' ').trim().slice(0, NOTE_PREVIEW_LEN) : '';
+    return {
+      id: l.id,
+      leadNumber: l.leadNumber,
+      fullName: l.fullName,
+      status: l.status,
+      bucket: l.bucket,
+      owner: l.owner,
+      consultor: l.consultor,
+      createdAt: l.createdAt,
+      zohoUrl: l.zohoUrl,
+      phone: l.phone,
+      lastNote: n ? { preview, createdAt: n.createdAt } : null,
+    };
+  });
+
+  const byBucket: Record<string, number> = {};
+  for (const l of leads) byBucket[l.bucket] = (byBucket[l.bucket] || 0) + 1;
+
+  const card: ZohoLeadsCard = {
+    title,
+    subtitle: subtitleBase,
+    total: soloSeguimiento ? rows.length : leads.length,
+    rows: cardRows,
+    byBucket,
+  };
+
+  // Lo que ve el MODELO: NO la lista (la pinta el cliente), solo instrucción +
+  // resumen para que escriba un intro inteligente. Así Haiku ya no "parafrasea"
+  // ni se salta la tabla.
+  const resumen = Object.entries(byBucket)
+    .map(([b, n]) => `${BUCKET_LABEL[b as keyof typeof BUCKET_LABEL] || b}: ${n}`)
+    .join(' · ');
+  const content = [
+    `LISTA DE LEADS YA MOSTRADA al asesor como tarjeta visual (${card.total} ${soloSeguimiento ? 'que necesitan seguimiento' : 'leads'}${estadoFiltro ? `, filtro "${input.estado}"` : ''}). Distribución: ${resumen}.`,
+    'Tu respuesta: SOLO 1 frase corta de contexto (ej. "¡Aquí tienes tus más urgentes, Juanse! 👇"). NO listes los leads, NO escribas tabla, NO los analices en prosa — la tarjeta ya los muestra.',
+    'Luego pon un bloque <quick_replies> con 3 chips accionables sobre estos leads (ej. "¿A quién llamo primero?", "Busca a [nombre] y dime qué pasó", "Déjale nota de seguimiento al primero").',
+  ].join('\n');
+
+  return { content, leads: card };
 }
 
 // ════════════════════════════════════════════════════════════════

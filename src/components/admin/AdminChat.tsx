@@ -5,7 +5,9 @@ import ReactMarkdown, { type Components } from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { extractQuickReplies, stripQuickRepliesForStream } from '@/lib/quick-replies';
 import { extractZohoAction, stripZohoActionForStream, type ZohoPendingAction } from '@/lib/zoho-actions';
+import { extractZohoLeads, stripZohoLeadsForStream, type ZohoLeadsCard } from '@/lib/zoho-leads-card';
 import { ZohoActionCard } from '@/components/ZohoActionCard';
+import { LeadsCard } from '@/components/LeadsCard';
 
 // Render markdown del asistente: tablas con bordes, enlaces naranjas a Zoho.
 const mdComponents: Components = {
@@ -38,6 +40,7 @@ interface Msg {
   content: string;
   quickReplies?: string[];
   action?: ZohoPendingAction;
+  leads?: ZohoLeadsCard;
 }
 
 const SUGERENCIAS = [
@@ -95,21 +98,25 @@ export function AdminChat() {
         const { done, value } = await reader.read();
         if (done) break;
         acc += decoder.decode(value, { stream: true });
-        // Durante el stream ocultamos bloques especiales (<quick_replies> y
-        // <zoho_action>), parciales o completos, SIN borrar lo que venga después.
-        const visible = stripZohoActionForStream(stripQuickRepliesForStream(acc));
+        // Durante el stream ocultamos bloques especiales (<quick_replies>,
+        // <zoho_action>, <zoho_leads>) SIN borrar lo que venga después.
+        const visible = stripZohoLeadsForStream(stripZohoActionForStream(stripQuickRepliesForStream(acc)));
         setMsgs((prev) => {
           const copy = [...prev];
           copy[copy.length - 1] = { role: 'assistant', content: visible };
           return copy;
         });
       }
-      // Al terminar: separar texto limpio, chips y la acción de Zoho a confirmar.
+      // Al terminar: separar texto limpio, chips, acción y lista de leads.
       const { cleanText: noReplies, replies } = extractQuickReplies(acc);
-      const { cleanText, action } = extractZohoAction(noReplies);
+      const { cleanText: noAction, action } = extractZohoAction(noReplies);
+      const { cleanText, leads } = extractZohoLeads(noAction);
       setMsgs((prev) => {
         const copy = [...prev];
-        copy[copy.length - 1] = { role: 'assistant', content: cleanText, quickReplies: replies, action: action ?? undefined };
+        copy[copy.length - 1] = {
+          role: 'assistant', content: cleanText, quickReplies: replies,
+          action: action ?? undefined, leads: leads ?? undefined,
+        };
         return copy;
       });
     } catch {
@@ -191,6 +198,8 @@ export function AdminChat() {
                 m.content
               )}
             </div>
+            {/* Lista de leads como tarjeta rica */}
+            {m.role === 'assistant' && m.leads && <LeadsCard card={m.leads} onLeadClick={send} />}
             {/* Tarjeta de acción Zoho a confirmar (nota / estado / seguimiento) */}
             {m.role === 'assistant' && m.action && <ZohoActionCard action={m.action} />}
             {/* Chips de coach (quick replies) — seleccionables */}
