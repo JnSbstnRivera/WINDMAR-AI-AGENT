@@ -7,9 +7,10 @@ interface Props {
   disabled?: boolean;
   onTypingChange?: (typing: boolean) => void;
   onAttach?: (file: File) => void;
+  onEmail?: () => void;
 }
 
-export function WelcomeScreen({ onSend, disabled, onTypingChange, onAttach }: Props) {
+export function WelcomeScreen({ onSend, disabled, onTypingChange, onAttach, onEmail }: Props) {
   return (
     <div className="flex-1 flex flex-col items-center justify-start px-4 pt-[8vh] sm:pt-[10vh] pb-6 sm:pb-8">
       <div
@@ -50,7 +51,7 @@ export function WelcomeScreen({ onSend, disabled, onTypingChange, onAttach }: Pr
       </p>
 
       <div className="w-full max-w-2xl">
-        <ChatInput onSend={onSend} disabled={disabled} onTypingChange={onTypingChange} onAttach={onAttach} />
+        <ChatInput onSend={onSend} disabled={disabled} onTypingChange={onTypingChange} onAttach={onAttach} onEmail={onEmail} />
       </div>
 
       <style>{`

@@ -1321,6 +1321,7 @@ export function ChatApp({ user, onSignOut }: Props) {
               onSend={sendMessage}
               disabled={isStreaming}
               onAttach={uploadDocument}
+              onEmail={() => setFollowUpOpen(true)}
               onTypingChange={(typing) => {
                 if (!isStreaming) setMascotState(typing ? 'typing' : 'idle');
               }}
