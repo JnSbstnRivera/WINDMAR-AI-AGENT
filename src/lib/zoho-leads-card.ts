@@ -25,12 +25,25 @@ export interface LeadCardRow {
   lastNote: { preview: string; createdAt: string | null } | null;
 }
 
+/** Fila de deal para búsquedas por teléfono/correo/nombre (estilo NOTAS VASS). */
+export interface DealCardRow {
+  name: string;
+  stage: string | null;
+  amount: string | null;
+  contactName: string | null;
+  owner: string | null;
+  createdAt: string | null;
+  zohoUrl: string;
+}
+
 export interface ZohoLeadsCard {
   title: string; // "Mi cartera" | "Leads que necesitan seguimiento" | "Cartera de X"
   subtitle: string; // "29 en Asistencia Coordinada sin nota en 24h"
   total: number; // total que cumplió el filtro (puede ser > rows.length)
   rows: LeadCardRow[];
   byBucket?: Record<string, number>;
+  /** Solo en búsquedas por teléfono/correo/nombre: deals recientes del contacto. */
+  deals?: DealCardRow[];
 }
 
 const OPEN = '<zoho_leads>';

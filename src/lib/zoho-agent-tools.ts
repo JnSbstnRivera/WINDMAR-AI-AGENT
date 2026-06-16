@@ -14,6 +14,8 @@ import {
   resolveAsesor,
   getDealsByQuery,
   searchContacts,
+  searchLeads,
+  detectQueryType,
   assignLeads,
   getLeadBasic,
   type LeadBasic,
@@ -26,7 +28,7 @@ import {
   NOT_IN_PORTFOLIO_MSG,
 } from '@/lib/zoho-access';
 import type { ZohoPendingAction } from '@/lib/zoho-actions';
-import type { ZohoLeadsCard, LeadCardRow } from '@/lib/zoho-leads-card';
+import type { ZohoLeadsCard, LeadCardRow, DealCardRow } from '@/lib/zoho-leads-card';
 import type { ZohoClientCard, ClientDeal } from '@/lib/zoho-client-card';
 
 /**
@@ -249,7 +251,8 @@ async function fetchLastNotes(rows: Array<{ id: string }>) {
 
 async function runMisLeads(input: Record<string, unknown>, scope: ViewerScope): Promise<ZohoToolResult> {
   const soloSeguimiento = input.solo_seguimiento === true;
-  const cantidad = Math.min(Math.max(Number(input.cantidad) || 15, 1), 25);
+  // Sin número exacto → 30 (la tabla aguanta bien); con número, respeta hasta 40.
+  const cantidad = Math.min(Math.max(Number(input.cantidad) || 30, 1), 40);
   const ordenarPor = input.ordenar_por === 'creacion' ? 'creacion' : 'actividad';
   const estadoFiltro = String(input.estado || '').trim().toLowerCase();
 
@@ -334,25 +337,21 @@ async function runMisLeads(input: Record<string, unknown>, scope: ViewerScope): 
     subtitleBase = `${leads.length} leads${estadoFiltro ? ` · ${input.estado}` : ''}${leads.length > rows.length ? ` · mostrando ${rows.length} ${ordenTxt}` : ''}`;
   }
 
-  // Notas de las filas a mostrar + armado de la tarjeta estructurada.
-  const notes = await fetchLastNotes(rows);
-  const cardRows: LeadCardRow[] = rows.map((l) => {
-    const n = notes.get(l.id) ?? null;
-    const preview = n ? n.content.replace(/\s+/g, ' ').trim().slice(0, NOTE_PREVIEW_LEN) : '';
-    return {
-      id: l.id,
-      leadNumber: l.leadNumber,
-      fullName: l.fullName,
-      status: l.status,
-      bucket: l.bucket,
-      owner: l.owner,
-      consultor: l.consultor,
-      createdAt: l.createdAt,
-      zohoUrl: l.zohoUrl,
-      phone: l.phone,
-      lastNote: n ? { preview, createdAt: n.createdAt } : null,
-    };
-  });
+  // La tabla NO muestra columna de nota → no traemos notas aquí (rápido). El
+  // triage de arriba ya consultó notas solo para FILTRAR los stale.
+  const cardRows: LeadCardRow[] = rows.map((l) => ({
+    id: l.id,
+    leadNumber: l.leadNumber,
+    fullName: l.fullName,
+    status: l.status,
+    bucket: l.bucket,
+    owner: l.owner,
+    consultor: l.consultor,
+    createdAt: l.createdAt,
+    zohoUrl: l.zohoUrl,
+    phone: l.phone,
+    lastNote: null,
+  }));
 
   const byBucket: Record<string, number> = {};
   for (const l of leads) byBucket[l.bucket] = (byBucket[l.bucket] || 0) + 1;
@@ -390,8 +389,43 @@ async function runBuscarCliente(input: Record<string, unknown>, scope: ViewerSco
   const query = String(input.query || '').trim();
   if (query.length < 3) return { content: 'Query muy corta — pídele al asesor email, teléfono, nombre o Lead#.' };
 
-  const full = await getClientFull(query);
   const maps = await getZohoMaps();
+
+  // ── TELÉFONO / CORREO / NOMBRE → TABLA (estilo NOTAS VASS): últimos leads +
+  //    deals del contacto. Lead# (L######) NO entra aquí: cae a la ficha + cuadro.
+  if (detectQueryType(query) !== 'leadNumber') {
+    const [leadsRaw, dealsRaw] = await Promise.all([searchLeads(query, 10), getDealsByQuery(query)]);
+    const visLeads = scope.canSeeAll ? leadsRaw : leadsRaw.filter((l) => (l.ownerEmail || '').toLowerCase() === scope.email);
+    const visDeals = scope.canSeeAll ? dealsRaw : dealsRaw.filter((d) => (d.ownerEmail || '').toLowerCase() === scope.email);
+    if (visLeads.length === 0 && visDeals.length === 0) {
+      return { content: `No encontré "${query}" en Zoho${scope.canSeeAll ? '' : ' en tu cartera'}. Dile al asesor que verifique el dato — NO inventes resultados.` };
+    }
+    const byCreated = (a: { createdAt: string | null }, b: { createdAt: string | null }) => (b.createdAt || '').localeCompare(a.createdAt || '');
+    const leads3 = [...visLeads].sort(byCreated).slice(0, 3);
+    const deals3 = [...visDeals].sort(byCreated).slice(0, 3);
+    const rows: LeadCardRow[] = leads3.map((l) => ({
+      id: l.id, leadNumber: l.leadNumber, fullName: l.fullName, status: l.stage,
+      bucket: maps.bucketOf(l.stage), owner: l.owner, consultor: l.consultor,
+      createdAt: l.createdAt, zohoUrl: l.zohoUrl, phone: l.mobile || l.phone, lastNote: null,
+    }));
+    const dealRows: DealCardRow[] = deals3.map((d) => ({
+      name: d.name, stage: d.stage, amount: d.amount, contactName: d.contactName,
+      owner: d.owner, createdAt: d.createdAt, zohoUrl: d.zohoUrl,
+    }));
+    const card: ZohoLeadsCard = {
+      title: `Resultados para "${query}"`,
+      subtitle: `${visLeads.length} lead(s) · ${visDeals.length} deal(s) — los más recientes`,
+      total: visLeads.length,
+      rows,
+      deals: dealRows.length ? dealRows : undefined,
+    };
+    return {
+      content: `BÚSQUEDA mostrada como TABLA (${rows.length} leads, ${dealRows.length} deals del contacto). NO repitas la lista ni inventes. Di 1 frase corta; si hay varios, sugiere abrir el correcto con "Abre el lead L######".`,
+      leads: card,
+    };
+  }
+
+  const full = await getClientFull(query);
 
   // FALLBACK — cliente CONVERTIDO (sin lead; Contacto/Deal). Scoping por owner.
   if (!full) {

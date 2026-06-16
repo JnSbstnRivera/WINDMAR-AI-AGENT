@@ -47,6 +47,20 @@ export function ChatWindow({
     }
   }, [isStreaming]);
 
+  // Las tarjetas/tablas (leads, ficha, tipificación, quick replies) se adjuntan
+  // DESPUÉS del stream y cambian la altura del mensaje → la vista "brincaba".
+  // Cuando el último mensaje gana ese contenido, re-bajamos al final (con un
+  // pequeño delay para que la tabla termine de montar/medir).
+  const last = messages[messages.length - 1];
+  const lastExtrasKey = last
+    ? [last.id, last.leads ? 'L' : '', last.client ? 'C' : '', last.actions?.length ?? 0, last.quickReplies?.length ?? 0, last.tools?.length ?? 0, last.quality ? 'Q' : ''].join('|')
+    : '';
+  useEffect(() => {
+    if (isStreaming || !lastExtrasKey) return;
+    const id = setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' }), 80);
+    return () => clearTimeout(id);
+  }, [lastExtrasKey, isStreaming]);
+
   return (
     <div className="flex-1 overflow-y-auto px-3 sm:px-6 md:px-10 py-6">
       <div className="max-w-3xl mx-auto">
