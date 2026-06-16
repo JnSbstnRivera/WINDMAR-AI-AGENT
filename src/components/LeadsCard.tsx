@@ -114,6 +114,7 @@ export function LeadsCard({
                           fullName={l.fullName}
                           currentStatus={l.status}
                           options={tipOptions}
+                          consultor={l.consultor}
                           compact
                           onSaved={() => { setDoneIds((s) => new Set(s).add(l.id)); setTimeout(() => setOpenId(null), 1200); }}
                         />

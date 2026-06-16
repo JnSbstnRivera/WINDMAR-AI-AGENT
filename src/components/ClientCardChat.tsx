@@ -70,6 +70,7 @@ export function ClientCardChat({ card, onEmail }: { card: ZohoClientCard; onEmai
             fullName={card.fullName}
             currentStatus={card.status}
             options={card.tipificarOptions ?? []}
+            consultor={card.consultor}
           />
           {onEmail && (
             <div style={{ marginTop: 8 }}>

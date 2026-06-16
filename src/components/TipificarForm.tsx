@@ -3,8 +3,10 @@
 import { useRef, useState } from 'react';
 import type { ZohoPendingAction } from '@/lib/zoho-actions';
 import type { TipificarOpt } from '@/lib/zoho-client-card';
+import { VentaForm } from './VentaForm';
 
 const CALL_TEMPLATE = '📞 Llamada realizada — resultado: __';
+const SALE_STATUS = 'Caso Vendido';
 
 /**
  * Cuadro de tipificación reutilizable (ficha del cliente y filas de la tabla):
@@ -17,6 +19,7 @@ export function TipificarForm({
   fullName,
   currentStatus,
   options,
+  consultor,
   compact,
   onSaved,
 }: {
@@ -25,6 +28,7 @@ export function TipificarForm({
   fullName: string;
   currentStatus: string | null;
   options: TipificarOpt[];
+  consultor?: string | null;
   compact?: boolean;
   onSaved?: () => void;
 }) {
@@ -37,8 +41,13 @@ export function TipificarForm({
 
   function pickStatus(status: string) {
     setNuevoEstado(status);
+    // Para "Caso Vendido" el VentaForm compone la nota → limpiamos para que no
+    // pise la plantilla simple.
+    if (status === SALE_STATUS) {
+      if (nota.trim() === '' || nota === appliedTpl.current) { setNota(''); appliedTpl.current = ''; }
+      return;
+    }
     const tpl = options.find((o) => o.status === status)?.plantilla || '';
-    // Autocompleta la nota solo si está vacía o aún tiene una plantilla previa.
     if (tpl && (nota.trim() === '' || nota === appliedTpl.current)) {
       setNota(tpl);
       appliedTpl.current = tpl;
@@ -88,6 +97,12 @@ export function TipificarForm({
           📞 Solo llamada
         </button>
       </div>
+
+      {/* Venta: formulario completo (producto/consultor/pago) → compone la nota */}
+      {nuevoEstado === SALE_STATUS && (
+        <VentaForm consultorPrefill={consultor} onNote={(t) => { setNota(t); appliedTpl.current = t; }} />
+      )}
+
       <textarea
         value={nota}
         onChange={(e) => setNota(e.target.value)}
