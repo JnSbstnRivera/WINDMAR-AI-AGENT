@@ -44,6 +44,8 @@ export interface ZohoLeadsCard {
   byBucket?: Record<string, number>;
   /** Solo en búsquedas por teléfono/correo/nombre: deals recientes del contacto. */
   deals?: DealCardRow[];
+  /** Estados + plantilla para tipificar inline en cada fila (editable en /admin/zoho). */
+  tipificarOptions?: Array<{ status: string; plantilla?: string | null }>;
 }
 
 const OPEN = '<zoho_leads>';

@@ -12,7 +12,7 @@ export default async function ZohoConfigPage() {
     sb.from('zoho_status_map').select('status,bucket,sort,updated_at,updated_by').order('sort'),
     sb.from('zoho_deal_stage_map').select('stage,state,completed,sort,updated_at,updated_by').order('sort'),
     sb.rpc('admin_zoho_health', { p_days: 7 }),
-    sb.from('zoho_tipificar_opciones').select('status,orden,activo').order('orden'),
+    sb.from('zoho_tipificar_opciones').select('status,plantilla,orden,activo').order('orden'),
   ]);
 
   return (
@@ -20,7 +20,7 @@ export default async function ZohoConfigPage() {
       initialStatusMap={statusRes.data ?? []}
       initialStageMap={stageRes.data ?? []}
       initialHealth={healthRes.data ?? null}
-      initialTipificar={(tipRes.data ?? []) as Array<{ status: string; orden: number; activo: boolean }>}
+      initialTipificar={(tipRes.data ?? []) as Array<{ status: string; plantilla: string | null; orden: number; activo: boolean }>}
       buckets={Object.keys(BUCKET_LABEL)}
       bucketLabels={BUCKET_LABEL}
       allStatuses={VALID_LEAD_STATUSES}

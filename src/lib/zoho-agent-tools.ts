@@ -362,6 +362,7 @@ async function runMisLeads(input: Record<string, unknown>, scope: ViewerScope): 
     total: soloSeguimiento ? rows.length : leads.length,
     rows: cardRows,
     byBucket,
+    tipificarOptions: await getTipificarOptions(),
   };
 
   // Lo que ve el MODELO: NO la lista (la pinta el cliente), solo instrucción +
@@ -418,6 +419,7 @@ async function runBuscarCliente(input: Record<string, unknown>, scope: ViewerSco
       total: visLeads.length,
       rows,
       deals: dealRows.length ? dealRows : undefined,
+      tipificarOptions: await getTipificarOptions(),
     };
     return {
       content: `BÚSQUEDA mostrada como TABLA (${rows.length} leads, ${dealRows.length} deals del contacto). NO repitas la lista ni inventes. Di 1 frase corta; si hay varios, sugiere abrir el correcto con "Abre el lead L######".`,

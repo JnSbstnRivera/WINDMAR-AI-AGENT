@@ -1,8 +1,10 @@
 'use client';
 
+import { Fragment, useState } from 'react';
 import { BUCKET_LABEL, type Bucket } from '@/lib/zoho-status';
 import type { ZohoLeadsCard } from '@/lib/zoho-leads-card';
 import { callHref } from '@/lib/dialer';
+import { TipificarForm } from './TipificarForm';
 
 const BUCKET_COLOR: Record<Bucket, string> = {
   nuevo: '#38bdf8', seguimiento: '#F7941D', frio: '#94a3b8', cita_pendiente: '#a78bfa',
@@ -26,13 +28,16 @@ const td: React.CSSProperties = { padding: '6px 8px', fontSize: 12.5, color: '#c
  */
 export function LeadsCard({
   card,
-  onLeadClick,
 }: {
   card: ZohoLeadsCard;
+  /** @deprecated ya no se usa: tipificar es inline en la fila. */
   onLeadClick?: (text: string) => void;
 }) {
   const buckets = Object.entries(card.byBucket ?? {}).sort((a, b) => b[1] - a[1]);
   const deals = card.deals ?? [];
+  const tipOptions = card.tipificarOptions ?? [];
+  const [openId, setOpenId] = useState<string | null>(null); // fila expandida
+  const [doneIds, setDoneIds] = useState<Set<string>>(new Set()); // filas ya tipificadas
 
   return (
     <div
@@ -71,32 +76,53 @@ export function LeadsCard({
             </tr>
           </thead>
           <tbody>
-            {card.rows.map((l) => (
-              <tr key={l.id}>
-                <td style={td}><a href={l.zohoUrl} target="_blank" rel="noopener noreferrer" style={{ color: '#94a3b8' }}>{l.leadNumber || '—'}</a></td>
-                <td style={{ ...td, color: '#e8eaf0', fontWeight: 600, maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis' }}>{l.fullName}</td>
-                <td style={{ ...td, color: BUCKET_COLOR[l.bucket] }}>● {l.status || 'sin estado'}</td>
-                <td style={td}>{l.owner || '—'}</td>
-                <td style={td}>{l.consultor || '—'}</td>
-                <td style={td}>
-                  {l.phone && callHref(l.phone, '3cx')
-                    ? <a href={callHref(l.phone, '3cx')!} style={{ color: '#22c55e' }} title="Llamar (3CX)">{l.phone}</a>
-                    : (l.phone || '—')}
-                </td>
-                <td style={td}>{fmtFecha(l.createdAt)}</td>
-                <td style={{ ...td, textAlign: 'right' }}>
-                  {onLeadClick && (
-                    <button
-                      onClick={() => onLeadClick(`Abre el lead ${l.leadNumber || l.fullName}`)}
-                      style={{ fontSize: 11.5, color: '#F7941D', cursor: 'pointer', background: 'none', border: '1px solid rgba(247,148,29,0.45)', borderRadius: 6, padding: '2px 9px', whiteSpace: 'nowrap' }}
-                      title="Abrir ficha + tipificar"
-                    >
-                      Abrir
-                    </button>
+            {card.rows.map((l) => {
+              const open = openId === l.id;
+              const isDone = doneIds.has(l.id);
+              return (
+                <Fragment key={l.id}>
+                  <tr style={open ? { background: 'rgba(247,148,29,0.06)' } : undefined}>
+                    <td style={td}><a href={l.zohoUrl} target="_blank" rel="noopener noreferrer" style={{ color: '#94a3b8' }}>{l.leadNumber || '—'}</a></td>
+                    <td style={{ ...td, color: '#e8eaf0', fontWeight: 600, maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {isDone ? '✓ ' : ''}{l.fullName}
+                    </td>
+                    <td style={{ ...td, color: BUCKET_COLOR[l.bucket] }}>● {l.status || 'sin estado'}</td>
+                    <td style={td}>{l.owner || '—'}</td>
+                    <td style={td}>{l.consultor || '—'}</td>
+                    <td style={td}>
+                      {l.phone && callHref(l.phone, '3cx')
+                        ? <a href={callHref(l.phone, '3cx')!} style={{ color: '#22c55e' }} title="Llamar (3CX)">{l.phone}</a>
+                        : (l.phone || '—')}
+                    </td>
+                    <td style={td}>{fmtFecha(l.createdAt)}</td>
+                    <td style={{ ...td, textAlign: 'right' }}>
+                      <button
+                        onClick={() => setOpenId(open ? null : l.id)}
+                        style={{ fontSize: 11.5, color: open ? '#1B3A5C' : '#F7941D', cursor: 'pointer', background: open ? '#F7941D' : 'none', border: '1px solid rgba(247,148,29,0.45)', borderRadius: 6, padding: '2px 9px', whiteSpace: 'nowrap' }}
+                        title="Tipificar este lead sin salir de la lista"
+                      >
+                        {open ? 'Cerrar' : isDone ? 'Editar' : 'Tipificar'}
+                      </button>
+                    </td>
+                  </tr>
+                  {open && (
+                    <tr>
+                      <td colSpan={8} style={{ padding: '10px 12px', background: 'rgba(255,255,255,0.03)', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+                        <TipificarForm
+                          leadId={l.id}
+                          leadNumber={l.leadNumber}
+                          fullName={l.fullName}
+                          currentStatus={l.status}
+                          options={tipOptions}
+                          compact
+                          onSaved={() => { setDoneIds((s) => new Set(s).add(l.id)); setTimeout(() => setOpenId(null), 1200); }}
+                        />
+                      </td>
+                    </tr>
                   )}
-                </td>
-              </tr>
-            ))}
+                </Fragment>
+              );
+            })}
           </tbody>
         </table>
       </div>

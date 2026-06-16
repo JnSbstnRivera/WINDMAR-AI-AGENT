@@ -38,7 +38,7 @@ export function ZohoAdmin({
   initialStatusMap: StatusRow[];
   initialStageMap: StageRow[];
   initialHealth: ZohoHealth | null;
-  initialTipificar: Array<{ status: string; orden: number; activo: boolean }>;
+  initialTipificar: Array<{ status: string; plantilla: string | null; orden: number; activo: boolean }>;
   buckets: string[];
   bucketLabels: Record<string, string>;
   allStatuses: string[];
@@ -50,8 +50,11 @@ export function ZohoAdmin({
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
 
-  // ── Tipificación: lista editable de estados del dropdown del cuadro ──
-  const [tipificar, setTipificar] = useState<string[]>(initialTipificar.filter((t) => t.activo).map((t) => t.status));
+  // ── Tipificación: estados + plantilla editables del cuadro ──
+  type Tip = { status: string; plantilla: string };
+  const [tipificar, setTipificar] = useState<Tip[]>(
+    initialTipificar.filter((t) => t.activo).map((t) => ({ status: t.status, plantilla: t.plantilla ?? '' }))
+  );
   const [tipDirty, setTipDirty] = useState(false);
   const [tipSaving, setTipSaving] = useState(false);
   const [tipMsg, setTipMsg] = useState<string | null>(null);
@@ -59,10 +62,13 @@ export function ZohoAdmin({
 
   const addTip = () => {
     const v = tipNew.trim();
-    if (!v || tipificar.includes(v)) return;
-    setTipificar((t) => [...t, v]); setTipNew(''); setTipDirty(true);
+    if (!v || tipificar.some((t) => t.status === v)) return;
+    setTipificar((t) => [...t, { status: v, plantilla: '' }]); setTipNew(''); setTipDirty(true);
   };
-  const removeTip = (s: string) => { setTipificar((t) => t.filter((x) => x !== s)); setTipDirty(true); };
+  const removeTip = (s: string) => { setTipificar((t) => t.filter((x) => x.status !== s)); setTipDirty(true); };
+  const setTipPlantilla = (s: string, plantilla: string) => {
+    setTipificar((t) => t.map((x) => (x.status === s ? { ...x, plantilla } : x))); setTipDirty(true);
+  };
   const moveTip = (i: number, dir: -1 | 1) => {
     setTipificar((t) => {
       const j = i + dir; if (j < 0 || j >= t.length) return t;
@@ -75,7 +81,7 @@ export function ZohoAdmin({
     try {
       const res = await fetch('/api/admin/zoho/tipificar', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ statuses: tipificar }),
+        body: JSON.stringify({ items: tipificar }),
       });
       const j = await res.json();
       if (!res.ok) throw new Error(j.error || 'Error guardando');
@@ -217,13 +223,19 @@ export function ZohoAdmin({
             </div>
             <div className="flex flex-col" style={{ gap: 6, marginBottom: 12 }}>
               {tipificar.length === 0 && <div style={{ color: 'var(--text3)', fontSize: 13 }}>Sin estados — agrega al menos uno abajo.</div>}
-              {tipificar.map((s, i) => (
-                <div key={s} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 10px', background: 'rgba(255,255,255,0.03)', borderRadius: 8 }}>
+              {tipificar.map((t, i) => (
+                <div key={t.status} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 10px', background: 'rgba(255,255,255,0.03)', borderRadius: 8, flexWrap: 'wrap' }}>
                   <span style={{ color: 'var(--text3)', fontSize: 12, minWidth: 18 }}>{i + 1}.</span>
-                  <span style={{ flex: 1, color: 'var(--text1)', fontSize: 13 }}>{s}</span>
+                  <span style={{ minWidth: 150, color: 'var(--text1)', fontSize: 13, fontWeight: 600 }}>{t.status}</span>
+                  <input
+                    value={t.plantilla}
+                    onChange={(e) => setTipPlantilla(t.status, e.target.value)}
+                    placeholder="Plantilla de nota (se autocompleta al elegir este estado)"
+                    style={{ ...selectStyle, flex: 1, minWidth: 220 }}
+                  />
                   <button onClick={() => moveTip(i, -1)} disabled={i === 0} title="Subir" style={{ ...selectStyle, padding: '2px 8px', cursor: i === 0 ? 'default' : 'pointer', opacity: i === 0 ? 0.4 : 1 }}>↑</button>
                   <button onClick={() => moveTip(i, 1)} disabled={i === tipificar.length - 1} title="Bajar" style={{ ...selectStyle, padding: '2px 8px', cursor: i === tipificar.length - 1 ? 'default' : 'pointer', opacity: i === tipificar.length - 1 ? 0.4 : 1 }}>↓</button>
-                  <button onClick={() => removeTip(s)} title="Quitar" style={{ ...selectStyle, padding: '2px 8px', cursor: 'pointer', color: '#ef4444', borderColor: 'rgba(239,68,68,0.4)' }}>✕</button>
+                  <button onClick={() => removeTip(t.status)} title="Quitar" style={{ ...selectStyle, padding: '2px 8px', cursor: 'pointer', color: '#ef4444', borderColor: 'rgba(239,68,68,0.4)' }}>✕</button>
                 </div>
               ))}
             </div>
@@ -237,7 +249,7 @@ export function ZohoAdmin({
                 style={{ ...selectStyle, flex: 1, minWidth: 200 }}
               />
               <datalist id="zoho-all-statuses">
-                {allStatuses.filter((s) => !tipificar.includes(s)).map((s) => <option key={s} value={s} />)}
+                {allStatuses.filter((s) => !tipificar.some((t) => t.status === s)).map((s) => <option key={s} value={s} />)}
               </datalist>
               <button onClick={addTip} disabled={!tipNew.trim()} style={{ ...selectStyle, cursor: tipNew.trim() ? 'pointer' : 'default', color: '#F7941D', borderColor: 'rgba(247,148,29,0.5)' }}>+ Agregar</button>
               <button

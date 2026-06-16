@@ -23,17 +23,24 @@ import {
 
 const TTL_MS = 5 * 60 * 1000;
 
+export interface TipificarOption { status: string; plantilla: string | null }
+
 // Default curado si la tabla está vacía o Supabase falla.
-const DEFAULT_TIPIFICAR = [
-  'No Contesta', 'Llamar Despues', 'Cita Coordinada', 'Cita Realizada',
-  'Caso Vendido', 'Seguimiento Requerido', 'DQ o No le Interesa',
+const DEFAULT_TIPIFICAR: TipificarOption[] = [
+  { status: 'No Contesta', plantilla: '📵 No contesta. Intento #__ — reintentar: __' },
+  { status: 'Llamar Despues', plantilla: '⏰ Pidió que lo llamen luego. Cuándo: __' },
+  { status: 'Cita Coordinada', plantilla: '📅 Cita coordinada para __ con __' },
+  { status: 'Cita Realizada', plantilla: '✅ Cita realizada. Resultado: __' },
+  { status: 'Caso Vendido', plantilla: '🎉 Caso vendido. Método de pago: __. Detalle: __' },
+  { status: 'Seguimiento Requerido', plantilla: '📞 Seguimiento: __. Próximo paso: __' },
+  { status: 'DQ o No le Interesa', plantilla: '❌ No interesado. Motivo: __' },
 ];
 
 type Cache = {
   statusToBucket: Record<string, string>;
   stageToState: Record<string, DealState>;
   stageCompleted: Record<string, boolean>;
-  tipificar: string[];
+  tipificar: TipificarOption[];
   loadedAt: number;
 };
 
@@ -47,7 +54,7 @@ async function load(): Promise<Cache> {
     const [s, d, t] = await Promise.all([
       sb.from('zoho_status_map').select('status,bucket'),
       sb.from('zoho_deal_stage_map').select('stage,state,completed'),
-      sb.from('zoho_tipificar_opciones').select('status,orden,activo').order('orden'),
+      sb.from('zoho_tipificar_opciones').select('status,plantilla,orden,activo').order('orden'),
     ]);
     for (const r of (s.data ?? []) as Array<{ status: string; bucket: string }>) {
       fresh.statusToBucket[r.status] = r.bucket;
@@ -56,9 +63,9 @@ async function load(): Promise<Cache> {
       fresh.stageToState[r.stage] = r.state;
       fresh.stageCompleted[r.stage] = r.completed;
     }
-    fresh.tipificar = ((t.data ?? []) as Array<{ status: string; activo: boolean }>)
+    fresh.tipificar = ((t.data ?? []) as Array<{ status: string; plantilla: string | null; activo: boolean }>)
       .filter((r) => r.activo)
-      .map((r) => r.status);
+      .map((r) => ({ status: r.status, plantilla: r.plantilla ?? null }));
   } catch (err) {
     // Fallback silencioso: cache vacío → todo cae a los defaults del código.
     console.error('[zoho-config] no se pudo cargar config de Supabase, usando defaults:', err instanceof Error ? err.message : err);
@@ -99,7 +106,7 @@ export function invalidateZohoMapsCache(): void {
  * Estados que aparecen en el dropdown del cuadro de tipificación (editable en
  * /admin/zoho). Si la tabla está vacía o falla, devuelve el default curado.
  */
-export async function getTipificarOptions(): Promise<string[]> {
+export async function getTipificarOptions(): Promise<TipificarOption[]> {
   const m = await load();
   return m.tipificar.length ? m.tipificar : DEFAULT_TIPIFICAR;
 }
