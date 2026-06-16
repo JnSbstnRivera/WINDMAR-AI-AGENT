@@ -316,10 +316,8 @@ function ChatMessageImpl({
           <LeadsCard card={message.leads} onLeadClick={onQuickReply} />
         )}
 
-        {/* Ficha de cliente como tarjeta rica + acciones de 1 clic */}
-        {!isStreaming && message.client && (
-          <ClientCardChat card={message.client} onSend={onQuickReply} />
-        )}
+        {/* Ficha de cliente + cuadro de tipificación (dropdown estado + nota) */}
+        {!isStreaming && message.client && <ClientCardChat card={message.client} />}
 
         {/* Tarjetas de acción Zoho (nota/estado/seguimiento/compuesta) a confirmar */}
         {!isStreaming && message.actions?.map((a, i) => (

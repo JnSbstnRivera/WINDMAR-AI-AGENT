@@ -204,8 +204,8 @@ export function AdminChat() {
             </div>
             {/* Lista de leads como tarjeta rica */}
             {m.role === 'assistant' && m.leads && <LeadsCard card={m.leads} onLeadClick={send} />}
-            {/* Ficha de cliente como tarjeta rica + acciones 1 clic */}
-            {m.role === 'assistant' && m.client && <ClientCardChat card={m.client} onSend={send} />}
+            {/* Ficha de cliente + cuadro de tipificación */}
+            {m.role === 'assistant' && m.client && <ClientCardChat card={m.client} />}
             {/* Tarjetas de acción Zoho a confirmar (nota / estado / seguimiento / compuesta) */}
             {m.role === 'assistant' && m.actions?.map((a, idx) => (
               <ZohoActionCard key={`${a.leadId}-${a.type}-${idx}`} action={a} />

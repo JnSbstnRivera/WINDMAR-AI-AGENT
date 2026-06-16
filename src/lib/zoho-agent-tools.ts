@@ -19,7 +19,7 @@ import {
   type LeadBasic,
 } from '@/lib/zoho';
 import { isActionable, BUCKET_LABEL, VALID_LEAD_STATUSES, resolveLeadStatus } from '@/lib/zoho-status';
-import { getZohoMaps, logZohoQuery } from '@/lib/zoho-config';
+import { getZohoMaps, logZohoQuery, getTipificarOptions } from '@/lib/zoho-config';
 import {
   type ViewerScope,
   ownsLead,
@@ -424,6 +424,7 @@ async function runBuscarCliente(input: Record<string, unknown>, scope: ViewerSco
 
   if (!ownsLead(full.lead, scope)) return { content: NOT_IN_PORTFOLIO_MSG };
   const l = full.lead;
+  const tipificarOptions = await getTipificarOptions();
   const card: ZohoClientCard = {
     kind: 'lead',
     fullName: l.fullName,
@@ -440,6 +441,7 @@ async function runBuscarCliente(input: Record<string, unknown>, scope: ViewerSco
     totalDeals: full.summary.totalDeals,
     dealsAbiertos: full.summary.dealsAbiertos,
     deals: full.deals.slice(0, 6).map((d) => ({ name: d.name, stage: d.stage, amount: d.amount, zohoUrl: d.zohoUrl })),
+    tipificarOptions,
   };
   return {
     content: `FICHA de ${l.fullName} (Lead ${l.leadNumber || l.id}, estado "${l.stage || 'sin estado'}") mostrada como tarjeta — NO repitas los datos ni escribas tabla. En 1-2 frases da el PRÓXIMO PASO de gestión según su estado y lo comprado (${full.summary.sistemaComprado}). Cierra con <quick_replies> de 3 chips accionables (ej. dejar nota, marcar estado, programar seguimiento).`,

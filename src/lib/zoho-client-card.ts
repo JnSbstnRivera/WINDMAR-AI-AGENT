@@ -31,6 +31,8 @@ export interface ZohoClientCard {
   totalDeals: number;
   dealsAbiertos: number;
   deals: ClientDeal[];
+  /** Estados para el dropdown de tipificación (editables en /admin/zoho). */
+  tipificarOptions?: string[];
 }
 
 const OPEN = '<zoho_client>';

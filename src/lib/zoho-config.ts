@@ -23,10 +23,17 @@ import {
 
 const TTL_MS = 5 * 60 * 1000;
 
+// Default curado si la tabla está vacía o Supabase falla.
+const DEFAULT_TIPIFICAR = [
+  'No Contesta', 'Llamar Despues', 'Cita Coordinada', 'Cita Realizada',
+  'Caso Vendido', 'Seguimiento Requerido', 'DQ o No le Interesa',
+];
+
 type Cache = {
   statusToBucket: Record<string, string>;
   stageToState: Record<string, DealState>;
   stageCompleted: Record<string, boolean>;
+  tipificar: string[];
   loadedAt: number;
 };
 
@@ -34,12 +41,13 @@ let cache: Cache | null = null;
 
 async function load(): Promise<Cache> {
   if (cache && Date.now() - cache.loadedAt < TTL_MS) return cache;
-  const fresh: Cache = { statusToBucket: {}, stageToState: {}, stageCompleted: {}, loadedAt: Date.now() };
+  const fresh: Cache = { statusToBucket: {}, stageToState: {}, stageCompleted: {}, tipificar: [], loadedAt: Date.now() };
   try {
     const sb = getSupabaseAdmin();
-    const [s, d] = await Promise.all([
+    const [s, d, t] = await Promise.all([
       sb.from('zoho_status_map').select('status,bucket'),
       sb.from('zoho_deal_stage_map').select('stage,state,completed'),
+      sb.from('zoho_tipificar_opciones').select('status,orden,activo').order('orden'),
     ]);
     for (const r of (s.data ?? []) as Array<{ status: string; bucket: string }>) {
       fresh.statusToBucket[r.status] = r.bucket;
@@ -48,6 +56,9 @@ async function load(): Promise<Cache> {
       fresh.stageToState[r.stage] = r.state;
       fresh.stageCompleted[r.stage] = r.completed;
     }
+    fresh.tipificar = ((t.data ?? []) as Array<{ status: string; activo: boolean }>)
+      .filter((r) => r.activo)
+      .map((r) => r.status);
   } catch (err) {
     // Fallback silencioso: cache vacío → todo cae a los defaults del código.
     console.error('[zoho-config] no se pudo cargar config de Supabase, usando defaults:', err instanceof Error ? err.message : err);
@@ -82,6 +93,15 @@ export async function getZohoMaps(): Promise<ZohoMaps> {
 /** Invalida el cache (llamar tras editar los mapeos en /admin/zoho). */
 export function invalidateZohoMapsCache(): void {
   cache = null;
+}
+
+/**
+ * Estados que aparecen en el dropdown del cuadro de tipificación (editable en
+ * /admin/zoho). Si la tabla está vacía o falla, devuelve el default curado.
+ */
+export async function getTipificarOptions(): Promise<string[]> {
+  const m = await load();
+  return m.tipificar.length ? m.tipificar : DEFAULT_TIPIFICAR;
 }
 
 // ════════════════════════════════════════════════════════════════

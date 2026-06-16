@@ -33,13 +33,15 @@ const selectStyle: React.CSSProperties = {
 const optionStyle: React.CSSProperties = { background: 'var(--bg2)', color: 'var(--text1)' };
 
 export function ZohoAdmin({
-  initialStatusMap, initialStageMap, initialHealth, buckets, bucketLabels,
+  initialStatusMap, initialStageMap, initialHealth, initialTipificar, buckets, bucketLabels, allStatuses,
 }: {
   initialStatusMap: StatusRow[];
   initialStageMap: StageRow[];
   initialHealth: ZohoHealth | null;
+  initialTipificar: Array<{ status: string; orden: number; activo: boolean }>;
   buckets: string[];
   bucketLabels: Record<string, string>;
+  allStatuses: string[];
 }) {
   const [tab, setTab] = useState<'mapeos' | 'salud'>('mapeos');
   const [statusMap, setStatusMap] = useState<StatusRow[]>(initialStatusMap);
@@ -47,6 +49,42 @@ export function ZohoAdmin({
   const [dirty, setDirty] = useState(false);
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
+
+  // ── Tipificación: lista editable de estados del dropdown del cuadro ──
+  const [tipificar, setTipificar] = useState<string[]>(initialTipificar.filter((t) => t.activo).map((t) => t.status));
+  const [tipDirty, setTipDirty] = useState(false);
+  const [tipSaving, setTipSaving] = useState(false);
+  const [tipMsg, setTipMsg] = useState<string | null>(null);
+  const [tipNew, setTipNew] = useState('');
+
+  const addTip = () => {
+    const v = tipNew.trim();
+    if (!v || tipificar.includes(v)) return;
+    setTipificar((t) => [...t, v]); setTipNew(''); setTipDirty(true);
+  };
+  const removeTip = (s: string) => { setTipificar((t) => t.filter((x) => x !== s)); setTipDirty(true); };
+  const moveTip = (i: number, dir: -1 | 1) => {
+    setTipificar((t) => {
+      const j = i + dir; if (j < 0 || j >= t.length) return t;
+      const c = [...t]; [c[i], c[j]] = [c[j], c[i]]; return c;
+    });
+    setTipDirty(true);
+  };
+  async function saveTip() {
+    setTipSaving(true); setTipMsg(null);
+    try {
+      const res = await fetch('/api/admin/zoho/tipificar', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ statuses: tipificar }),
+      });
+      const j = await res.json();
+      if (!res.ok) throw new Error(j.error || 'Error guardando');
+      setTipDirty(false);
+      setTipMsg('✅ Guardado. Aplica en máx. 5 min (cache del agente).');
+    } catch (e) {
+      setTipMsg('❌ ' + (e instanceof Error ? e.message : 'Error'));
+    } finally { setTipSaving(false); }
+  }
 
   const [health, setHealth] = useState<ZohoHealth | null>(initialHealth);
   const [days, setDays] = useState(7);
@@ -169,6 +207,53 @@ export function ZohoAdmin({
                 </div>
               ))}
             </div>
+          </div>
+
+          {/* ── Tipificación: estados del dropdown del cuadro del chat ── */}
+          <div style={card}>
+            <div style={{ color: '#F7941D', fontWeight: 700, fontSize: 15, marginBottom: 4 }}>Tipificación → estados del cuadro</div>
+            <div style={{ ...label, textTransform: 'none', letterSpacing: 0, marginBottom: 12 }}>
+              Estados que el asesor ve en el dropdown del cuadro de tipificación (chat). Agrega, quita o reordena a tu gusto. Solo valores reales de Zoho.
+            </div>
+            <div className="flex flex-col" style={{ gap: 6, marginBottom: 12 }}>
+              {tipificar.length === 0 && <div style={{ color: 'var(--text3)', fontSize: 13 }}>Sin estados — agrega al menos uno abajo.</div>}
+              {tipificar.map((s, i) => (
+                <div key={s} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 10px', background: 'rgba(255,255,255,0.03)', borderRadius: 8 }}>
+                  <span style={{ color: 'var(--text3)', fontSize: 12, minWidth: 18 }}>{i + 1}.</span>
+                  <span style={{ flex: 1, color: 'var(--text1)', fontSize: 13 }}>{s}</span>
+                  <button onClick={() => moveTip(i, -1)} disabled={i === 0} title="Subir" style={{ ...selectStyle, padding: '2px 8px', cursor: i === 0 ? 'default' : 'pointer', opacity: i === 0 ? 0.4 : 1 }}>↑</button>
+                  <button onClick={() => moveTip(i, 1)} disabled={i === tipificar.length - 1} title="Bajar" style={{ ...selectStyle, padding: '2px 8px', cursor: i === tipificar.length - 1 ? 'default' : 'pointer', opacity: i === tipificar.length - 1 ? 0.4 : 1 }}>↓</button>
+                  <button onClick={() => removeTip(s)} title="Quitar" style={{ ...selectStyle, padding: '2px 8px', cursor: 'pointer', color: '#ef4444', borderColor: 'rgba(239,68,68,0.4)' }}>✕</button>
+                </div>
+              ))}
+            </div>
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+              <input
+                list="zoho-all-statuses"
+                value={tipNew}
+                onChange={(e) => setTipNew(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addTip(); } }}
+                placeholder="Agregar estado (ej. Lead Frio)"
+                style={{ ...selectStyle, flex: 1, minWidth: 200 }}
+              />
+              <datalist id="zoho-all-statuses">
+                {allStatuses.filter((s) => !tipificar.includes(s)).map((s) => <option key={s} value={s} />)}
+              </datalist>
+              <button onClick={addTip} disabled={!tipNew.trim()} style={{ ...selectStyle, cursor: tipNew.trim() ? 'pointer' : 'default', color: '#F7941D', borderColor: 'rgba(247,148,29,0.5)' }}>+ Agregar</button>
+              <button
+                onClick={saveTip}
+                disabled={!tipDirty || tipSaving}
+                style={{
+                  background: tipDirty ? '#F7941D' : 'var(--glass-bg)', color: tipDirty ? '#1B3A5C' : 'var(--text3)',
+                  border: '1px solid ' + (tipDirty ? '#F7941D' : 'var(--glass-border)'),
+                  borderRadius: 10, padding: '7px 16px', fontWeight: 700, fontSize: 13,
+                  cursor: tipDirty && !tipSaving ? 'pointer' : 'default',
+                }}
+              >
+                {tipSaving ? 'Guardando…' : 'Guardar tipificación'}
+              </button>
+            </div>
+            {tipMsg && <div style={{ fontSize: 13, color: 'var(--text2)', marginTop: 8 }}>{tipMsg}</div>}
           </div>
 
           {/* Save bar */}
