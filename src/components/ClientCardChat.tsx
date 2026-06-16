@@ -4,6 +4,7 @@ import { type Bucket } from '@/lib/zoho-status';
 import type { ZohoClientCard } from '@/lib/zoho-client-card';
 import { callHref } from '@/lib/dialer';
 import { TipificarForm } from './TipificarForm';
+import { NoteHover } from './NoteHover';
 
 const BUCKET_COLOR: Record<Bucket, string> = {
   nuevo: '#38bdf8', seguimiento: '#F7941D', frio: '#94a3b8', cita_pendiente: '#a78bfa',
@@ -23,9 +24,10 @@ export function ClientCardChat({ card, onEmail }: { card: ZohoClientCard; onEmai
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
           <div style={{ color: '#e8eaf0', fontSize: 16, fontWeight: 700 }} className="truncate">{card.fullName}</div>
-          <div style={{ fontSize: 12, marginTop: 2 }}>
+          <div style={{ fontSize: 12, marginTop: 2 }} className="inline-flex items-center gap-1.5">
             {card.status ? <span style={{ color: accent }}>● {card.status}</span> : <span style={{ color: '#10b981' }}>● Cliente (convertido)</span>}
             {card.leadNumber && <span style={{ color: '#64748b' }}> · {card.leadNumber}</span>}
+            {canAct && <NoteHover leadId={card.leadId!} />}
           </div>
         </div>
         <a href={card.zohoUrl} target="_blank" rel="noopener noreferrer" style={{ fontSize: 11.5, color: '#94a3b8', whiteSpace: 'nowrap' }}>Zoho ↗</a>

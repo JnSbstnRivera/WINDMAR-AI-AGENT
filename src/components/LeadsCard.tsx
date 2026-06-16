@@ -5,6 +5,7 @@ import { BUCKET_LABEL, type Bucket } from '@/lib/zoho-status';
 import type { ZohoLeadsCard } from '@/lib/zoho-leads-card';
 import { callHref } from '@/lib/dialer';
 import { TipificarForm } from './TipificarForm';
+import { NoteHover } from './NoteHover';
 
 const BUCKET_COLOR: Record<Bucket, string> = {
   nuevo: '#38bdf8', seguimiento: '#F7941D', frio: '#94a3b8', cita_pendiente: '#a78bfa',
@@ -83,8 +84,11 @@ export function LeadsCard({
                 <Fragment key={l.id}>
                   <tr style={open ? { background: 'rgba(247,148,29,0.06)' } : undefined}>
                     <td style={td}><a href={l.zohoUrl} target="_blank" rel="noopener noreferrer" style={{ color: '#94a3b8' }}>{l.leadNumber || '—'}</a></td>
-                    <td style={{ ...td, color: '#e8eaf0', fontWeight: 600, maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                      {isDone ? '✓ ' : ''}{l.fullName}
+                    <td style={{ ...td, color: '#e8eaf0', fontWeight: 600, maxWidth: 200 }}>
+                      <span className="inline-flex items-center gap-1.5">
+                        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 160, display: 'inline-block', whiteSpace: 'nowrap' }}>{isDone ? '✓ ' : ''}{l.fullName}</span>
+                        <NoteHover leadId={l.id} />
+                      </span>
                     </td>
                     <td style={{ ...td, color: BUCKET_COLOR[l.bucket] }}>● {l.status || 'sin estado'}</td>
                     <td style={td}>{l.owner || '—'}</td>
