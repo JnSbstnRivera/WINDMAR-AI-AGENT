@@ -733,14 +733,20 @@ export interface LeadBasic {
 }
 
 /**
- * Trae los datos mínimos de UN lead por su ID (para validar dueño/estado antes
- * de escribir). Devuelve null si no existe o si Zoho rechaza.
+ * Trae los datos mínimos de UN lead. Acepta el ID interno de Zoho O el Lead #
+ * visible (formato L######): el asesor casi siempre referencia por Lead #, no
+ * por el id interno. Si es Lead #, resuelve por Lead_Number primero. Devuelve
+ * null si no existe o si Zoho rechaza.
  */
-export async function getLeadBasic(leadId: string): Promise<LeadBasic | null> {
+export async function getLeadBasic(ref: string): Promise<LeadBasic | null> {
   try {
-    const res = (await zohoFetch(
-      `/Leads/${leadId}?fields=Full_Name,First_Name,Last_Name,Lead_Number,Lead_Status,Owner`
-    )) as { data?: ZohoLeadRaw[] };
+    const fields = 'Full_Name,First_Name,Last_Name,Lead_Number,Lead_Status,Owner';
+    const r0 = (ref || '').trim();
+    // Lead # (L######, LD-..., LE-...) → buscar por Lead_Number; si no, id directo.
+    const path = detectQueryType(r0) === 'leadNumber'
+      ? `/Leads/search?criteria=(Lead_Number:equals:${encodeURIComponent(r0)})&fields=${fields}&per_page=1`
+      : `/Leads/${r0}?fields=${fields}`;
+    const res = (await zohoFetch(path)) as { data?: ZohoLeadRaw[] };
     const r = res.data?.[0];
     if (!r) return null;
     return {
