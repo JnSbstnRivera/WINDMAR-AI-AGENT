@@ -30,8 +30,9 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'No autenticado' }, { status: 401 });
   }
   const scope = getViewerScope(session);
-  const sUser = session.user as unknown as Record<string, string | null | undefined>;
-  const asesorName = (sUser.displayName || session.user.name || scope.email.split('@')[0]) as string;
+  // En las NOTAS de Zoho usamos el NOMBRE REAL del SSO (o el correo) — nunca el
+  // apodo del chat (ej. "Juanse"), que queda solo para la conversación.
+  const asesorName = (session.user.name || scope.email) as string;
 
   let body: { action?: ZohoPendingAction };
   try {
@@ -84,7 +85,7 @@ async function executeStep(
       const contenido = (step.nota?.contenido || '').trim();
       if (contenido.length < 2) throw new Error('La nota está vacía');
       if (contenido.length > 5000) throw new Error('Nota demasiado larga (máx 5000)');
-      const ok = await addLeadNote(step.leadId, `${contenido}\n— Gestión: ${asesorName}`, `Nota de ${asesorName}`);
+      const ok = await addLeadNote(step.leadId, `${contenido}\n— Gestión: ${asesorName}`, `Nota — ${asesorName}`);
       if (!ok) throw new Error('Zoho no aceptó la nota');
       await logAudit(actorEmail, 'zoho.note', step.leadId, { via: 'chat', chars: contenido.length });
       return `Nota guardada en ${fullName}`;
@@ -106,7 +107,7 @@ async function executeStep(
       const ok = await setLeadFollowup(step.leadId, { callDate, appointmentAt });
       if (!ok) throw new Error('Zoho no aceptó el seguimiento');
       if (nota.length >= 2) {
-        await addLeadNote(step.leadId, `📅 Seguimiento: ${nota}\n— Gestión: ${asesorName}`, `Seguimiento de ${asesorName}`);
+        await addLeadNote(step.leadId, `📅 Seguimiento: ${nota}\n— Gestión: ${asesorName}`, `Nota — ${asesorName}`);
       }
       await logAudit(actorEmail, 'zoho.followup', step.leadId, { callDate, appointmentAt });
       return 'seguimiento programado';
