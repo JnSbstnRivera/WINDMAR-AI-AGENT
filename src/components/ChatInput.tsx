@@ -149,7 +149,7 @@ export function ChatInput({ onSend, disabled, onTypingChange, isStreaming, onSto
 
   return (
     <div className="px-4 py-4 safe-bottom">
-      <div className="max-w-3xl mx-auto">
+      <div className="max-w-3xl lg:max-w-5xl xl:max-w-6xl mx-auto">
         {/* chat-input-glow agrega una estela de luz girando alrededor del
             input (loop 8s) — conic-gradient con colores Windmar (naranja
             + purple + azul) y filter blur para que se sienta suave. */}

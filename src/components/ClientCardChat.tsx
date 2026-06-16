@@ -19,7 +19,7 @@ export function ClientCardChat({ card, onEmail }: { card: ZohoClientCard; onEmai
   const canAct = card.kind === 'lead' && !!card.leadId;
 
   return (
-    <div className="my-3 w-full max-w-[680px] rounded-xl border-2 px-4 py-3" style={{ background: '#0a1628', borderColor: 'rgba(247,148,29,0.4)' }}>
+    <div className="my-3 w-full max-w-[920px] rounded-xl border-2 px-4 py-3" style={{ background: '#0a1628', borderColor: 'rgba(247,148,29,0.4)' }}>
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
           <div style={{ color: '#e8eaf0', fontSize: 16, fontWeight: 700 }} className="truncate">{card.fullName}</div>

@@ -62,8 +62,8 @@ export function ChatWindow({
   }, [lastExtrasKey, isStreaming]);
 
   return (
-    <div className="flex-1 overflow-y-auto px-3 sm:px-6 md:px-10 py-6">
-      <div className="max-w-3xl mx-auto">
+    <div className="flex-1 overflow-y-auto px-3 sm:px-6 md:px-8 py-6">
+      <div className="max-w-3xl lg:max-w-5xl xl:max-w-6xl mx-auto">
         {messages.map((msg, i) => {
           // El botón "Regenerar" SOLO aparece en el último mensaje del asistente
           // (no en mensajes anteriores) y solo cuando NO está en streaming.

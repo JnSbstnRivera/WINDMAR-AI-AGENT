@@ -81,7 +81,7 @@ export function TipificarForm({
     <div className="flex flex-col gap-2">
       <div className="flex gap-2 items-center flex-wrap">
         <select value={nuevoEstado} onChange={(e) => pickStatus(e.target.value)} disabled={saving} style={{ ...inputBase, flex: 1, minWidth: 160 }}>
-          <option value="" style={{ background: '#13243b' }}>— Cambiar estado{currentStatus ? ` (actual: ${currentStatus})` : ''} —</option>
+          <option value="" style={{ background: '#13243b' }}>No cambiar status — solo dejar nota{currentStatus ? ` (actual: ${currentStatus})` : ''}</option>
           {options.map((o) => <option key={o.status} value={o.status} style={{ background: '#13243b' }}>{o.status}</option>)}
         </select>
         <button onClick={soloLlamada} disabled={saving} style={{ fontSize: 11.5, padding: '6px 10px', borderRadius: 8, cursor: 'pointer', border: '1px solid rgba(247,148,29,0.5)', color: '#F7941D', background: 'transparent', whiteSpace: 'nowrap' }} title="Registrar solo la llamada (sin cambiar estado)">

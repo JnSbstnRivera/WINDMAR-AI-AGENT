@@ -41,7 +41,7 @@ export function LeadsCard({
 
   return (
     <div
-      className="my-3 w-full max-w-[860px] rounded-xl border-2 px-3 py-3"
+      className="my-3 w-full rounded-xl border-2 px-3 py-3"
       style={{ background: '#0a1628', borderColor: 'rgba(247,148,29,0.4)' }}
     >
       {/* Header */}
