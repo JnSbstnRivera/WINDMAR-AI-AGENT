@@ -20,13 +20,24 @@ export function ClientCardChat({ card, onEmail }: { card: ZohoClientCard; onEmai
   const canAct = card.kind === 'lead' && !!card.leadId;
 
   return (
-    <div className="my-3 w-full max-w-[920px] rounded-xl border-2 px-4 py-3" style={{ background: '#0a1628', borderColor: 'rgba(247,148,29,0.4)' }}>
+    <div
+      className="my-3 w-full max-w-[920px] rounded-xl border-2 px-4 py-3"
+      style={{ background: '#0a1628', borderColor: `${accent}66`, borderLeft: `4px solid ${accent}` }}
+    >
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
-          <div style={{ color: '#e8eaf0', fontSize: 16, fontWeight: 700 }} className="truncate">{card.fullName}</div>
-          <div style={{ fontSize: 12, marginTop: 2 }} className="inline-flex items-center gap-1.5">
-            {card.status ? <span style={{ color: accent }}>● {card.status}</span> : <span style={{ color: '#10b981' }}>● Cliente (convertido)</span>}
-            {card.leadNumber && <span style={{ color: '#64748b' }}> · {card.leadNumber}</span>}
+          <div className="flex items-center gap-2 flex-wrap">
+            <span style={{ color: '#e8eaf0', fontSize: 16, fontWeight: 700 }} className="truncate">{card.fullName}</span>
+            {/* Estado como badge de color */}
+            <span style={{
+              fontSize: 11, fontWeight: 700, padding: '2px 10px', borderRadius: 999,
+              color: card.status ? accent : '#10b981',
+              background: `${card.status ? accent : '#10b981'}1a`,
+              border: `1px solid ${card.status ? accent : '#10b981'}55`, whiteSpace: 'nowrap',
+            }}>● {card.status || 'Cliente convertido'}</span>
+          </div>
+          <div style={{ fontSize: 12, marginTop: 3 }} className="inline-flex items-center gap-1.5">
+            {card.leadNumber && <span style={{ color: '#64748b' }}>{card.leadNumber}</span>}
             {canAct && <NoteHover leadId={card.leadId!} />}
           </div>
         </div>
@@ -34,16 +45,20 @@ export function ClientCardChat({ card, onEmail }: { card: ZohoClientCard; onEmai
       </div>
 
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1" style={{ fontSize: 12, color: '#94a3b8', marginTop: 8 }}>
-        {card.email && <span>✉️ {card.email}</span>}
-        {card.phone && <span>📞 {card.phone}</span>}
+        {card.email && <a href={`mailto:${card.email}`} style={{ color: '#94a3b8' }}>✉️ {card.email}</a>}
+        {card.phone && (callHref(card.phone, '3cx')
+          ? <a href={callHref(card.phone, '3cx')!} style={{ color: '#22c55e' }} title="Llamar (3CX)">📞 {card.phone}</a>
+          : <span>📞 {card.phone}</span>)}
         {card.owner && <span>🧑‍💼 Owner: {card.owner}</span>}
         {card.consultor && <span>👤 {card.consultor}</span>}
       </div>
 
       {callHref(card.phone, '3cx') && (
-        <div className="flex items-center gap-3" style={{ marginTop: 8 }}>
-          <a href={callHref(card.phone, '3cx')!} style={{ fontSize: 12, color: '#22c55e', fontWeight: 600 }} title={`Llamar ${card.phone} con 3CX`}>📞 Llamar 3CX</a>
-          <a href={callHref(card.phone, 'kixie')!} style={{ fontSize: 12, color: '#22c55e', fontWeight: 600 }} title={`Llamar ${card.phone} con Kixie`}>📞 Kixie</a>
+        <div className="flex items-center gap-2" style={{ marginTop: 10 }}>
+          <a href={callHref(card.phone, '3cx')!} title={`Llamar ${card.phone} con 3CX`}
+            style={{ fontSize: 12, color: '#22c55e', fontWeight: 600, padding: '4px 12px', borderRadius: 7, border: '1px solid rgba(34,197,94,0.45)', background: 'rgba(34,197,94,0.08)' }}>📞 Llamar 3CX</a>
+          <a href={callHref(card.phone, 'kixie')!} title={`Llamar ${card.phone} con Kixie`}
+            style={{ fontSize: 12, color: '#22c55e', fontWeight: 600, padding: '4px 12px', borderRadius: 7, border: '1px solid rgba(34,197,94,0.45)', background: 'rgba(34,197,94,0.08)' }}>📞 Kixie</a>
         </div>
       )}
 

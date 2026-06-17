@@ -1,6 +1,6 @@
 'use client';
 
-import { Fragment, useState } from 'react';
+import { Fragment, useMemo, useState } from 'react';
 import { BUCKET_LABEL, type Bucket } from '@/lib/zoho-status';
 import type { ZohoLeadsCard } from '@/lib/zoho-leads-card';
 import { callHref } from '@/lib/dialer';
@@ -13,6 +13,22 @@ const BUCKET_COLOR: Record<Bucket, string> = {
 };
 
 const fmtFecha = (iso: string | null) => (iso ? iso.slice(0, 10) : '—');
+
+/** Filtro de fecha (sobre createdAt) — client-side, sobre las filas ya cargadas. */
+type DateFilter = 'all' | 'today' | '7d' | '30d';
+const DATE_LABEL: Record<DateFilter, string> = {
+  all: 'Todas las fechas', today: 'Creados hoy', '7d': 'Últimos 7 días', '30d': 'Últimos 30 días',
+};
+function inDateRange(iso: string | null, f: DateFilter): boolean {
+  if (f === 'all') return true;
+  if (!iso) return false;
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return false;
+  const now = new Date();
+  if (f === 'today') return d.toDateString() === now.toDateString();
+  const days = (now.getTime() - d.getTime()) / 86400000;
+  return f === '7d' ? days <= 7 : days <= 30;
+}
 
 const th: React.CSSProperties = {
   textAlign: 'left', padding: '6px 8px', fontSize: 10.5, letterSpacing: '0.04em',
@@ -39,6 +55,16 @@ export function LeadsCard({
   const tipOptions = card.tipificarOptions ?? [];
   const [openId, setOpenId] = useState<string | null>(null); // fila expandida
   const [doneIds, setDoneIds] = useState<Set<string>>(new Set()); // filas ya tipificadas
+  const [bucketFilter, setBucketFilter] = useState<Bucket | 'all'>('all'); // filtro por estado
+  const [dateFilter, setDateFilter] = useState<DateFilter>('all'); // filtro por fecha de creación
+
+  // Filtro client-side sobre las filas ya cargadas (estado + fecha de creación).
+  const visibleRows = useMemo(
+    () => card.rows.filter((l) =>
+      (bucketFilter === 'all' || l.bucket === bucketFilter) && inDateRange(l.createdAt, dateFilter)),
+    [card.rows, bucketFilter, dateFilter],
+  );
+  const hasFilter = bucketFilter !== 'all' || dateFilter !== 'all';
 
   return (
     <div
@@ -48,17 +74,62 @@ export function LeadsCard({
       {/* Header */}
       <div style={{ padding: '0 4px', marginBottom: 8 }}>
         <div style={{ color: '#F7941D', fontWeight: 700, fontSize: 14.5 }}>{card.title}</div>
-        <div style={{ color: '#94a3b8', fontSize: 12, marginTop: 1 }}>{card.subtitle}</div>
+        <div style={{ color: '#94a3b8', fontSize: 12, marginTop: 1 }}>
+          {card.subtitle}
+          {hasFilter && <span style={{ color: '#F7941D' }}> · mostrando {visibleRows.length} de {card.rows.length}</span>}
+        </div>
+
+        {/* Chips de estado = filtro clickable. Click activa/desactiva. */}
         {buckets.length > 1 && (
-          <div className="flex flex-wrap gap-1.5" style={{ marginTop: 8 }}>
-            {buckets.map(([b, n]) => (
-              <span key={b} style={{
-                fontSize: 11, padding: '2px 9px', borderRadius: 999, background: 'rgba(255,255,255,0.05)',
-                color: BUCKET_COLOR[b as Bucket] || '#94a3b8', border: `1px solid ${BUCKET_COLOR[b as Bucket] || '#94a3b8'}44`,
-              }}>{BUCKET_LABEL[b as Bucket] || b}: {n}</span>
-            ))}
+          <div className="flex flex-wrap items-center gap-1.5" style={{ marginTop: 8 }}>
+            <button
+              onClick={() => setBucketFilter('all')}
+              style={{
+                fontSize: 11, padding: '2px 10px', borderRadius: 999, cursor: 'pointer',
+                background: bucketFilter === 'all' ? '#F7941D' : 'rgba(255,255,255,0.05)',
+                color: bucketFilter === 'all' ? '#1B3A5C' : '#94a3b8',
+                border: '1px solid rgba(247,148,29,0.45)', fontWeight: bucketFilter === 'all' ? 700 : 400,
+              }}
+            >Todos: {card.rows.length}</button>
+            {buckets.map(([b, n]) => {
+              const active = bucketFilter === b;
+              const c = BUCKET_COLOR[b as Bucket] || '#94a3b8';
+              return (
+                <button key={b} onClick={() => setBucketFilter(active ? 'all' : (b as Bucket))} style={{
+                  fontSize: 11, padding: '2px 10px', borderRadius: 999, cursor: 'pointer',
+                  background: active ? c : 'rgba(255,255,255,0.05)',
+                  color: active ? '#0a1628' : c, fontWeight: active ? 700 : 400,
+                  border: `1px solid ${c}${active ? 'ff' : '44'}`,
+                }} title={`Filtrar por ${BUCKET_LABEL[b as Bucket] || b}`}>
+                  {BUCKET_LABEL[b as Bucket] || b}: {n}
+                </button>
+              );
+            })}
           </div>
         )}
+
+        {/* Filtro por fecha de creación + reset */}
+        <div className="flex flex-wrap items-center gap-2" style={{ marginTop: 8 }}>
+          <span style={{ fontSize: 10.5, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em' }}>📅 Fecha</span>
+          <select
+            value={dateFilter}
+            onChange={(e) => setDateFilter(e.target.value as DateFilter)}
+            style={{
+              fontSize: 11.5, color: '#cbd5e1', background: '#0f1d33', cursor: 'pointer',
+              border: '1px solid rgba(247,148,29,0.35)', borderRadius: 6, padding: '3px 8px',
+            }}
+          >
+            {(Object.keys(DATE_LABEL) as DateFilter[]).map((f) => (
+              <option key={f} value={f} style={{ background: '#0f1d33' }}>{DATE_LABEL[f]}</option>
+            ))}
+          </select>
+          {hasFilter && (
+            <button
+              onClick={() => { setBucketFilter('all'); setDateFilter('all'); }}
+              style={{ fontSize: 11, color: '#94a3b8', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline' }}
+            >Limpiar filtros</button>
+          )}
+        </div>
       </div>
 
       {/* Tabla de leads */}
@@ -71,24 +142,37 @@ export function LeadsCard({
               <th style={th}>Estado</th>
               <th style={th}>Owner</th>
               <th style={th}>Consultor</th>
-              <th style={th}>Tel</th>
               <th style={th}>Creado</th>
               <th style={th}></th>
             </tr>
           </thead>
           <tbody>
-            {card.rows.map((l) => {
+            {visibleRows.length === 0 && (
+              <tr>
+                <td colSpan={7} style={{ ...td, textAlign: 'center', color: '#64748b', padding: '16px 8px' }}>
+                  Ningún lead coincide con el filtro.
+                </td>
+              </tr>
+            )}
+            {visibleRows.map((l) => {
               const open = openId === l.id;
               const isDone = doneIds.has(l.id);
               return (
                 <Fragment key={l.id}>
                   <tr style={open ? { background: 'rgba(247,148,29,0.06)' } : undefined}>
                     <td style={td}><a href={l.zohoUrl} target="_blank" rel="noopener noreferrer" style={{ color: '#94a3b8' }}>{l.leadNumber || '—'}</a></td>
-                    <td style={{ ...td, color: '#e8eaf0', fontWeight: 600, maxWidth: 200 }}>
+                    <td style={{ ...td, color: '#e8eaf0', fontWeight: 600, maxWidth: 220, whiteSpace: 'normal' }}>
                       <span className="inline-flex items-center gap-1.5">
-                        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 160, display: 'inline-block', whiteSpace: 'nowrap' }}>{isDone ? '✓ ' : ''}{l.fullName}</span>
+                        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 180, display: 'inline-block', whiteSpace: 'nowrap' }}>{isDone ? '✓ ' : ''}{l.fullName}</span>
                         <NoteHover leadId={l.id} />
                       </span>
+                      {l.phone && (
+                        <div style={{ fontSize: 11, fontWeight: 400, marginTop: 1 }}>
+                          {callHref(l.phone, '3cx')
+                            ? <a href={callHref(l.phone, '3cx')!} style={{ color: '#22c55e' }} title="Llamar (3CX)">📞 {l.phone}</a>
+                            : <span style={{ color: '#64748b' }}>📞 {l.phone}</span>}
+                        </div>
+                      )}
                     </td>
                     <td style={{ ...td, color: BUCKET_COLOR[l.bucket] }}>● {l.status || 'sin estado'}</td>
                     <td style={{ ...td, whiteSpace: 'normal' }}>
@@ -109,11 +193,6 @@ export function LeadsCard({
                         </div>
                       )}
                     </td>
-                    <td style={td}>
-                      {l.phone && callHref(l.phone, '3cx')
-                        ? <a href={callHref(l.phone, '3cx')!} style={{ color: '#22c55e' }} title="Llamar (3CX)">{l.phone}</a>
-                        : (l.phone || '—')}
-                    </td>
                     <td style={td}>{fmtFecha(l.createdAt)}</td>
                     <td style={{ ...td, textAlign: 'right' }}>
                       <button
@@ -127,7 +206,7 @@ export function LeadsCard({
                   </tr>
                   {open && (
                     <tr>
-                      <td colSpan={8} style={{ padding: '10px 12px', background: 'rgba(255,255,255,0.03)', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+                      <td colSpan={7} style={{ padding: '10px 12px', background: 'rgba(255,255,255,0.03)', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
                         <TipificarForm
                           leadId={l.id}
                           leadNumber={l.leadNumber}
