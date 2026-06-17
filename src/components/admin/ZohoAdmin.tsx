@@ -6,12 +6,13 @@ import { useState } from 'react';
 type StatusRow = { status: string; bucket: string; sort: number; updated_at?: string; updated_by?: string | null };
 type StageRow = { stage: string; state: string; completed: boolean; sort: number; updated_at?: string; updated_by?: string | null };
 type ByTool = { tool: string | null; calls: number; errors: number; avg_ms: number };
+type ByUser = { user_email: string; calls: number; errors: number; avg_ms: number };
 type ByDay = { day: string; calls: number; errors: number };
 type RecentError = { at: string; tool: string | null; error: string | null; user_email: string | null };
 export type ZohoHealth = {
   days: number; total: number; errors: number; errorRatePct: number;
   avgMs: number; p50Ms: number; p95Ms: number;
-  byTool: ByTool[]; byDay: ByDay[]; recentErrors: RecentError[];
+  byTool: ByTool[]; byUser?: ByUser[]; byDay: ByDay[]; recentErrors: RecentError[];
 };
 
 const STATES = ['ganado', 'abierto', 'perdido'] as const;
@@ -344,6 +345,56 @@ function HealthPanel({ health, days, loading, onDays }: { health: ZohoHealth | n
           </table>
         )}
       </div>
+
+      {/* Consultas por asesor — control de uso del agente por cada uno */}
+      <div style={card}>
+        <div style={{ ...label, marginBottom: 10 }}>Consultas por asesor</div>
+        {!health.byUser || health.byUser.length === 0 ? (
+          <div style={{ color: 'var(--text3)', fontSize: 13 }}>Sin consultas en el período.</div>
+        ) : (
+          (() => {
+            const maxCalls = Math.max(...health.byUser.map((u) => u.calls), 1);
+            return (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
+                {health.byUser.map((u) => (
+                  <div key={u.user_email} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <span style={{ width: 200, minWidth: 200, fontSize: 12.5, color: 'var(--text1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={u.user_email}>
+                      {u.user_email.split('@')[0]}
+                    </span>
+                    <div style={{ flex: 1, height: 18, background: 'rgba(255,255,255,0.05)', borderRadius: 5, overflow: 'hidden', position: 'relative' }}>
+                      <div style={{ width: `${(u.calls / maxCalls) * 100}%`, height: '100%', background: 'linear-gradient(90deg,#F7941D,#e8830d)', borderRadius: 5 }} />
+                    </div>
+                    <span style={{ width: 44, textAlign: 'right', fontSize: 12.5, fontWeight: 600, color: 'var(--text1)' }}>{u.calls}</span>
+                    <span style={{ width: 64, textAlign: 'right', fontSize: 11, color: 'var(--text3)' }}>{u.avg_ms}ms</span>
+                    {u.errors > 0 && <span style={{ width: 30, textAlign: 'right', fontSize: 11, color: '#ef4444' }}>⚠{u.errors}</span>}
+                  </div>
+                ))}
+              </div>
+            );
+          })()
+        )}
+      </div>
+
+      {/* Uso por día (barras) */}
+      {health.byDay.length > 0 && (
+        <div style={card}>
+          <div style={{ ...label, marginBottom: 10 }}>Consultas por día</div>
+          {(() => {
+            const maxDay = Math.max(...health.byDay.map((d) => d.calls), 1);
+            return (
+              <div style={{ display: 'flex', alignItems: 'flex-end', gap: 6, height: 90 }}>
+                {health.byDay.map((d) => (
+                  <div key={d.day} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }} title={`${d.day}: ${d.calls} consultas`}>
+                    <span style={{ fontSize: 10, color: 'var(--text2)' }}>{d.calls}</span>
+                    <div style={{ width: '100%', maxWidth: 34, height: `${(d.calls / maxDay) * 64}px`, minHeight: 3, background: 'linear-gradient(180deg,#F7941D,#e8830d)', borderRadius: '4px 4px 0 0' }} />
+                    <span style={{ fontSize: 9.5, color: 'var(--text3)' }}>{d.day.slice(5)}</span>
+                  </div>
+                ))}
+              </div>
+            );
+          })()}
+        </div>
+      )}
 
       {health.recentErrors.length > 0 && (
         <div style={card}>
