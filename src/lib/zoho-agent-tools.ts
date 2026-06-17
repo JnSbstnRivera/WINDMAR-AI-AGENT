@@ -18,6 +18,8 @@ import {
   detectQueryType,
   assignLeads,
   getLeadBasic,
+  getZohoUsers,
+  getUserContactByEmail,
   type LeadBasic,
 } from '@/lib/zoho';
 import { isActionable, BUCKET_LABEL, VALID_LEAD_STATUSES, resolveLeadStatus } from '@/lib/zoho-status';
@@ -346,8 +348,13 @@ async function runMisLeads(input: Record<string, unknown>, scope: ViewerScope): 
     status: l.status,
     bucket: l.bucket,
     owner: l.owner,
+    ownerEmail: l.ownerEmail,
+    ownerPhone: l.ownerPhone,
     consultor: l.consultor,
+    consultorEmail: l.consultorEmail,
+    consultorPhone: l.consultorPhone,
     createdAt: l.createdAt,
+    appointmentAt: l.appointmentAt,
     zohoUrl: l.zohoUrl,
     phone: l.phone,
     lastNote: null,
@@ -395,7 +402,7 @@ async function runBuscarCliente(input: Record<string, unknown>, scope: ViewerSco
   // ── TELÉFONO / CORREO / NOMBRE → TABLA (estilo NOTAS VASS): últimos leads +
   //    deals del contacto. Lead# (L######) NO entra aquí: cae a la ficha + cuadro.
   if (detectQueryType(query) !== 'leadNumber') {
-    const [leadsRaw, dealsRaw] = await Promise.all([searchLeads(query, 10), getDealsByQuery(query)]);
+    const [leadsRaw, dealsRaw] = await Promise.all([searchLeads(query, 10), getDealsByQuery(query), getZohoUsers()]);
     const visLeads = scope.canSeeAll ? leadsRaw : leadsRaw.filter((l) => (l.ownerEmail || '').toLowerCase() === scope.email);
     const visDeals = scope.canSeeAll ? dealsRaw : dealsRaw.filter((d) => (d.ownerEmail || '').toLowerCase() === scope.email);
     if (visLeads.length === 0 && visDeals.length === 0) {
@@ -406,8 +413,10 @@ async function runBuscarCliente(input: Record<string, unknown>, scope: ViewerSco
     const deals3 = [...visDeals].sort(byCreated).slice(0, 3);
     const rows: LeadCardRow[] = leads3.map((l) => ({
       id: l.id, leadNumber: l.leadNumber, fullName: l.fullName, status: l.stage,
-      bucket: maps.bucketOf(l.stage), owner: l.owner, consultor: l.consultor,
-      createdAt: l.createdAt, zohoUrl: l.zohoUrl, phone: l.mobile || l.phone, lastNote: null,
+      bucket: maps.bucketOf(l.stage), owner: l.owner,
+      ownerEmail: l.ownerEmail, ownerPhone: getUserContactByEmail(l.ownerEmail).phone,
+      consultor: l.consultor, consultorEmail: l.consultorEmail, consultorPhone: getUserContactByEmail(l.consultorEmail).phone,
+      createdAt: l.createdAt, appointmentAt: null, zohoUrl: l.zohoUrl, phone: l.mobile || l.phone, lastNote: null,
     }));
     const dealRows: DealCardRow[] = deals3.map((d) => ({
       name: d.name, stage: d.stage, amount: d.amount, contactName: d.contactName,

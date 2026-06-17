@@ -91,8 +91,24 @@ export function LeadsCard({
                       </span>
                     </td>
                     <td style={{ ...td, color: BUCKET_COLOR[l.bucket] }}>● {l.status || 'sin estado'}</td>
-                    <td style={td}>{l.owner || '—'}</td>
-                    <td style={td}>{l.consultor || '—'}</td>
+                    <td style={{ ...td, whiteSpace: 'normal' }}>
+                      <div>{l.owner || '—'}</div>
+                      {(l.ownerEmail || l.ownerPhone) && (
+                        <div style={{ fontSize: 10.5, color: '#64748b', lineHeight: 1.3 }}>
+                          {l.ownerEmail && <div className="truncate" style={{ maxWidth: 150 }}>{l.ownerEmail}</div>}
+                          {l.ownerPhone && <div>📞 {l.ownerPhone}</div>}
+                        </div>
+                      )}
+                    </td>
+                    <td style={{ ...td, whiteSpace: 'normal' }}>
+                      <div>{l.consultor || '—'}</div>
+                      {(l.consultorEmail || l.consultorPhone) && (
+                        <div style={{ fontSize: 10.5, color: '#64748b', lineHeight: 1.3 }}>
+                          {l.consultorEmail && <div className="truncate" style={{ maxWidth: 150 }}>{l.consultorEmail}</div>}
+                          {l.consultorPhone && <div>📞 {l.consultorPhone}</div>}
+                        </div>
+                      )}
+                    </td>
                     <td style={td}>
                       {l.phone && callHref(l.phone, '3cx')
                         ? <a href={callHref(l.phone, '3cx')!} style={{ color: '#22c55e' }} title="Llamar (3CX)">{l.phone}</a>

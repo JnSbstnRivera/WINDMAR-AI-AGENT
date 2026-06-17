@@ -370,8 +370,8 @@ interface ZohoLeadRaw {
   State?: string;
   Zip_Code?: string;
   Lead_Status?: string;
-  Owner?: { name?: string; email?: string };
-  Sales_Rep?: { name?: string; email?: string };
+  Owner?: { id?: string; name?: string; email?: string };
+  Sales_Rep?: { id?: string; name?: string; email?: string };
   Sales_Rep_Email?: string;
   Created_Time?: string;
   // Campos custom posibles:
@@ -468,33 +468,54 @@ export interface ZohoUser {
   id: string;
   name: string;
   email: string;
+  phone: string | null;
 }
 
 let usersCache: Map<string, string> | null = null;
 let usersListCache: ZohoUser[] | null = null;
+let usersByIdCache: Map<string, ZohoUser> | null = null;
 
 async function loadUsers(): Promise<Map<string, string>> {
   if (usersCache) return usersCache;
   const map = new Map<string, string>();
+  const byId = new Map<string, ZohoUser>();
   const list: ZohoUser[] = [];
   let page = 1;
   // Hasta 4 páginas de 200 = 800 usuarios (de sobra para Windmar PR).
   for (; page <= 4; page++) {
     const res = (await zohoFetch(`/users?type=ActiveUsers&per_page=200&page=${page}`)) as {
-      users?: Array<{ id: string; email?: string; full_name?: string }>;
+      users?: Array<{ id: string; email?: string; full_name?: string; phone?: string; mobile?: string }>;
       info?: { more_records?: boolean };
     };
     for (const u of res.users || []) {
       if (u.email) {
+        const rec: ZohoUser = { id: u.id, name: u.full_name || u.email, email: u.email.toLowerCase(), phone: u.mobile || u.phone || null };
         map.set(u.email.toLowerCase(), u.id);
-        list.push({ id: u.id, name: u.full_name || u.email, email: u.email.toLowerCase() });
+        byId.set(u.id, rec);
+        list.push(rec);
       }
     }
     if (!res.info?.more_records) break;
   }
   usersCache = map;
+  usersByIdCache = byId;
   usersListCache = list.sort((a, b) => a.name.localeCompare(b.name));
   return map;
+}
+
+/** Contacto (email/teléfono) de un usuario de Zoho por su ID. Requiere loadUsers. */
+export function getUserContactById(id: string | null | undefined): { email: string | null; phone: string | null } {
+  if (!id || !usersByIdCache) return { email: null, phone: null };
+  const u = usersByIdCache.get(id);
+  return { email: u?.email ?? null, phone: u?.phone ?? null };
+}
+
+/** Contacto por correo (email→id→teléfono). SYNC: requiere cache ya cargado
+ *  (loadUsers / getZohoUsers). Devuelve null si está frío. */
+export function getUserContactByEmail(email: string | null | undefined): { email: string | null; phone: string | null } {
+  if (!email || !usersCache) return { email: email ?? null, phone: null };
+  const id = usersCache.get(email.trim().toLowerCase());
+  return { email: email ?? null, phone: getUserContactById(id).phone };
 }
 
 /** Resuelve el Owner ID de Zoho a partir del correo del asesor. */
@@ -580,7 +601,11 @@ export interface MyLead {
   status: string | null;
   bucket: Bucket;
   owner: string | null;       // Lead Owner (agente call center)
+  ownerEmail: string | null;
+  ownerPhone: string | null;
   consultor: string | null;   // Sales_Rep (consultor de ventas)
+  consultorEmail: string | null;
+  consultorPhone: string | null;
   modifiedAt: string | null;
   createdAt: string | null;
   appointmentAt: string | null; // Presenter_Appointment ("Cita Date/Time")
@@ -600,6 +625,7 @@ export interface MyLead {
 export async function getMyLeads(ownerId: string, limit = 1000): Promise<MyLead[]> {
   const fields = `${LEAD_FIELDS},Modified_Time,Presenter_Appointment,Llamar_de_esta_fecha`;
   const maps = await getZohoMaps(); // mapeo Lead_Status → bucket (config DB + default)
+  await loadUsers(); // cache de usuarios → teléfono del owner/consultor
   type Raw = ZohoLeadRaw & { Modified_Time?: string; Presenter_Appointment?: string; Llamar_de_esta_fecha?: string };
 
   // Paginación: Zoho devuelve máx 200 por página. Traemos hasta 5 páginas
@@ -625,7 +651,11 @@ export async function getMyLeads(ownerId: string, limit = 1000): Promise<MyLead[
     status: r.Lead_Status || null,
     bucket: maps.bucketOf(r.Lead_Status),
     owner: r.Owner?.name || null,
+    ownerEmail: r.Owner?.email || getUserContactById(r.Owner?.id).email,
+    ownerPhone: getUserContactById(r.Owner?.id).phone,
     consultor: r.Sales_Rep?.name || null,
+    consultorEmail: r.Sales_Rep?.email || r.Sales_Rep_Email || getUserContactById(r.Sales_Rep?.id).email,
+    consultorPhone: getUserContactById(r.Sales_Rep?.id).phone,
     modifiedAt: r.Modified_Time || null,
     createdAt: r.Created_Time || null,
     appointmentAt: r.Presenter_Appointment || null,

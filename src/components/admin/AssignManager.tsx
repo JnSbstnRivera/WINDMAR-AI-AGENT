@@ -20,6 +20,7 @@ interface Lead {
   owner: string | null;
   consultor: string | null;
   createdAt: string | null;
+  appointmentAt: string | null; // Cita Date/Time (Presenter_Appointment)
   zohoUrl: string;
 }
 
@@ -42,6 +43,10 @@ export function AssignManager({ users }: { users: AssignUser[] }) {
   const [zohoUsers, setZohoUsers] = useState<Array<{ name: string; email: string }>>([]);
   const [leads, setLeads] = useState<Lead[] | null>(null);
   const [statusFilter, setStatusFilter] = useState<string>('');
+  // Filtro por fecha de CITA (Presenter_Appointment) — caso de Jesús (TM):
+  // ver citas de hoy / futuras / una fecha específica.
+  const [citaFilter, setCitaFilter] = useState<'todas' | 'hoy' | 'futuras' | 'fecha'>('todas');
+  const [citaFecha, setCitaFecha] = useState<string>(''); // YYYY-MM-DD
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -91,8 +96,22 @@ export function AssignManager({ users }: { users: AssignUser[] }) {
     });
   }
 
-  // Leads visibles según el filtro de estado (ej. solo "No Contesta")
-  const visible = leads ? (statusFilter ? leads.filter((l) => (l.status || 'sin estado') === statusFilter) : leads) : [];
+  // Hoy en PR (YYYY-MM-DD) para los filtros de cita.
+  const hoyPR = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Puerto_Rico', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
+  const citaDay = (l: Lead) => (l.appointmentAt || '').slice(0, 10);
+
+  // Leads visibles según filtro de estado + filtro de fecha de cita.
+  const visible = (leads ?? [])
+    .filter((l) => (statusFilter ? (l.status || 'sin estado') === statusFilter : true))
+    .filter((l) => {
+      if (citaFilter === 'todas') return true;
+      const d = citaDay(l);
+      if (!d) return false;
+      if (citaFilter === 'hoy') return d === hoyPR;
+      if (citaFilter === 'futuras') return d >= hoyPR;
+      if (citaFilter === 'fecha') return citaFecha ? d === citaFecha : true;
+      return true;
+    });
   const distinctStatuses = leads
     ? Array.from(
         leads.reduce((m, l) => {
@@ -274,6 +293,30 @@ export function AssignManager({ users }: { users: AssignUser[] }) {
                     </option>
                   ))}
                 </select>
+              </div>
+
+              {/* Filtro por fecha de CITA (Presenter_Appointment) — caso TM (Jesús) */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
+                <span style={{ color: 'var(--text2)', fontSize: 12 }}>📅 Cita:</span>
+                {([['todas', 'Todas'], ['hoy', 'Hoy'], ['futuras', 'Futuras']] as const).map(([k, lbl]) => (
+                  <button
+                    key={k}
+                    onClick={() => { setCitaFilter(k); setSelected(new Set()); }}
+                    style={{ ...selectStyle, cursor: 'pointer', borderColor: citaFilter === k ? '#F7941D' : 'var(--glass-border)', color: citaFilter === k ? '#F7941D' : 'var(--text2)' }}
+                  >
+                    {lbl}
+                  </button>
+                ))}
+                <input
+                  type="date"
+                  value={citaFecha}
+                  onChange={(e) => { setCitaFecha(e.target.value); setCitaFilter(e.target.value ? 'fecha' : 'todas'); setSelected(new Set()); }}
+                  style={{ ...selectStyle, borderColor: citaFilter === 'fecha' ? '#F7941D' : 'var(--glass-border)', colorScheme: 'dark' }}
+                  title="Ver citas de una fecha específica"
+                />
+                {citaFilter !== 'todas' && (
+                  <span style={{ color: 'var(--text3)', fontSize: 12 }}>{visible.length} con cita</span>
+                )}
               </div>
 
               {/* Tabla en columnas */}

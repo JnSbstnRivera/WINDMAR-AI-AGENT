@@ -18,8 +18,13 @@ export interface LeadCardRow {
   status: string | null;
   bucket: Bucket;
   owner: string | null;
+  ownerEmail: string | null;
+  ownerPhone: string | null;
   consultor: string | null;
+  consultorEmail: string | null;
+  consultorPhone: string | null;
   createdAt: string | null;
+  appointmentAt: string | null;
   zohoUrl: string;
   phone: string | null;
   lastNote: { preview: string; createdAt: string | null } | null;
