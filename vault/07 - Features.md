@@ -1,6 +1,6 @@
 ---
 tags: [features, capabilities, producto]
-fecha: 2026-05-26
+fecha: 2026-06-17
 ---
 
 # ✨ Features completas
@@ -29,7 +29,7 @@ Detalle técnico: [[03 - Flujo de pregunta]]
 ## 🤝 Zoho CRM — consulta + gestión autónoma
 
 > [!success] Junio 2026 — el salto grande
-> El bot pasó de SOLO chat a operar el CRM. El asesor consulta y **gestiona su cartera en lenguaje natural** (tool-use), sin memorizar comandos. Todo en producción (commit `33b7c8f`).
+> El bot pasó de SOLO chat a operar el CRM. El asesor consulta y **gestiona su cartera en lenguaje natural** (tool-use), sin memorizar comandos. Todo en producción (commit `844d7ce`).
 
 **Consultas (lenguaje natural, sin comandos):**
 
@@ -62,6 +62,29 @@ El asesor pasó de **solo-lectura** a **gestionar** su cartera. Tools scoped a S
 - **Acciones de 1-clic en la ficha:** No contestó · Cita coordinada · Vendido · Nota · Seguimiento.
 - **Flujos compuestos:** *"no contestó, lo llamo mañana 10am"* genera en UN turno estado + seguimiento (+nota) en UNA tarjeta combinada con un solo **Confirmar**.
 
+**Tablas HTML interactivas + búsqueda:**
+
+- **Lista de leads en tabla** (filas/columnas): `Lead# · Cliente · Estado · Owner · Consultor · Tel · Creado · Abrir`; bajo **Owner** y **Consultor** se muestra su **correo y teléfono**. Máx **30** filas.
+- **Búsqueda por teléfono / correo / nombre** → tabla de los **últimos 3 leads + 3 deals** (estilo NOTAS VASS). Un **Lead# (`L######`)** abre la ficha.
+- `L######` resuelve al **record id real** (`getLeadBasic`) → el bot ya no divaga ni inventa.
+
+**🗂️ Tipificación (estilo NOTAS VASS / TELEMERCADEO):**
+
+> [!success] Tipificar y dejar nota en un clic
+> La ficha del cliente **y cada fila de la tabla** incluyen un **cuadro de tipificación** (`TipificarForm`), igual en espíritu al de NOTAS VASS / TM.
+
+- **Dropdown de estados** (editables en `/admin/zoho`) + **nota que se autollena** con la plantilla del estado + botón **"Solo llamada"** (registra llamada sin cambiar estado) → **"Guardar"** escribe estado + nota en Zoho en un clic (compound, scoped + auditado).
+- **Tipificar INLINE en la tabla**: cada fila se **expande** con el cuadro → tipificar / dejar nota sin re-buscar; la fila queda marcada con ✓.
+- **`VentaForm`** (modelo VASS): al elegir **"Caso Vendido"** aparece un formulario de venta completo — selectores de producto (placas / placas+batería / powerwall / water / roofing / anker), sub-productos, cantidad de placas/baterías, financiamiento multi (WH Financial / Oriental / EnFin / Palmetto / Synchrony / Kiwi / Home Depot / Cash), consultor (prefill editable), # de aplicación y observaciones → compone una nota estructurada con preview editable.
+- **Plantillas por estado EDITABLES** en `/admin/zoho` (agregar / quitar / reordenar / editar texto), con datalist de los **18 estados oficiales**. Trae plantillas estilo VASS (Caso Vendido: producto + consultor + pago) y TM (No Contesta, Asistencia Coordinada).
+
+> [!info] La nota usa el nombre REAL del SSO
+> Título **"Nota — {nombre real del SSO}"** (el apodo del chat NO va en la nota) + atribución **"— Gestión: {nombre real}"** y firma **SUN BOT**.
+
+**📝 NoteHover — última nota al pasar el mouse:**
+
+Ícono 📝 junto al cliente (en la tabla y en la ficha): al pasar el mouse muestra la **última nota** en un mini pop-up estilo Zoho. Carga **bajo demanda** (`/api/zoho/last-note`), cachea y respeta el scoping del asesor.
+
 **Briefing matutino (`BriefingCard`):**
 
 Al abrir el chat muestra **citas de HOY** + **seguimientos vencidos / para hoy** + accionables. Usa campos nativos de Zoho (`Presenter_Appointment`, `Llamar_de_esta_fecha`). Endpoint `/api/zoho/briefing` (rápido, sin consultar notas).
@@ -69,9 +92,10 @@ Al abrir el chat muestra **citas de HOY** + **seguimientos vencidos / para hoy**
 **Config editable en `/admin/zoho`:**
 
 - Mapeos `Lead_Status → grupo` y `Deal Stage → estado` editables **sin redeploy**.
-- Dashboard de **salud**: latencia p50/p95, % error, consultas por herramienta (tabla telemetría `zoho_query_log`).
+- **Plantillas de tipificación por estado** editables (`zoho_tipificar_opciones`).
+- Dashboard de **salud**: consultas **por asesor** (llamadas, prom ms, errores) + gráfica **por día** (RPC `admin_zoho_health` con `byUser`), latencia p50/p95, % error, consultas por herramienta (tabla telemetría `zoho_query_log`).
 
-Detalle del agente Zoho: [[03 - Flujo de pregunta]] · Roadmap proactivo: [[16 - Roadmap]]
+Detalle del agente Zoho: [[03 - Flujo de pregunta]] · Dashboard: [[11 - Dashboard admin]] · Roadmap proactivo: [[16 - Roadmap]]
 
 ---
 
@@ -115,7 +139,10 @@ Atajos físicos en la barra del chat para no romper el flujo de la llamada.
 
 - **🎙️ Dictado por voz** — botón de micrófono con **Web Speech API nativa** del navegador (NO Deepgram). Gratis, on-device, en español; funciona en Edge/Chrome.
 - **📧 Botón de correo** — ícono de sobre en la barra (chat activo y pantalla de bienvenida) → abre el modal de plantillas de seguimiento (equivale a `/@`).
-- **📞 Dos botones de llamada por lead** — **"3CX"** (esquema `callto:`) y **"Kixie"** (esquema `tel:`), independientes: el asesor elige softphone. Centralizado en `lib/dialer.ts` (mayormente Edge; Kixie requiere su extensión instalada).
+- **📞 Dos botones de llamada por lead** — **"3CX"** y **"Kixie"**, ambos con esquema **`tel:`**, centralizados en `lib/dialer.ts`. Se eliminó `callto:` porque **Microsoft Teams lo interceptaba** (Teams tiene llamadas deshabilitadas en el tenant); `tel:` abre el softphone real (3CX hoy; Kixie cuando su extensión esté en Edge).
+
+> [!info] Auto-actualización del PWA
+> El PWA cacheaba el JS y los asesores veían versiones viejas. Solución: `next.config` expone `NEXT_PUBLIC_COMMIT_SHA`, **`/api/version`** devuelve el SHA del deploy vivo, y `ServiceWorkerRegister` **recarga sola** al reenfocar si difieren. Ya no hay que limpiar caché. Además, **vista de escritorio más ancha** (chat y tarjetas en `lg`/`xl`).
 
 ---
 

@@ -1,12 +1,24 @@
 ---
 tags: [dashboard, admin, métricas, analytics]
-fecha: 2026-05-26
+fecha: 2026-06-17
 ---
 
 # 📊 Dashboard administrativo
 
 > [!info] Acceso restringido
 > Ruta: `/admin` · Solo emails en `ADMIN_EMAILS` (variable de entorno). Verificación en cada request.
+
+---
+
+## 🧭 Menú desplegable (`AdminNav`)
+
+> [!success] Junio 2026 — el topbar se simplificó
+> Las **8 opciones** del admin (dashboard / gestión / asignar / auditoría / usuarios / Zoho config / Zoho salud / etc.) ahora viven en un **menú desplegable** (`AdminNav`) en vez de una fila de tabs.
+
+- El **ítem activo** se resalta y muestra un **badge de pendientes** (ej. usuarios por aprobar).
+- El logo **SUN BOT** + el **reloj** + el **toggle de tema** se quedan fijos en la barra.
+
+Componente: `src/components/admin/AdminNav.tsx`.
 
 ---
 
@@ -193,10 +205,35 @@ Cada llamada hace 7 RPCs en paralelo (`Promise.all`). Latencia típica: ~300ms.
 
 ---
 
+## 🤝 Salud de Zoho — consultas por asesor y por día (`/admin/zoho`)
+
+> [!info] Junio 2026 — telemetría del agente Zoho
+> La pestaña **Salud** de `/admin/zoho` muestra cómo se usa el agente Zoho, no solo si está vivo.
+
+- **Consultas por asesor** — bar chart por usuario: **llamadas**, **promedio ms** y **errores**.
+- **Consultas por día** — gráfica de volumen de consultas a Zoho en el tiempo.
+- Latencia p50/p95, % error y consultas por herramienta (sobre la tabla `zoho_query_log`).
+
+RPC: `admin_zoho_health` ahora devuelve `byUser` (desglose por asesor) además de los agregados.
+
+Junto a Salud, `/admin/zoho` sigue teniendo la **config editable** (mapeos de estados/stages + **plantillas de tipificación por estado** `zoho_tipificar_opciones`). Ver [[07 - Features#🤝 Zoho CRM — consulta + gestión autónoma]].
+
+---
+
+## 📅 Filtro de fecha de cita en `/admin/asignar`
+
+> [!tip] Asignar leads por fecha de cita (`Presenter_Appointment`)
+> Nuevo filtro en la pantalla de asignación: **Todas / Hoy / Futuras / fecha específica**.
+
+Caso de uso real (líder de Telemercadeo, **Jesús**): filtrar **Cita Coordinada + owner + cita de hoy** para repartir solo los leads con cita del día.
+
+---
+
 ## Conexiones
 
 - 🗄️ Las funciones SQL: [[04 - Esquema Supabase#Funciones RPC]]
 - 👎 Cómo se generan los downvotes: [[03 - Flujo de pregunta#Paso 10 — Feedback opcional]]
 - 🧠 Lo que el dashboard ayuda a mejorar: [[05 - SYSTEM_PROMPT]]
+- 🤝 El agente que la salud de Zoho monitorea: [[07 - Features#🤝 Zoho CRM — consulta + gestión autónoma]]
 
 [[00 🌞 MOC|← Volver al MOC]]
