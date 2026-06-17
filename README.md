@@ -34,8 +34,9 @@ App migrada del proyecto Vite original a Next.js. El motor LLM original era **Gr
 - **Subida de documentos** (`/api/upload-document`) — analiza imágenes/PDF con Claude (el archivo se manda a Anthropic y se descarta, no se persiste).
 - **Agente Zoho CRM en lenguaje natural** (tool-use) — el LLM decide y ejecuta herramientas server-side. El asesor **gestiona su cartera** desde el chat (no solo consulta):
   - `buscar_cliente` — por email/teléfono/nombre/Lead#/deal; encuentra hasta clientes **convertidos** (Contacto + Deal sin lead). Devuelve **ficha rica estructurada** (`ClientCardChat`), no texto que el modelo redacte.
-  - `mis_leads` — la cartera como **tarjeta rica** (`LeadsCard`, móvil-friendly) con estado por color, última nota y botones; filtros por cantidad, orden, estado y fechas; triage "sin nota en 24h". Los líderes pueden pedir la cartera de **cualquier asesor** por su nombre completo.
-  - **Escrituras del asesor con confirmación de 1 clic** — `agregar_nota`, `actualizar_estado`, `programar_seguimiento`. **Disponibles para todos pero scoped** a SU cartera (`ownsLead`). Patrón **preparar→confirmar**: NO tocan Zoho hasta que el asesor da clic en la tarjeta (`ZohoActionCard`) → `POST /api/zoho/action` re-valida dueño + audita. Notas con plantillas + firma `🤖☀️ SUN BOT`.
+  - `mis_leads` — la cartera como **tabla HTML interactiva** (`LeadsCard`): Lead# · Cliente · Estado (color) · **Owner (+ correo/tel)** · **Consultor (+ correo/tel)** · Tel · Creado · Abrir. Máx 30; filtros por estado/fecha/orden; triage "sin nota en 24h". Líderes piden la cartera de **cualquier asesor** por nombre completo.
+  - **Tipificar desde el chat — cuadro estilo NOTAS VASS/TM** (`TipificarForm`): la ficha y **cada fila de la tabla** (expandible, marca ✓) traen un cuadro con **dropdown de estados** (editables en `/admin/zoho`) + **nota que se autollena con la plantilla del estado** + botón "Solo llamada". Guardar escribe **estado + nota** en un clic (scoped `ownsLead`, auditado, vía `POST /api/zoho/action`). Al elegir **"Caso Vendido"** aparece `VentaForm` (formulario de venta completo: producto/sub-producto/cantidad/financiamiento/consultor → nota estructurada). Notas firmadas SUN BOT, **título con el nombre real del SSO** (el apodo solo en el chat).
+  - **📝 Última nota al pasar el mouse** (`NoteHover`, estilo Zoho) — ícono junto al cliente; carga bajo demanda (`/api/zoho/last-note`), cacheada, scoped.
   - **Flujos compuestos** — *"no contestó, lo llamo mañana 10am"* prepara estado + seguimiento en **una sola tarjeta** con un único Confirmar (`makeCompoundAction`).
   - `asignar_leads` — reasignación masiva de Owner. **Solo roles elevados.**
   - **Resolución de asesor sin ambigüedad** (`resolveAsesor`): si un nombre matchea a varios usuarios (ej. "juan" → 12 tocayos), el agente **pide elegir**; "mis leads" resuelve al **propio usuario** por email→ID exacto. Mata el bug de carteras cruzadas.
@@ -44,15 +45,16 @@ App migrada del proyecto Vite original a Next.js. El motor LLM original era **Gr
   - **Mapeos editables sin deploy** (`zoho_status_map`, `zoho_deal_stage_map`, `zoho-config.ts`, cache 5 min + fallback a defaults) + **telemetría** (`zoho_query_log`).
 - **☀️ Briefing matutino** — al abrir el chat, `BriefingCard` muestra **citas de hoy + seguimientos vencidos + accionables** (campos nativos `Presenter_Appointment` / `Llamar_de_esta_fecha`). Endpoint `/api/zoho/briefing` (rápido, sin consultar notas).
 - **🎙️ Dictado por voz** — botón de micrófono con Web Speech API nativa del navegador (gratis, on-device, español; Edge/Chrome). El texto reconocido cae en el input.
-- **📞 Llamar 3CX / Kixie** — dos botones por lead/ficha que lanzan el softphone (3CX vía `callto:`, Kixie vía `tel:`; `lib/dialer.ts`).
+- **📞 Llamar 3CX / Kixie** — dos botones por lead/ficha que lanzan el softphone vía `tel:` (`lib/dialer.ts`). Nota: se usa `tel:` y no `callto:` porque Teams interceptaba `callto:` en las máquinas; `tel:` lo toma 3CX (o la extensión de Kixie en el navegador).
+- **🔄 Auto-actualización del PWA** — `/api/version` (SHA del deploy vivo) vs `NEXT_PUBLIC_COMMIT_SHA` (horneado): `ServiceWorkerRegister` recarga al reenfocar si hay versión nueva → el asesor siempre en la última, sin limpiar caché.
 - **Coach de ventas IA** — sugerencias de qué ofrecer según el cliente y sus deals, como chips accionables.
 - **Envío de correos** de seguimiento al cliente (Microsoft Graph, firma corporativa, autocompletar desde Zoho). Atajo: ícono de **sobre** en la barra del chat (además de `/@`).
-- **Panel administrativo** (tema ejecutivo neón, allowlist por email):
+- **Panel administrativo** (tema ejecutivo neón, allowlist por email; las secciones viven en un **menú desplegable** `AdminNav` — el logo SUN BOT, reloj y tema se quedan en la barra):
   - **Dashboard** — KPIs, gráficas de uso, departamentos, hora pico, satisfacción y comparativas (Recharts).
   - **Gestión** (`/admin/gestion`) — chat con el agente Zoho por lenguaje natural para líderes.
-  - **Asignar** (`/admin/asignar`) — tablero para ver y reasignar carteras, con búsqueda manual de usuarios de Zoho.
-  - **Usuarios** (`/admin/usuarios`) — aprobar/rechazar ingresos **y agregar usuarios manualmente** (correo, nombre, área, rol; quedan pre-aprobados). Roles y suspensión/eliminación con **jerarquía Super Admin**.
-  - **Zoho** (`/admin/zoho`) — **configuración y salud del agente Zoho**: editor de mapeos (qué estados de lead cuentan en cada grupo, qué etapas de deal son venta/completado) que aplica sin redeploy, + dashboard de salud con latencia p50/p95, % de error, consultas por herramienta y errores recientes (RPC `admin_zoho_health`).
+  - **Asignar** (`/admin/asignar`) — ver y reasignar carteras, con búsqueda manual de usuarios de Zoho + **filtro por fecha de cita** (Presenter_Appointment: Hoy / Futuras / fecha) — flujo del líder de Telemercadeo.
+  - **Usuarios** (`/admin/usuarios`) — aprobar/rechazar ingresos **y agregar usuarios manualmente**. Roles y suspensión/eliminación con **jerarquía Super Admin**.
+  - **Zoho** (`/admin/zoho`) — **config + salud del agente**: editor de mapeos (status→grupo, stage→estado) + **plantillas de tipificación editables** (agregar/quitar/reordenar/editar texto) — todo sin redeploy; dashboard de salud (latencia p50/p95, % error, **consultas por herramienta y por asesor**, por día; RPC `admin_zoho_health`).
   - **Auditoría** (`/admin/auditoria`) — registro append-only (`admin_audit`) de accesos, notas y asignaciones.
 - **Multidominio** — login para `@windmarhome.com` y `@windmarenergy.com` (extensible vía `ALLOWED_EMAIL_DOMAINS`).
 - **Comandos `/` (easter eggs)** sin gastar tokens (texto fijo, no llaman al LLM).
@@ -122,7 +124,10 @@ windmar-ai-agent-next/
 │   │   │   ├── zoho/assign/route.ts           # Reasignación masiva de Owner (gateado)
 │   │   │   ├── zoho/note/route.ts             # Crear nota en lead (gateado)
 │   │   │   ├── zoho/action/route.ts           # Ejecuta escritura confirmada (nota/estado/seguimiento/compound) scoped+auditada
-│   │   │   └── zoho/briefing/route.ts         # Briefing del asesor (citas hoy + seguimientos vencidos)
+│   │   │   ├── zoho/briefing/route.ts         # Briefing del asesor (citas hoy + seguimientos vencidos)
+│   │   │   ├── zoho/last-note/route.ts        # Última nota de un lead (pop-up al pasar el mouse)
+│   │   │   ├── admin/zoho/tipificar/route.ts  # Lista editable de estados+plantillas del cuadro
+│   │   │   └── version/route.ts               # SHA del deploy vivo (auto-update del PWA)
 │   │   ├── admin/page.tsx                     # Dashboard ejecutivo (KPIs + gráficas)
 │   │   ├── admin/layout.tsx                   # Layout neón + allowlist server-side
 │   │   ├── admin/gestion/page.tsx            # Chat de gestión con el agente Zoho
@@ -140,7 +145,12 @@ windmar-ai-agent-next/
 │   │   ├── ChatMessage.tsx
 │   │   ├── ChatWindow.tsx
 │   │   ├── MascotPanel.tsx                    # SUN BOT
+│   │   ├── ServiceWorkerRegister.tsx          # Registra SW + auto-update por versión
 │   │   ├── ZohoActionCard.tsx                 # Tarjeta de confirmación de escritura (1 clic) + compound
+│   │   ├── TipificarForm.tsx                  # Cuadro de tipificación (dropdown estado + nota + plantilla)
+│   │   ├── VentaForm.tsx                      # Formulario de venta completo (modelo VASS) para "Caso Vendido"
+│   │   ├── NoteHover.tsx                      # Última nota en pop-up al pasar el mouse (📝)
+│   │   ├── admin/AdminNav.tsx                 # Menú desplegable del panel admin
 │   │   ├── LeadsCard.tsx                      # Lista de leads como tarjeta rica (móvil-friendly)
 │   │   ├── ClientCardChat.tsx                 # Ficha de cliente rica + acciones 1-clic
 │   │   ├── BriefingCard.tsx                   # Briefing matutino al abrir el chat
@@ -163,7 +173,7 @@ windmar-ai-agent-next/
 │   │   ├── zoho-leads-card.ts                 # Tarjeta estructurada de lista de leads (<zoho_leads>)
 │   │   ├── zoho-client-card.ts                # Tarjeta estructurada de ficha de cliente (<zoho_client>)
 │   │   ├── quick-replies.ts                   # Extractor compartido de <quick_replies> (chat + admin)
-│   │   ├── dialer.ts                          # Click-to-call 3CX (callto:) / Kixie (tel:)
+│   │   ├── dialer.ts                          # Click-to-call 3CX / Kixie (ambos vía tel:)
 │   │   ├── admin-auth.ts                      # Allowlist admin + super admin (por email)
 │   │   ├── audit.ts                           # logAudit() → admin_audit
 │   │   ├── email-templates.ts                # Plantillas de correo
@@ -185,7 +195,11 @@ windmar-ai-agent-next/
 │   ├── 013_admin_audit.sql                    # tabla admin_audit (append-only)
 │   ├── 014_relax_departamento.sql             # área de texto libre (RH, etc.)
 │   ├── 015_zoho_config.sql                    # zoho_status_map + zoho_deal_stage_map + zoho_query_log (+seeds)
-│   └── 016_admin_zoho_health.sql              # RPC admin_zoho_health (latencia p50/p95, % error)
+│   ├── 016_admin_zoho_health.sql              # RPC admin_zoho_health (latencia p50/p95, % error)
+│   ├── 017_zoho_tipificar_opciones.sql        # tabla estados del cuadro de tipificación (editable)
+│   ├── 018_zoho_tipificar_plantillas.sql      # + columna plantilla por estado
+│   ├── 019_tipificar_plantillas_vass_tm.sql   # plantillas estilo VASS/TM + Asistencia Coordinada
+│   └── 020_admin_zoho_health_by_user.sql      # + consultas por asesor (byUser) en la RPC
 ├── public/                                     # Imágenes (sunbot, logo)
 ├── .env.local                                  # Variables locales (NO Git)
 ├── .env.example                                # Plantilla

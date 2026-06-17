@@ -1,7 +1,7 @@
 # 🗺️ Roadmap Visual — WINDMAR AI AGENT
 
-> Mapa conceptual del proyecto. **Última actualización: 15 junio 2026 (v6 — era Zoho + Autonomía del asesor)**
-> Estado: **🟢 EN PRODUCCIÓN — Agente Zoho en lenguaje natural · asesor gestiona su cartera con confirmación · tarjetas ricas · briefing matutino · dictado por voz · llamar 3CX/Kixie**
+> Mapa conceptual del proyecto. **Última actualización: 17 junio 2026 (v7 — tipificación + formulario de venta + panel por asesor)**
+> Estado: **🟢 EN PRODUCCIÓN — Agente Zoho conversacional · cuadro de tipificación (dropdown + plantillas + venta VASS) · tablas HTML con contacto · última nota en hover · briefing · voz · llamar 3CX/Kixie · menú admin + dashboard por asesor**
 
 ---
 
@@ -383,6 +383,43 @@ flowchart LR
 
 ## 📅 Bitácora de Cambios
 
+### 15–17 junio 2026 — 🟦 Tipificación, formulario de venta y panel por asesor
+
+Iteración guiada por feedback de uso real (referencia: repos NOTAS-VENTAS-VASS y
+TELEMERCADEO-SEGUIMIENTO). **EN PRODUCCIÓN** (commit `844d7ce`).
+
+**Tipificar desde el chat (sin salir):**
+- La ficha y **cada fila de la tabla** traen un cuadro (`TipificarForm`): dropdown
+  de estados + **nota que se autollena con la plantilla del estado** + "Solo
+  llamada" → Guardar escribe estado+nota en un clic. Fila expandible inline,
+  marca ✓ al guardar.
+- `VentaForm`: al elegir **"Caso Vendido"**, formulario de venta completo (modelo
+  VASS): producto/sub-producto/cantidad/financiamiento/consultor → nota
+  estructurada.
+- **Plantillas por estado editables** en `/admin/zoho` (agregar/quitar/reordenar/
+  editar texto). Tabla `zoho_tipificar_opciones` (migraciones 017–019).
+- Nota: título con el **nombre real del SSO** (apodo solo en chat).
+- **📝 Última nota en pop-up** al pasar el mouse (`NoteHover`, `/api/zoho/last-note`).
+
+**Tablas HTML + búsquedas:**
+- Lista de leads como **tabla** (Lead#·Cliente·Estado·**Owner+correo/tel**·
+  **Consultor+correo/tel**·Tel·Creado·Abrir), máx 30. Búsqueda por teléfono/
+  correo/nombre → **últimos 3 leads + 3 deals**. `L######` → ficha + cuadro.
+- 🐛 fix raíz: `L######` resuelve al record id (`getLeadBasic`) → el bot ya no divaga.
+
+**Panel admin:**
+- `AdminNav`: las 8 opciones del topbar → **menú desplegable** (logo Sun Bot,
+  reloj y tema se quedan).
+- `/admin/zoho` Salud: **consultas por asesor** + por día (RPC `byUser`, mig. 020).
+- `/admin/asignar`: **filtro por fecha de cita** (Hoy/Futuras/fecha) — flujo del
+  líder de Telemercadeo.
+
+**Plataforma:**
+- **Auto-actualización del PWA** (`/api/version` + `NEXT_PUBLIC_COMMIT_SHA`): adiós
+  caché viejo, el asesor siempre en la última versión.
+- Llamadas: `3CX`/`Kixie` ambos vía `tel:` (se quitó `callto:` que iba a Teams).
+- Vista de escritorio más ancha. SYSTEM_PROMPT mantiene el coach tras mostrar data.
+
 ### 11–15 junio 2026 — 🟧 Era Zoho CRM + Autonomía del asesor
 
 El salto más grande desde el lanzamiento: el agente pasó de "responder dudas" a
@@ -714,5 +751,6 @@ Sistema de login email/password con flip card 3D, registro con depto/rol/T&C, Pr
 
 ---
 
-**Última actualización**: 15 junio 2026 — Era Zoho CRM + Autonomía del asesor (Fases A–D en producción)
-**Próxima revisión sugerida**: al arrancar Fase E (n8n + botmaker) o Fase F (afinamiento)
+**Última actualización**: 17 junio 2026 — Tipificación + formulario de venta + panel por asesor (en producción)
+**Pendiente principal**: Fase E (n8n sync nocturno + alertas · botmaker WhatsApp) · atajos de teclado para tipificar · "líder ve solo su equipo" · push PWA matutino (VAPID). Descartado: Deepgram, Power BI, Supermetrics.
+**Próxima revisión sugerida**: al arrancar Fase E (n8n + botmaker)
