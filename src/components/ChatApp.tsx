@@ -5,6 +5,7 @@ import { Sidebar } from './Sidebar';
 import { ChatWindow } from './ChatWindow';
 import { ChatInput } from './ChatInput';
 import { WelcomeScreen } from './WelcomeScreen';
+import { WorldBackground } from './WorldBackground';
 import { MascotPanel, type MascotState } from './MascotPanel';
 import { TopBar } from './TopBar';
 import { ProfileModal } from './ProfileModal';
@@ -997,7 +998,9 @@ export function ChatApp({ user, onSignOut }: Props) {
   }
 
   return (
-    <div className="flex h-screen bg-[#eef4fa] dark:bg-[#0a1628] overflow-hidden">
+    <div className="relative flex h-screen bg-[#eef4fa] dark:bg-[#0a1628] overflow-hidden">
+      {/* Fondo "mundo" a pantalla completa (bienvenida + chat) — detrás del sidebar y el chat. Solo modo oscuro (ver WorldBackground). */}
+      <WorldBackground />
       {sidebarOpen && (
         <div
           className="fixed inset-0 bg-black/40 z-40 md:hidden"
@@ -1005,7 +1008,7 @@ export function ChatApp({ user, onSignOut }: Props) {
         />
       )}
 
-      <div className={`${desktopSidebarHidden ? 'md:hidden' : 'md:flex md:h-full'}`}>
+      <div className={`relative z-10 ${desktopSidebarHidden ? 'md:hidden' : 'md:flex md:h-full'}`}>
         <Sidebar
           conversations={conversations}
           activeId={activeId}
@@ -1122,7 +1125,7 @@ export function ChatApp({ user, onSignOut }: Props) {
         </p>
       </div>
 
-      <main className={`flex-1 flex flex-col min-w-0 transition-all duration-300 ${desktopSidebarHidden ? 'md:pl-16' : 'md:pl-28'}`}>
+      <main className={`relative z-10 flex-1 flex flex-col min-w-0 transition-all duration-300 ${desktopSidebarHidden ? 'md:pl-16' : 'md:pl-28'}`}>
         <div className="md:hidden flex items-center gap-3 px-4 py-3 border-b border-[#b8cfe8] dark:border-gray-700 bg-[#eef4fa] dark:bg-[#0f1c2e] flex-shrink-0">
           <button
             onClick={() => setSidebarOpen(true)}
