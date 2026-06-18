@@ -37,8 +37,8 @@ const BUCKET_COLOR: Record<string, string> = {
 
 export function AssignManager({ users }: { users: AssignUser[] }) {
   const [manualSource, setManualSource] = useState('');
-  const [target, setTarget] = useState('');
-  const [manualTarget, setManualTarget] = useState('');
+  const [targets, setTargets] = useState<string[]>([]); // destinos para reparto equitativo
+  const [targetInput, setTargetInput] = useState('');
   const [zohoUsers, setZohoUsers] = useState<Array<{ name: string; email: string }>>([]);
   const [leads, setLeads] = useState<Lead[] | null>(null);
   const [statusFilter, setStatusFilter] = useState<string>('');
@@ -60,9 +60,32 @@ export function AssignManager({ users }: { users: AssignUser[] }) {
       .catch(() => {});
   }, []);
 
-  // La búsqueda manual tiene prioridad sobre el dropdown.
   const effectiveSource = manualSource.trim().toLowerCase();
-  const effectiveTarget = manualTarget.trim().toLowerCase() || target;
+
+  // Nombre legible de un correo (de la app o de Zoho) para el preview.
+  const nameOf = (email: string) =>
+    users.find((u) => u.email.toLowerCase() === email)?.name ||
+    zohoUsers.find((u) => u.email.toLowerCase() === email)?.name ||
+    email.split('@')[0];
+
+  function addTarget(raw: string) {
+    const e = raw.trim().toLowerCase();
+    if (!e || !e.includes('@')) return;
+    if (e === effectiveSource) { setMsg({ kind: 'err', text: 'Ese asesor es el origen.' }); return; }
+    setTargets((prev) => (prev.includes(e) ? prev : [...prev, e]));
+    setTargetInput('');
+  }
+  function removeTarget(e: string) {
+    setTargets((prev) => prev.filter((x) => x !== e));
+  }
+
+  // Reparto PAREJO (round-robin 1-a-1): diferencia máx. de 1 lead entre asesores.
+  function splitEven(ids: string[], emails: string[]): Record<string, string[]> {
+    const out: Record<string, string[]> = {};
+    emails.forEach((e) => (out[e] = []));
+    ids.forEach((id, i) => out[emails[i % emails.length]].push(id));
+    return out;
+  }
 
   async function loadLeads() {
     if (!effectiveSource) return;
@@ -128,34 +151,36 @@ export function AssignManager({ users }: { users: AssignUser[] }) {
     );
   }
 
-  async function assign() {
-    if (!effectiveTarget || selected.size === 0) return;
-    if (effectiveTarget === effectiveSource) {
-      setMsg({ kind: 'err', text: 'El destino es el mismo asesor de origen.' });
-      return;
-    }
+  // Reparte los leads seleccionados EQUITATIVAMENTE entre los asesores destino.
+  // Una llamada a /api/zoho/assign por asesor con su tajada (cada una auditada).
+  async function distribute() {
+    if (targets.length === 0 || selected.size === 0) return;
+    const plan = splitEven(Array.from(selected), targets);
     setBusy(true);
     setMsg(null);
+    let ok = 0, fail = 0;
+    const done = new Set<string>();
     try {
-      const res = await fetch('/api/zoho/assign', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ leadIds: Array.from(selected), ownerEmail: effectiveTarget }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        setMsg({ kind: 'err', text: data.error || 'Error asignando' });
-        return;
+      for (const email of targets) {
+        const slice = plan[email];
+        if (!slice.length) continue;
+        try {
+          const res = await fetch('/api/zoho/assign', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ leadIds: slice, ownerEmail: email }),
+          });
+          const data = await res.json();
+          if (res.ok) { ok += data.success ?? slice.length; slice.forEach((id) => done.add(id)); }
+          else { fail += slice.length; }
+        } catch { fail += slice.length; }
       }
       setMsg({
-        kind: 'ok',
-        text: `Asignados ${data.success}/${data.total} a ${effectiveTarget}${data.failed ? ` · ${data.failed} fallaron` : ''}.`,
+        kind: fail === 0 ? 'ok' : 'err',
+        text: `Repartidos ${ok} leads entre ${targets.length} asesor(es)${fail ? ` · ${fail} fallaron` : ''}.`,
       });
-      // Quitar los asignados de la vista (ya no son del origen)
-      setLeads((prev) => (prev ? prev.filter((l) => !selected.has(l.id)) : prev));
+      setLeads((prev) => (prev ? prev.filter((l) => !done.has(l.id)) : prev));
       setSelected(new Set());
-    } catch {
-      setMsg({ kind: 'err', text: 'Error de conexión' });
     } finally {
       setBusy(false);
     }
@@ -373,31 +398,55 @@ export function AssignManager({ users }: { users: AssignUser[] }) {
                 ))}
               </div>
 
-              {/* Barra de asignación */}
-              <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap', marginTop: 16, paddingTop: 14, borderTop: '1px solid var(--glass-border)' }}>
-                <span style={{ color: 'var(--text2)', fontSize: 13 }}>Asignar {selected.size} a:</span>
-                <select
-                  value={target}
-                  onChange={(e) => { setTarget(e.target.value); setManualTarget(''); }}
-                  style={selectStyle}
+              {/* Panel de reparto equitativo entre varios asesores */}
+              <div style={{ marginTop: 16, paddingTop: 14, borderTop: '1px solid var(--glass-border)' }}>
+                <div style={{ color: 'var(--text2)', fontSize: 13, marginBottom: 8 }}>
+                  Repartir <b style={{ color: '#F7941D' }}>{selected.size}</b> leads en partes iguales entre los asesores:
+                </div>
+
+                {/* Agregar asesores destino (escrito, con autocompletado) */}
+                <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', marginBottom: 8 }}>
+                  <input
+                    value={targetInput}
+                    onChange={(e) => setTargetInput(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addTarget(targetInput); } }}
+                    list="zoho-users-list"
+                    placeholder="correo del asesor destino + Enter"
+                    style={{ ...selectStyle, minWidth: 300 }}
+                  />
+                  <button onClick={() => addTarget(targetInput)} disabled={!targetInput.trim()} style={btn('#38bdf8', !targetInput.trim())}>
+                    + Agregar
+                  </button>
+                </div>
+
+                {/* Chips de asesores elegidos */}
+                {targets.length > 0 && (
+                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 10 }}>
+                    {targets.map((e) => (
+                      <span key={e} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12, padding: '4px 10px', borderRadius: 999, background: 'rgba(56,189,248,0.12)', border: '1px solid rgba(56,189,248,0.4)', color: '#bfe6ff' }}>
+                        {nameOf(e)}
+                        <button onClick={() => removeTarget(e)} style={{ background: 'none', border: 'none', color: '#7dd3fc', cursor: 'pointer', fontWeight: 700, lineHeight: 1 }} aria-label={`Quitar ${e}`}>×</button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+
+                {/* Preview del reparto */}
+                {targets.length > 0 && selected.size > 0 && (
+                  <div style={{ fontSize: 12, color: 'var(--text2)', marginBottom: 10, padding: '8px 12px', borderRadius: 8, background: 'rgba(255,255,255,0.03)', border: '1px solid var(--glass-border)' }}>
+                    <span style={{ color: 'var(--text3)' }}>Vista previa: </span>
+                    {Object.entries(splitEven(Array.from(selected), targets)).map(([e, ids], i) => (
+                      <span key={e}>{i > 0 ? ' · ' : ''}<b style={{ color: 'var(--text1)' }}>{nameOf(e)}</b>: {ids.length}</span>
+                    ))}
+                  </div>
+                )}
+
+                <button
+                  onClick={distribute}
+                  disabled={busy || targets.length === 0 || selected.size === 0}
+                  style={btn('#F7941D', busy || targets.length === 0 || selected.size === 0)}
                 >
-                  <option value="">— elige destino —</option>
-                  {users.map((u) => (
-                    <option key={u.email} value={u.email} style={{ background: '#0f1525' }}>
-                      {u.name} ({u.rol})
-                    </option>
-                  ))}
-                </select>
-                <span style={{ color: 'var(--text3)', fontSize: 12 }}>o manual:</span>
-                <input
-                  value={manualTarget}
-                  onChange={(e) => setManualTarget(e.target.value)}
-                  list="zoho-users-list"
-                  placeholder="correo destino"
-                  style={{ ...selectStyle, minWidth: 220 }}
-                />
-                <button onClick={assign} disabled={busy || !effectiveTarget || selected.size === 0} style={btn('#F7941D', busy || !effectiveTarget || selected.size === 0)}>
-                  {busy ? 'Asignando…' : `Reasignar ${selected.size}`}
+                  {busy ? 'Repartiendo…' : `Repartir ${selected.size} entre ${targets.length || 0} asesor(es)`}
                 </button>
               </div>
             </>
