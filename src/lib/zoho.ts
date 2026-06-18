@@ -207,7 +207,7 @@ export function detectQueryType(query: string): QueryType {
 // Campos que pedimos a Zoho — minimizar payload (Zoho devuelve TODO si no
 // especificas). Lista probada en NOTAS-VENTAS-VASS.
 const LEAD_FIELDS =
-  'Full_Name,First_Name,Last_Name,Phone,Mobile,Email,Lead_Status,Owner,Sales_Rep,Sales_Rep_Email,Street,City,State,Zip_Code,Created_Time,Lead_Number';
+  'Full_Name,First_Name,Last_Name,Phone,Mobile,Email,Lead_Status,Owner,Sales_Rep,Sales_Rep_Email,Sales_Rep_Phone,Street,City,State,Zip_Code,Created_Time,Lead_Number';
 const DEAL_FIELDS =
   'Deal_Name,Amount,Stage,Closing_Date,Contact_Name,Owner,Created_Time';
 const CONTACT_FIELDS =
@@ -373,6 +373,7 @@ interface ZohoLeadRaw {
   Owner?: { id?: string; name?: string; email?: string };
   Sales_Rep?: { id?: string; name?: string; email?: string };
   Sales_Rep_Email?: string;
+  Sales_Rep_Phone?: string; // campo custom del lead — tel del consultor
   Created_Time?: string;
   // Campos custom posibles:
   Sistema_Comprado?: string;
@@ -655,7 +656,7 @@ export async function getMyLeads(ownerId: string, limit = 1000): Promise<MyLead[
     ownerPhone: getUserContactById(r.Owner?.id).phone,
     consultor: r.Sales_Rep?.name || null,
     consultorEmail: r.Sales_Rep?.email || r.Sales_Rep_Email || getUserContactById(r.Sales_Rep?.id).email,
-    consultorPhone: getUserContactById(r.Sales_Rep?.id).phone,
+    consultorPhone: r.Sales_Rep_Phone || getUserContactById(r.Sales_Rep?.id).phone,
     modifiedAt: r.Modified_Time || null,
     createdAt: r.Created_Time || null,
     appointmentAt: r.Presenter_Appointment || null,

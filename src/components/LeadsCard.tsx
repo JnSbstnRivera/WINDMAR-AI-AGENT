@@ -212,7 +212,13 @@ export function LeadsCard({
                       {(l.consultorEmail || l.consultorPhone) && (
                         <div style={{ fontSize: 10.5, color: '#64748b', lineHeight: 1.3 }}>
                           {l.consultorEmail && <div className="truncate" style={{ maxWidth: 150 }}>{l.consultorEmail}</div>}
-                          {l.consultorPhone && <div>📞 {l.consultorPhone}</div>}
+                          {l.consultorPhone && (
+                            <div>
+                              {callHref(l.consultorPhone, '3cx')
+                                ? <a href={callHref(l.consultorPhone, '3cx')!} style={{ color: '#22c55e' }} title="Llamar consultor (3CX)">📞 {l.consultorPhone}</a>
+                                : <>📞 {l.consultorPhone}</>}
+                            </div>
+                          )}
                         </div>
                       )}
                     </td>

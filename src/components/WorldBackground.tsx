@@ -42,13 +42,6 @@ export function WorldBackground() {
       <span className="world-ember world-ember-4" />
       <span className="world-ember world-ember-5" />
 
-      {/* Meteoros / haces de luz diagonales (estilo shader) en colores Windmar */}
-      <span className="world-meteor world-meteor-1" />
-      <span className="world-meteor world-meteor-2" />
-      <span className="world-meteor world-meteor-3" />
-      <span className="world-meteor world-meteor-4" />
-      <span className="world-meteor world-meteor-5" />
-
       <style>{`
         /* ════════ MODO CLARO — planeta de día (legible con texto oscuro) ════════ */
         .world-bg {
@@ -142,28 +135,6 @@ export function WorldBackground() {
         .dark .world-ember {
           background: rgb(208,228,255);
           box-shadow: 0 0 9px 2px rgba(130,175,255,0.85);
-        }
-
-        /* ════════ meteoros / haces de luz diagonales (Windmar) ════════ */
-        .world-meteor {
-          position: absolute;
-          height: 2px; width: 170px; border-radius: 999px;
-          background: linear-gradient(270deg, var(--mc, #F7941D) 0%, rgba(247,148,29,0) 72%);
-          box-shadow: 0 0 8px 1px var(--mc, #F7941D);
-          opacity: 0;
-          will-change: transform, opacity;
-          animation: worldMeteor 6s linear infinite;
-        }
-        .world-meteor-1 { --mc: #F7941D; top: 12%; left: 78%; animation-delay: 0s;   animation-duration: 6.5s; }
-        .world-meteor-2 { --mc: #4f9bff; top: 6%;  left: 60%; animation-delay: 2.2s; animation-duration: 7.5s; }
-        .world-meteor-3 { --mc: #F7941D; top: 20%; left: 90%; animation-delay: 4.1s; animation-duration: 6s; }
-        .world-meteor-4 { --mc: #6aa8ff; top: 3%;  left: 40%; animation-delay: 5.6s; animation-duration: 8s; }
-        .world-meteor-5 { --mc: #F7941D; top: 16%; left: 50%; animation-delay: 7.3s; animation-duration: 7s; }
-        @keyframes worldMeteor {
-          0%   { opacity: 0;   transform: rotate(38deg) translateX(60px); }
-          6%   { opacity: 0.9; }
-          55%  { opacity: 0.55; }
-          100% { opacity: 0;   transform: rotate(38deg) translateX(-560px); }
         }
 
         /* ════════ animaciones ════════ */
