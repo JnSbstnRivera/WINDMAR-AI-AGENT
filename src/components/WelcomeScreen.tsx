@@ -13,7 +13,14 @@ interface Props {
 
 export function WelcomeScreen({ onSend, disabled, onTypingChange, onAttach, onEmail }: Props) {
   return (
-    <div className="flex-1 flex flex-col items-center justify-start px-4 pt-[3vh] sm:pt-[5vh] pb-6 sm:pb-8">
+    <div className="relative flex-1 flex flex-col items-center justify-start px-4 pt-[3vh] sm:pt-[5vh] pb-6 sm:pb-8">
+      {/* Resplandor "amanecer Windmar" (estilo moon-chat, paleta brand) — detrás del contenido */}
+      <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden>
+        <div className="welcome-aura" />
+        <div className="welcome-moon" />
+      </div>
+
+      <div className="relative z-10 flex flex-col items-center w-full">
       <div
         className="relative flex items-center justify-center mb-2 sm:mb-3"
         style={{
@@ -55,8 +62,45 @@ export function WelcomeScreen({ onSend, disabled, onTypingChange, onAttach, onEm
         <BriefingCard onSend={onSend} />
         <ChatInput onSend={onSend} disabled={disabled} onTypingChange={onTypingChange} onAttach={onAttach} onEmail={onEmail} />
       </div>
+      </div>
 
       <style>{`
+        /* ── Resplandor "amanecer Windmar" (paleta brand) ── */
+        .welcome-moon {
+          position: absolute;
+          left: 50%;
+          bottom: clamp(-340px, -36%, -160px);
+          transform: translateX(-50%);
+          width: min(1000px, 175vw);
+          height: min(1000px, 175vw);
+          border-radius: 50%;
+          background: radial-gradient(120% 92% at 50% 0%,
+            rgba(247,148,29,0.85) 0%,
+            rgba(247,148,29,0.34) 9%,
+            rgba(29,66,155,0.45) 23%,
+            rgba(27,58,92,0.30) 43%,
+            rgba(27,58,92,0) 66%);
+          filter: blur(2px);
+        }
+        .welcome-aura {
+          position: absolute;
+          left: 50%;
+          bottom: -8%;
+          transform: translateX(-50%);
+          width: min(920px, 150vw);
+          height: 440px;
+          background: radial-gradient(52% 82% at 50% 100%,
+            rgba(247,148,29,0.22) 0%,
+            rgba(29,66,155,0.16) 46%,
+            transparent 76%);
+          filter: blur(34px);
+          animation: welcomeAuraPulse 6s ease-in-out infinite;
+        }
+        @keyframes welcomeAuraPulse {
+          0%, 100% { opacity: 0.75; }
+          50%      { opacity: 1; }
+        }
+
         @keyframes welcomeLogoGlow {
           0%, 100% {
             filter: drop-shadow(0 0 8px rgba(255,255,255,0.75))
