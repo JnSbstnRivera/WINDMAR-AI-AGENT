@@ -13,6 +13,7 @@ const LINKS = [
   { href: '/admin/gestion', label: 'Gestión (chat agente)', icon: '☀', accent: true },
   { href: '/admin/usuarios', label: 'Usuarios y accesos', icon: '👥', badge: true },
   { href: '/admin/asignar', label: 'Asignar leads', icon: '🎯' },
+  { href: '/admin/actividad', label: 'Actividad de admins', icon: '📈' },
   { href: '/admin/zoho', label: 'Zoho — config y salud', icon: '⚙' },
   { href: '/admin/auditoria', label: 'Auditoría', icon: '🛡' },
   { href: '/', label: 'Volver al chat', icon: '←' },
