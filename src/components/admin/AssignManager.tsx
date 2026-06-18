@@ -37,6 +37,7 @@ const BUCKET_COLOR: Record<string, string> = {
 
 export function AssignManager({ users }: { users: AssignUser[] }) {
   const [manualSource, setManualSource] = useState('');
+  const [candidates, setCandidates] = useState<Array<{ name: string; email: string }>>([]); // desambiguación de owner
   const [targets, setTargets] = useState<string[]>([]); // destinos para reparto equitativo
   const [targetInput, setTargetInput] = useState('');
   const [zohoUsers, setZohoUsers] = useState<Array<{ name: string; email: string }>>([]);
@@ -87,16 +88,24 @@ export function AssignManager({ users }: { users: AssignUser[] }) {
     return out;
   }
 
-  async function loadLeads() {
-    if (!effectiveSource) return;
+  async function loadLeads(ownerOverride?: string) {
+    const owner = (ownerOverride ?? effectiveSource).trim().toLowerCase();
+    if (!owner) return;
     setLoading(true);
     setMsg(null);
     setLeads(null);
     setSelected(new Set());
     setStatusFilter('');
+    setCandidates([]);
     try {
-      const res = await fetch(`/api/zoho/my-leads?owner=${encodeURIComponent(effectiveSource)}`);
+      const res = await fetch(`/api/zoho/my-leads?owner=${encodeURIComponent(owner)}`);
       const data = await res.json();
+      // 409 = nombre ambiguo (varios tocayos) → mostramos candidatos para elegir.
+      if (res.status === 409 && Array.isArray(data.candidates)) {
+        setCandidates(data.candidates);
+        setMsg({ kind: 'err', text: data.error || 'Varios asesores coinciden — elige uno abajo.' });
+        return;
+      }
       if (!res.ok) {
         setMsg({ kind: 'err', text: data.error || 'Error cargando leads' });
         return;
@@ -240,12 +249,15 @@ export function AssignManager({ users }: { users: AssignUser[] }) {
         Mira la cartera de un asesor, selecciona leads y reasígnalos. Cada acción queda auditada.
       </p>
 
-      {/* Datalist con TODOS los usuarios Zoho (para búsqueda manual) */}
+      {/* Datalists: por correo (destinos) y por nombre (origen) */}
       <datalist id="zoho-users-list">
         {zohoUsers.map((u) => (
-          <option key={u.email} value={u.email}>
-            {u.name}
-          </option>
+          <option key={u.email} value={u.email}>{u.name}</option>
+        ))}
+      </datalist>
+      <datalist id="zoho-names-list">
+        {zohoUsers.map((u) => (
+          <option key={u.email} value={u.name}>{u.email}</option>
         ))}
       </datalist>
 
@@ -254,15 +266,35 @@ export function AssignManager({ users }: { users: AssignUser[] }) {
         <span style={{ color: 'var(--text2)', fontSize: 13 }}>Ver leads del owner:</span>
         <input
           value={manualSource}
-          onChange={(e) => setManualSource(e.target.value)}
-          list="zoho-users-list"
-          placeholder="correo del owner (ej. j.salas@windmarhome.com)"
-          style={{ ...selectStyle, minWidth: 340 }}
+          onChange={(e) => { setManualSource(e.target.value); setCandidates([]); }}
+          onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); loadLeads(); } }}
+          list="zoho-names-list"
+          placeholder="nombre o correo del owner (ej. Juan Sebastian Rivera)"
+          style={{ ...selectStyle, minWidth: 360 }}
         />
-        <button onClick={loadLeads} disabled={!effectiveSource || loading} style={btn('#38bdf8', !effectiveSource || loading)}>
+        <button onClick={() => loadLeads()} disabled={!effectiveSource || loading} style={btn('#38bdf8', !effectiveSource || loading)}>
           {loading ? 'Cargando…' : 'Cargar cartera'}
         </button>
       </div>
+
+      {/* Desambiguación: varios asesores coinciden con el nombre → elige uno */}
+      {candidates.length > 0 && (
+        <div style={{ marginBottom: 14, padding: '10px 14px', borderRadius: 10, background: 'rgba(247,148,29,0.08)', border: '1px solid rgba(247,148,29,0.4)' }}>
+          <div style={{ color: 'var(--text2)', fontSize: 12, marginBottom: 8 }}>Coinciden varios — elige el owner:</div>
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+            {candidates.map((c) => (
+              <button
+                key={c.email}
+                onClick={() => { setManualSource(c.email); loadLeads(c.email); }}
+                style={{ fontSize: 12, padding: '5px 11px', borderRadius: 999, cursor: 'pointer', border: '1px solid rgba(56,189,248,0.45)', background: 'rgba(56,189,248,0.12)', color: '#bfe6ff' }}
+                title={c.email}
+              >
+                {c.name}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {msg && (
         <div
