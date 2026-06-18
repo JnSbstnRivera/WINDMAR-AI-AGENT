@@ -5,7 +5,7 @@
  * un solecito WH girando + texto con un brillo naranja que barre de izq. a der.
  * Reemplaza los 3 puntos del skeleton mientras el bot prepara la respuesta.
  */
-export function ShimmerLoader({ label = 'Pensando' }: { label?: string }) {
+export function ShimmerLoader({ label = 'Cooking' }: { label?: string }) {
   return (
     <span className="shimmer-loader" aria-label="Generando respuesta">
       <svg className="shimmer-sun" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden>
