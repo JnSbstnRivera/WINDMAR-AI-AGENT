@@ -104,8 +104,8 @@ export function Sidebar({ conversations, activeId, onSelect, onNew, onDelete, on
     <aside
       className={`
         fixed inset-y-0 left-0 z-50 w-72 h-full flex flex-col
-        bg-[#e9f0f9]/30 dark:bg-[#0a1422]/25
-        border-r border-[#b8cfe8]/40 dark:border-white/[0.06]
+        bg-[#e9f0f9]/20 dark:bg-[#0a1422]/15
+        border-r border-[#b8cfe8]/30 dark:border-white/[0.05]
         backdrop-blur-2xl
         transition-transform duration-300 ease-in-out
         ${isOpen ? 'translate-x-0' : '-translate-x-full'}

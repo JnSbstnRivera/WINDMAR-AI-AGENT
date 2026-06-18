@@ -36,7 +36,6 @@ const BUCKET_COLOR: Record<string, string> = {
 };
 
 export function AssignManager({ users }: { users: AssignUser[] }) {
-  const [source, setSource] = useState('');
   const [manualSource, setManualSource] = useState('');
   const [target, setTarget] = useState('');
   const [manualTarget, setManualTarget] = useState('');
@@ -62,7 +61,7 @@ export function AssignManager({ users }: { users: AssignUser[] }) {
   }, []);
 
   // La búsqueda manual tiene prioridad sobre el dropdown.
-  const effectiveSource = manualSource.trim().toLowerCase() || source;
+  const effectiveSource = manualSource.trim().toLowerCase();
   const effectiveTarget = manualTarget.trim().toLowerCase() || target;
 
   async function loadLeads() {
@@ -227,26 +226,13 @@ export function AssignManager({ users }: { users: AssignUser[] }) {
 
       {/* Origen */}
       <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap', marginBottom: 16 }}>
-        <span style={{ color: 'var(--text2)', fontSize: 13 }}>Ver leads de:</span>
-        <select
-          value={source}
-          onChange={(e) => { setSource(e.target.value); setManualSource(''); }}
-          style={selectStyle}
-        >
-          <option value="">— elige asesor —</option>
-          {users.map((u) => (
-            <option key={u.email} value={u.email} style={{ background: '#0f1525' }}>
-              {u.name} ({u.rol})
-            </option>
-          ))}
-        </select>
-        <span style={{ color: 'var(--text3)', fontSize: 12 }}>o búsqueda manual:</span>
+        <span style={{ color: 'var(--text2)', fontSize: 13 }}>Ver leads del owner:</span>
         <input
           value={manualSource}
           onChange={(e) => setManualSource(e.target.value)}
           list="zoho-users-list"
-          placeholder="correo de cualquier usuario Zoho (ej. developer)"
-          style={{ ...selectStyle, minWidth: 280 }}
+          placeholder="correo del owner (ej. j.salas@windmarhome.com)"
+          style={{ ...selectStyle, minWidth: 340 }}
         />
         <button onClick={loadLeads} disabled={!effectiveSource || loading} style={btn('#38bdf8', !effectiveSource || loading)}>
           {loading ? 'Cargando…' : 'Cargar cartera'}
