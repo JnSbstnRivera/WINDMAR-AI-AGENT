@@ -33,9 +33,9 @@ function inDateRange(iso: string | null, f: DateFilter): boolean {
 const th: React.CSSProperties = {
   textAlign: 'left', padding: '6px 8px', fontSize: 10.5, letterSpacing: '0.04em',
   textTransform: 'uppercase', color: '#F7941D', whiteSpace: 'nowrap',
-  borderBottom: '1px solid rgba(247,148,29,0.25)', position: 'sticky', top: 0, background: '#0a1628',
+  borderBottom: '1px solid rgba(247,148,29,0.25)', position: 'sticky', top: 0, background: 'var(--lc-head-bg)',
 };
-const td: React.CSSProperties = { padding: '6px 8px', fontSize: 12.5, color: '#cbd5e1', borderBottom: '1px solid rgba(255,255,255,0.06)', whiteSpace: 'nowrap' };
+const td: React.CSSProperties = { padding: '6px 8px', fontSize: 12.5, color: 'var(--lc-text)', borderBottom: '1px solid var(--lc-border)', whiteSpace: 'nowrap' };
 
 /**
  * Lista de leads como TABLA HTML interactiva (filas/columnas), no texto plano.
@@ -68,66 +68,89 @@ export function LeadsCard({
 
   return (
     <div
-      className="my-3 w-full rounded-xl border-2 px-3 py-3"
-      style={{ background: '#0a1628', borderColor: 'rgba(247,148,29,0.4)' }}
+      className="leads-card my-3 w-full rounded-xl border-2 px-3 py-3 backdrop-blur-md"
+      style={{ background: 'var(--lc-surface)', borderColor: 'rgba(247,148,29,0.4)' }}
     >
+      <style>{`
+        .leads-card {
+          --lc-surface: rgba(255,255,255,0.62);
+          --lc-head-bg: rgba(240,246,252,0.92);
+          --lc-text: #1f2937;
+          --lc-strong: #1B3A5C;
+          --lc-muted: #64748b;
+          --lc-border: rgba(15,23,42,0.08);
+          --lc-chip: rgba(15,23,42,0.05);
+          --lc-input-bg: #ffffff;
+        }
+        .dark .leads-card {
+          --lc-surface: rgba(10,22,40,0.45);
+          --lc-head-bg: rgba(10,22,40,0.92);
+          --lc-text: #cbd5e1;
+          --lc-strong: #e8eaf0;
+          --lc-muted: #64748b;
+          --lc-border: rgba(255,255,255,0.06);
+          --lc-chip: rgba(255,255,255,0.05);
+          --lc-input-bg: #0f1d33;
+        }
+      `}</style>
+
       {/* Header */}
       <div style={{ padding: '0 4px', marginBottom: 8 }}>
         <div style={{ color: '#F7941D', fontWeight: 700, fontSize: 14.5 }}>{card.title}</div>
-        <div style={{ color: '#94a3b8', fontSize: 12, marginTop: 1 }}>
+        <div style={{ color: 'var(--lc-muted)', fontSize: 12, marginTop: 1 }}>
           {card.subtitle}
           {hasFilter && <span style={{ color: '#F7941D' }}> · mostrando {visibleRows.length} de {card.rows.length}</span>}
         </div>
 
-        {/* Chips de estado = filtro clickable. Click activa/desactiva. */}
-        {buckets.length > 1 && (
-          <div className="flex flex-wrap items-center gap-1.5" style={{ marginTop: 8 }}>
-            <button
-              onClick={() => setBucketFilter('all')}
-              style={{
-                fontSize: 11, padding: '2px 10px', borderRadius: 999, cursor: 'pointer',
-                background: bucketFilter === 'all' ? '#F7941D' : 'rgba(255,255,255,0.05)',
-                color: bucketFilter === 'all' ? '#1B3A5C' : '#94a3b8',
-                border: '1px solid rgba(247,148,29,0.45)', fontWeight: bucketFilter === 'all' ? 700 : 400,
-              }}
-            >Todos: {card.rows.length}</button>
-            {buckets.map(([b, n]) => {
-              const active = bucketFilter === b;
-              const c = BUCKET_COLOR[b as Bucket] || '#94a3b8';
-              return (
-                <button key={b} onClick={() => setBucketFilter(active ? 'all' : (b as Bucket))} style={{
+        {/* Controles en UNA fila alineada: chips de estado + filtro de fecha + limpiar */}
+        <div className="flex flex-wrap items-center gap-1.5" style={{ marginTop: 8 }}>
+          {buckets.length > 1 && (
+            <>
+              <button
+                onClick={() => setBucketFilter('all')}
+                style={{
                   fontSize: 11, padding: '2px 10px', borderRadius: 999, cursor: 'pointer',
-                  background: active ? c : 'rgba(255,255,255,0.05)',
-                  color: active ? '#0a1628' : c, fontWeight: active ? 700 : 400,
-                  border: `1px solid ${c}${active ? 'ff' : '44'}`,
-                }} title={`Filtrar por ${BUCKET_LABEL[b as Bucket] || b}`}>
-                  {BUCKET_LABEL[b as Bucket] || b}: {n}
-                </button>
-              );
-            })}
-          </div>
-        )}
+                  background: bucketFilter === 'all' ? '#F7941D' : 'var(--lc-chip)',
+                  color: bucketFilter === 'all' ? '#fff' : 'var(--lc-muted)',
+                  border: '1px solid rgba(247,148,29,0.45)', fontWeight: bucketFilter === 'all' ? 700 : 400,
+                }}
+              >Todos: {card.rows.length}</button>
+              {buckets.map(([b, n]) => {
+                const active = bucketFilter === b;
+                const c = BUCKET_COLOR[b as Bucket] || '#94a3b8';
+                return (
+                  <button key={b} onClick={() => setBucketFilter(active ? 'all' : (b as Bucket))} style={{
+                    fontSize: 11, padding: '2px 10px', borderRadius: 999, cursor: 'pointer',
+                    background: active ? c : 'var(--lc-chip)',
+                    color: active ? '#fff' : c, fontWeight: active ? 700 : 400,
+                    border: `1px solid ${c}${active ? 'ff' : '44'}`,
+                  }} title={`Filtrar por ${BUCKET_LABEL[b as Bucket] || b}`}>
+                    {BUCKET_LABEL[b as Bucket] || b}: {n}
+                  </button>
+                );
+              })}
+            </>
+          )}
 
-        {/* Filtro por fecha de creación + reset */}
-        <div className="flex flex-wrap items-center gap-2" style={{ marginTop: 8 }}>
-          <span style={{ fontSize: 10.5, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em' }}>📅 Fecha</span>
+          {/* Filtro por fecha — alineado en la misma fila que los chips */}
+          <span style={{ fontSize: 13, marginLeft: buckets.length > 1 ? 4 : 0 }} title="Filtrar por fecha de creación">📅</span>
           <select
             value={dateFilter}
             onChange={(e) => setDateFilter(e.target.value as DateFilter)}
             style={{
-              fontSize: 11.5, color: '#cbd5e1', background: '#0f1d33', cursor: 'pointer',
+              fontSize: 11.5, color: 'var(--lc-text)', background: 'var(--lc-input-bg)', cursor: 'pointer',
               border: '1px solid rgba(247,148,29,0.35)', borderRadius: 6, padding: '3px 8px',
             }}
           >
             {(Object.keys(DATE_LABEL) as DateFilter[]).map((f) => (
-              <option key={f} value={f} style={{ background: '#0f1d33' }}>{DATE_LABEL[f]}</option>
+              <option key={f} value={f} style={{ background: 'var(--lc-input-bg)' }}>{DATE_LABEL[f]}</option>
             ))}
           </select>
           {hasFilter && (
             <button
               onClick={() => { setBucketFilter('all'); setDateFilter('all'); }}
-              style={{ fontSize: 11, color: '#94a3b8', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline' }}
-            >Limpiar filtros</button>
+              style={{ fontSize: 11, color: 'var(--lc-muted)', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline' }}
+            >Limpiar</button>
           )}
         </div>
       </div>
@@ -161,7 +184,7 @@ export function LeadsCard({
                 <Fragment key={l.id}>
                   <tr style={open ? { background: 'rgba(247,148,29,0.06)' } : undefined}>
                     <td style={td}><a href={l.zohoUrl} target="_blank" rel="noopener noreferrer" style={{ color: '#94a3b8' }}>{l.leadNumber || '—'}</a></td>
-                    <td style={{ ...td, color: '#e8eaf0', fontWeight: 600, maxWidth: 220, whiteSpace: 'normal' }}>
+                    <td style={{ ...td, color: 'var(--lc-strong)', fontWeight: 600, maxWidth: 220, whiteSpace: 'normal' }}>
                       <span className="inline-flex items-center gap-1.5">
                         <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 180, display: 'inline-block', whiteSpace: 'nowrap' }}>{isDone ? '✓ ' : ''}{l.fullName}</span>
                         <NoteHover leadId={l.id} />
@@ -248,7 +271,7 @@ export function LeadsCard({
               <tbody>
                 {deals.map((d, i) => (
                   <tr key={i}>
-                    <td style={{ ...td, color: '#e8eaf0' }}><a href={d.zohoUrl} target="_blank" rel="noopener noreferrer" style={{ color: '#8da2bd' }}>{d.name}</a></td>
+                    <td style={{ ...td, color: 'var(--lc-strong)' }}><a href={d.zohoUrl} target="_blank" rel="noopener noreferrer" style={{ color: '#8da2bd' }}>{d.name}</a></td>
                     <td style={td}>{d.stage || '—'}</td>
                     <td style={td}>{d.amount || '—'}</td>
                     <td style={td}>{d.contactName || '—'}</td>

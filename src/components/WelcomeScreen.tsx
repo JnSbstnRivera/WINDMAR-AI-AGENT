@@ -1,7 +1,6 @@
 'use client';
 
 import { ChatInput } from './ChatInput';
-import { BriefingCard } from './BriefingCard';
 
 interface Props {
   onSend: (text: string) => void;
@@ -57,7 +56,6 @@ export function WelcomeScreen({ onSend, disabled, onTypingChange, onAttach, onEm
       </div>
 
       <div className="w-full max-w-2xl mt-auto mb-[2vh] sm:mb-[4vh]">
-        <BriefingCard onSend={onSend} />
         <ChatInput onSend={onSend} disabled={disabled} onTypingChange={onTypingChange} onAttach={onAttach} onEmail={onEmail} />
       </div>
       </div>
