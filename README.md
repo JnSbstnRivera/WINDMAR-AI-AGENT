@@ -1,4 +1,4 @@
-# Windmar AI Agent (Sun Bot)
+# WINDMAR AI AGENT (SUN BOT)
 
 Asistente de IA interno de Windmar Home Puerto Rico: un chat conversacional (PWA instalable) con base de conocimiento propia e integración con Zoho CRM en lenguaje natural, para que los equipos de ventas y administración consulten clientes, gestionen su cartera y registren notas sin salir del chat.
 
