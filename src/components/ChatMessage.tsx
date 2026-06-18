@@ -11,6 +11,7 @@ import { QuickReplies } from './QuickReplies';
 import { ZohoActionCard } from './ZohoActionCard';
 import { LeadsCard } from './LeadsCard';
 import { ClientCardChat } from './ClientCardChat';
+import { ShimmerLoader } from './ShimmerLoader';
 import { useTypewriter } from '@/hooks/useTypewriter';
 
 interface Props {
@@ -278,17 +279,7 @@ function ChatMessageImpl({
       <div className="flex flex-col items-start min-w-0 flex-1 pt-1.5">
         <div className="text-[15px] sm:text-[15.5px] text-gray-800 dark:text-gray-100 leading-relaxed w-full break-words">
           {showSkeleton ? (
-            <span className="inline-flex items-center gap-1.5 py-1" aria-label="Generando respuesta">
-              <span className="w-2 h-2 rounded-full bg-[#F7941D]" style={{ animation: 'wmDotBounce 1.2s ease-in-out 0s infinite' }} />
-              <span className="w-2 h-2 rounded-full bg-[#F7941D]" style={{ animation: 'wmDotBounce 1.2s ease-in-out 0.2s infinite' }} />
-              <span className="w-2 h-2 rounded-full bg-[#F7941D]" style={{ animation: 'wmDotBounce 1.2s ease-in-out 0.4s infinite' }} />
-              <style>{`
-                @keyframes wmDotBounce {
-                  0%, 80%, 100% { transform: translateY(0); opacity: 0.4; }
-                  40%            { transform: translateY(-4px); opacity: 1; }
-                }
-              `}</style>
-            </span>
+            <ShimmerLoader />
           ) : (
             <>
               {renderContent(displayContent)}

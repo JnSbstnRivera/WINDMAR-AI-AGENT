@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { VoiceVisualizer } from './VoiceVisualizer';
 
 // Tipos mínimos de la Web Speech API (no están en el lib DOM de TS).
 interface SpeechRecognitionLike {
@@ -212,6 +213,9 @@ export function ChatInput({ onSend, disabled, onTypingChange, isStreaming, onSto
                 </button>
               </div>
             )}
+
+            {/* Visualizador de voz mientras dicta (Web Speech API) */}
+            {listening && <VoiceVisualizer />}
 
             <div className="flex gap-2 items-end">
               {/* Botón de dictado por voz (Web Speech API nativa) */}
