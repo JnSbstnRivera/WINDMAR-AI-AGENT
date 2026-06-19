@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { BUCKET_LABEL, type Bucket } from '@/lib/zoho-status';
+import { OwnerSelect } from './OwnerSelect';
 
 export interface AssignUser {
   email: string;
@@ -261,19 +262,17 @@ export function AssignManager({ users }: { users: AssignUser[] }) {
         ))}
       </datalist>
 
-      {/* Origen */}
+      {/* Origen — combobox buscable (clic despliega la lista de owners) */}
       <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap', marginBottom: 16 }}>
         <span style={{ color: 'var(--text2)', fontSize: 13 }}>Ver leads del owner:</span>
-        <input
-          value={manualSource}
-          onChange={(e) => { setManualSource(e.target.value); setCandidates([]); }}
-          onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); loadLeads(); } }}
-          list="zoho-names-list"
-          placeholder="nombre o correo del owner (ej. Juan Sebastian Rivera)"
-          style={{ ...selectStyle, minWidth: 360 }}
+        <OwnerSelect
+          users={zohoUsers}
+          value={manualSource.includes('@') ? manualSource : ''}
+          loading={loading}
+          onPick={(email) => { setManualSource(email); setCandidates([]); loadLeads(email); }}
         />
         <button onClick={() => loadLeads()} disabled={!effectiveSource || loading} style={btn('#38bdf8', !effectiveSource || loading)}>
-          {loading ? 'Cargando…' : 'Cargar cartera'}
+          {loading ? 'Cargando…' : 'Recargar'}
         </button>
       </div>
 
