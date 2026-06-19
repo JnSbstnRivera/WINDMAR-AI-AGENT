@@ -20,7 +20,7 @@ export default async function AdminActivityPage() {
   const events: AssignEvent[] = (data || []).map((r) => {
     const d = (r.detail || {}) as {
       count?: number; success?: number; failed?: number;
-      fromOwner?: string | null; leads?: Array<{ num?: string | null; name?: string | null }>;
+      fromOwner?: string | null; leads?: Array<{ num?: string | null; name?: string | null; url?: string | null }>;
     };
     return {
       createdAt: r.created_at,
@@ -30,7 +30,7 @@ export default async function AdminActivityPage() {
       success: typeof d.success === 'number' ? d.success : null,
       failed: typeof d.failed === 'number' ? d.failed : null,
       fromOwner: d.fromOwner ?? null,
-      leads: Array.isArray(d.leads) ? d.leads.map((l) => ({ num: l.num ?? null, name: l.name ?? null })) : null,
+      leads: Array.isArray(d.leads) ? d.leads.map((l) => ({ num: l.num ?? null, name: l.name ?? null, url: l.url ?? null })) : null,
     };
   });
 

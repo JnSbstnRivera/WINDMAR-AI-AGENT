@@ -183,7 +183,7 @@ export function AssignManager({ users }: { users: AssignUser[] }) {
               leadIds: slice,
               ownerEmail: email,
               fromOwner: effectiveSource,
-              leads: slice.map((id) => { const l = byId.get(id); return { num: l?.leadNumber ?? null, name: l?.fullName ?? null }; }),
+              leads: slice.map((id) => { const l = byId.get(id); return { num: l?.leadNumber ?? null, name: l?.fullName ?? null, url: l?.zohoUrl ?? null }; }),
             }),
           });
           const data = await res.json();

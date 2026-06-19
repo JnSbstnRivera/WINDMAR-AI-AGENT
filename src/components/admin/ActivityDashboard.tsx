@@ -11,7 +11,7 @@ export interface AssignEvent {
   success: number | null;
   failed: number | null;
   fromOwner: string | null;                                       // de quién era (owner anterior)
-  leads: Array<{ num: string | null; name: string | null }> | null; // qué leads
+  leads: Array<{ num: string | null; name: string | null; url: string | null }> | null; // qué leads (+ enlace Zoho)
 }
 
 const PR = 'America/Puerto_Rico';
@@ -71,7 +71,7 @@ export function ActivityDashboard({ events }: { events: AssignEvent[] }) {
 
   return (
     <div style={{ marginTop: 8 }}>
-      <h1 style={{ fontFamily: 'Outfit, sans-serif', fontSize: 22, fontWeight: 700, color: 'var(--text1)', margin: '0 0 4px' }}>
+      <h1 style={{ fontFamily: 'Outfit, sans-serif', fontSize: 22, fontWeight: 600, color: 'var(--text1)', margin: '0 0 4px' }}>
         Actividad de admins
       </h1>
       <p style={{ color: 'var(--text2)', fontSize: 13, margin: '0 0 16px' }}>
@@ -109,10 +109,10 @@ export function ActivityDashboard({ events }: { events: AssignEvent[] }) {
 
       {/* KPIs */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 12, marginBottom: 18 }}>
-        <div style={kpi}><span style={{ color: 'var(--text3)', fontSize: 12 }}>Leads asignados</span><span style={{ color: ORANGE, fontSize: 26, fontWeight: 700 }}>{totalLeads}</span></div>
-        <div style={kpi}><span style={{ color: 'var(--text3)', fontSize: 12 }}>Asignaciones</span><span style={{ color: 'var(--text1)', fontSize: 26, fontWeight: 700 }}>{totalEvents}</span></div>
-        <div style={kpi}><span style={{ color: 'var(--text3)', fontSize: 12 }}>Asesores receptores</span><span style={{ color: BLUE, fontSize: 26, fontWeight: 700 }}>{recipients}</span></div>
-        <div style={kpi}><span style={{ color: 'var(--text3)', fontSize: 12 }}>Admins activos</span><span style={{ color: 'var(--text1)', fontSize: 26, fontWeight: 700 }}>{activeAdmins}</span></div>
+        <div style={kpi}><span style={{ color: 'var(--text3)', fontSize: 12 }}>Leads asignados</span><span style={{ color: ORANGE, fontSize: 26, fontWeight: 600 }}>{totalLeads}</span></div>
+        <div style={kpi}><span style={{ color: 'var(--text3)', fontSize: 12 }}>Asignaciones</span><span style={{ color: 'var(--text1)', fontSize: 26, fontWeight: 600 }}>{totalEvents}</span></div>
+        <div style={kpi}><span style={{ color: 'var(--text3)', fontSize: 12 }}>Asesores receptores</span><span style={{ color: BLUE, fontSize: 26, fontWeight: 600 }}>{recipients}</span></div>
+        <div style={kpi}><span style={{ color: 'var(--text3)', fontSize: 12 }}>Admins activos</span><span style={{ color: 'var(--text1)', fontSize: 26, fontWeight: 600 }}>{activeAdmins}</span></div>
       </div>
 
       {/* Gráficas */}
@@ -165,7 +165,7 @@ export function ActivityDashboard({ events }: { events: AssignEvent[] }) {
           Detalle ({flat.length}) — fecha · admin · de quién → a quién · leads (clic para ver cuáles)
         </div>
         <div style={{ maxHeight: 460, overflowY: 'auto' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '18px 140px 1fr 1.4fr 64px 64px', gap: 8, padding: '6px 8px', position: 'sticky', top: 0, background: '#0f1525', fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.05em', color: ORANGE, fontWeight: 700, borderBottom: '1px solid var(--glass-border)' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '18px 140px 1fr 1.4fr 64px 64px', gap: 8, padding: '6px 8px', position: 'sticky', top: 0, background: '#0f1525', fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.05em', color: ORANGE, fontWeight: 600, borderBottom: '1px solid var(--glass-border)' }}>
             <span /><span>Fecha</span><span>Admin</span><span>De quién → A quién</span><span style={{ textAlign: 'right' }}>Leads</span><span style={{ textAlign: 'right' }}>Fallos</span>
           </div>
           {flat.length === 0 ? (
@@ -187,17 +187,28 @@ export function ActivityDashboard({ events }: { events: AssignEvent[] }) {
                     <span style={{ color: 'var(--text3)' }}> → </span>
                     <span style={{ color: 'var(--text1)', fontWeight: 600 }}>{shortName(e.target)}</span>
                   </span>
-                  <span style={{ color: BLUE, fontWeight: 700, textAlign: 'right' }}>{e.count}</span>
+                  <span style={{ color: BLUE, fontWeight: 600, textAlign: 'right' }}>{e.count}</span>
                   <span style={{ color: e.failed ? '#fca5a5' : 'var(--text3)', textAlign: 'right' }}>{e.failed || 0}</span>
                 </div>
                 {open && hasLeads && (
                   <div style={{ padding: '8px 12px 12px 44px', background: 'rgba(255,255,255,0.02)', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                    <div style={{ color: 'var(--text3)', fontSize: 11, marginBottom: 6 }}>Leads movidos ({e.leads!.length}):</div>
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                    <div style={{ color: 'var(--text3)', fontSize: 11, marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                      Leads movidos ({e.leads!.length}) — clic para verificar en Zoho
+                    </div>
+                    <div style={{ borderRadius: 8, border: '1px solid var(--glass-border)', overflow: 'hidden' }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: '110px 1fr 80px', gap: 8, padding: '6px 10px', background: 'rgba(255,255,255,0.03)', fontSize: 10.5, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text3)', fontWeight: 600 }}>
+                        <span>Lead#</span><span>Cliente</span><span style={{ textAlign: 'right' }}>Zoho</span>
+                      </div>
                       {e.leads!.map((l, j) => (
-                        <span key={j} style={{ fontSize: 11.5, padding: '3px 9px', borderRadius: 7, background: 'rgba(56,189,248,0.1)', border: '1px solid rgba(56,189,248,0.25)', color: 'var(--text1)' }}>
-                          {l.num ? <b style={{ color: BLUE }}>{l.num}</b> : null}{l.num && l.name ? ' · ' : ''}{l.name || (l.num ? '' : '—')}
-                        </span>
+                        <div key={j} style={{ display: 'grid', gridTemplateColumns: '110px 1fr 80px', gap: 8, padding: '6px 10px', alignItems: 'center', fontSize: 12.5, borderTop: j ? '1px solid rgba(255,255,255,0.04)' : 'none' }}>
+                          <span style={{ color: BLUE, fontWeight: 600 }}>{l.num || '—'}</span>
+                          <span style={{ color: 'var(--text1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={l.name || ''}>{l.name || '—'}</span>
+                          <span style={{ textAlign: 'right' }}>
+                            {l.url
+                              ? <a href={l.url} target="_blank" rel="noopener noreferrer" style={{ color: ORANGE, fontSize: 11.5, fontWeight: 600, textDecoration: 'none' }}>Zoho ↗</a>
+                              : <span style={{ color: 'var(--text3)', fontSize: 11 }}>—</span>}
+                          </span>
+                        </div>
                       ))}
                     </div>
                   </div>

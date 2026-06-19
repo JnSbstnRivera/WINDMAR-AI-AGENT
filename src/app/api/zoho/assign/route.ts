@@ -30,7 +30,7 @@ export async function POST(req: Request) {
     leadIds?: string[];
     ownerEmail?: string;
     fromOwner?: string;                                 // owner anterior (para auditar "de quién → a quién")
-    leads?: Array<{ id?: string; num?: string | null; name?: string | null }>; // datos del lead para mapear
+    leads?: Array<{ id?: string; num?: string | null; name?: string | null; url?: string | null }>; // datos del lead para mapear
   };
   try {
     body = await req.json();
@@ -63,7 +63,7 @@ export async function POST(req: Request) {
       failed: result.failed,
       fromOwner: (body.fromOwner || '').trim().toLowerCase() || null, // de quién era
       leads: Array.isArray(body.leads)                                 // qué leads (cap 200)
-        ? body.leads.slice(0, 200).map((l) => ({ num: l.num ?? null, name: l.name ?? null }))
+        ? body.leads.slice(0, 200).map((l) => ({ num: l.num ?? null, name: l.name ?? null, url: l.url ?? null }))
         : undefined,
     });
 
