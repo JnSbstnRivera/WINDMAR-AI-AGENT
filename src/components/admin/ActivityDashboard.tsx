@@ -27,7 +27,6 @@ type Range = '7d' | '30d' | 'all';
 export function ActivityDashboard({ events }: { events: AssignEvent[] }) {
   const [admin, setAdmin] = useState<'all' | string>('all');
   const [range, setRange] = useState<Range>('30d');
-  const [expanded, setExpanded] = useState<number | null>(null); // fila expandida (lista de leads)
 
   const admins = useMemo(() => Array.from(new Set(events.map((e) => e.admin))).sort(), [events]);
 
@@ -65,6 +64,17 @@ export function ActivityDashboard({ events }: { events: AssignEvent[] }) {
     () => [...filtered].sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(0, 300),
     [filtered]
   );
+
+  // Una fila por LEAD movido (sin expandir). Las asignaciones viejas sin detalle
+  // aparecen como una fila con lead vacío.
+  const flatLeads = useMemo(() => {
+    const out: Array<{ e: AssignEvent; l: { num: string | null; name: string | null; url: string | null } | null }> = [];
+    for (const e of flat) {
+      if (e.leads && e.leads.length) e.leads.forEach((l) => out.push({ e, l }));
+      else out.push({ e, l: null });
+    }
+    return out.slice(0, 600);
+  }, [flat]);
 
   const stamp = () => fmtDateTime(new Date().toISOString()).replace(/[/:, ]/g, '-');
   const sufijo = `${admin === 'all' ? 'todos' : shortName(admin)}-${range}`;
@@ -193,7 +203,7 @@ export function ActivityDashboard({ events }: { events: AssignEvent[] }) {
       <div style={card}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 10 }}>
           <div style={{ color: 'var(--text1)', fontSize: 14, fontWeight: 600 }}>
-            Detalle ({flat.length}) — fecha · admin · de quién → a quién · leads (clic para ver cuáles)
+            Detalle por lead ({flatLeads.length}) — fecha · admin · de quién → a quién · lead · Zoho
           </div>
           <div style={{ display: 'flex', gap: 8, marginLeft: 'auto' }}>
             <button onClick={exportResumen} disabled={flat.length === 0} style={{ ...xlsBtn, opacity: flat.length === 0 ? 0.5 : 1 }} title="Descargar resumen (una fila por asignación)">
@@ -204,58 +214,30 @@ export function ActivityDashboard({ events }: { events: AssignEvent[] }) {
             </button>
           </div>
         </div>
-        <div style={{ maxHeight: 460, overflowY: 'auto' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '18px 140px 1fr 1.4fr 64px 64px', gap: 8, padding: '6px 8px', position: 'sticky', top: 0, background: '#0f1525', fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.05em', color: ORANGE, fontWeight: 600, borderBottom: '1px solid var(--glass-border)' }}>
-            <span /><span>Fecha</span><span>Admin</span><span>De quién → A quién</span><span style={{ textAlign: 'right' }}>Leads</span><span style={{ textAlign: 'right' }}>Fallos</span>
+        <div style={{ maxHeight: 480, overflowY: 'auto' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '130px 120px 1.2fr 96px 1.2fr 70px', gap: 8, padding: '6px 10px', position: 'sticky', top: 0, background: '#0f1525', fontSize: 10.5, textTransform: 'uppercase', letterSpacing: '0.05em', color: ORANGE, fontWeight: 600, borderBottom: '1px solid var(--glass-border)' }}>
+            <span>Fecha</span><span>Admin</span><span>De quién → A quién</span><span>Lead#</span><span>Cliente</span><span style={{ textAlign: 'right' }}>Zoho</span>
           </div>
-          {flat.length === 0 ? (
+          {flatLeads.length === 0 ? (
             <div style={{ color: 'var(--text2)', fontSize: 13, padding: 14 }}>Sin asignaciones en este periodo.</div>
-          ) : flat.map((e, i) => {
-            const hasLeads = !!(e.leads && e.leads.length);
-            const open = expanded === i;
-            return (
-              <div key={i}>
-                <div
-                  onClick={() => hasLeads && setExpanded(open ? null : i)}
-                  style={{ display: 'grid', gridTemplateColumns: '18px 140px 1fr 1.4fr 64px 64px', gap: 8, padding: '7px 8px', alignItems: 'center', borderBottom: '1px solid rgba(255,255,255,0.05)', fontSize: 12.5, cursor: hasLeads ? 'pointer' : 'default', background: open ? 'rgba(247,148,29,0.06)' : 'transparent' }}
-                >
-                  <span style={{ color: 'var(--text3)', transform: open ? 'rotate(90deg)' : 'none', transition: 'transform 0.15s' }}>{hasLeads ? '▸' : ''}</span>
-                  <span style={{ color: 'var(--text3)', fontSize: 11 }}>{fmtDateTime(e.createdAt)}</span>
-                  <span style={{ color: '#F7941D', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={e.admin}>{shortName(e.admin)}</span>
-                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={`${e.fromOwner || '—'} → ${e.target || '—'}`}>
-                    <span style={{ color: 'var(--text3)' }}>{shortName(e.fromOwner)}</span>
-                    <span style={{ color: 'var(--text3)' }}> → </span>
-                    <span style={{ color: 'var(--text1)', fontWeight: 600 }}>{shortName(e.target)}</span>
-                  </span>
-                  <span style={{ color: BLUE, fontWeight: 600, textAlign: 'right' }}>{e.count}</span>
-                  <span style={{ color: e.failed ? '#fca5a5' : 'var(--text3)', textAlign: 'right' }}>{e.failed || 0}</span>
-                </div>
-                {open && hasLeads && (
-                  <div style={{ padding: '8px 12px 12px 44px', background: 'rgba(255,255,255,0.02)', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                    <div style={{ color: 'var(--text3)', fontSize: 11, marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                      Leads movidos ({e.leads!.length}) — clic para verificar en Zoho
-                    </div>
-                    <div style={{ borderRadius: 8, border: '1px solid var(--glass-border)', overflow: 'hidden' }}>
-                      <div style={{ display: 'grid', gridTemplateColumns: '110px 1fr 80px', gap: 8, padding: '6px 10px', background: 'rgba(255,255,255,0.03)', fontSize: 10.5, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text3)', fontWeight: 600 }}>
-                        <span>Lead#</span><span>Cliente</span><span style={{ textAlign: 'right' }}>Zoho</span>
-                      </div>
-                      {e.leads!.map((l, j) => (
-                        <div key={j} style={{ display: 'grid', gridTemplateColumns: '110px 1fr 80px', gap: 8, padding: '6px 10px', alignItems: 'center', fontSize: 12.5, borderTop: j ? '1px solid rgba(255,255,255,0.04)' : 'none' }}>
-                          <span style={{ color: BLUE, fontWeight: 600 }}>{l.num || '—'}</span>
-                          <span style={{ color: 'var(--text1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={l.name || ''}>{l.name || '—'}</span>
-                          <span style={{ textAlign: 'right' }}>
-                            {l.url
-                              ? <a href={l.url} target="_blank" rel="noopener noreferrer" style={{ color: ORANGE, fontSize: 11.5, fontWeight: 600, textDecoration: 'none' }}>Zoho ↗</a>
-                              : <span style={{ color: 'var(--text3)', fontSize: 11 }}>—</span>}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            );
-          })}
+          ) : flatLeads.map(({ e, l }, i) => (
+            <div key={i} style={{ display: 'grid', gridTemplateColumns: '130px 120px 1.2fr 96px 1.2fr 70px', gap: 8, padding: '7px 10px', alignItems: 'center', fontSize: 12.5, borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+              <span style={{ color: 'var(--text3)', fontSize: 11 }}>{fmtDateTime(e.createdAt)}</span>
+              <span style={{ color: '#F7941D', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={e.admin}>{shortName(e.admin)}</span>
+              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={`${e.fromOwner || '—'} → ${e.target || '—'}`}>
+                <span style={{ color: 'var(--text3)' }}>{shortName(e.fromOwner)}</span>
+                <span style={{ color: 'var(--text3)' }}> → </span>
+                <span style={{ color: 'var(--text1)', fontWeight: 600 }}>{shortName(e.target)}</span>
+              </span>
+              <span style={{ color: BLUE, fontWeight: 600 }}>{l?.num || '—'}</span>
+              <span style={{ color: 'var(--text1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={l?.name || ''}>{l?.name || '—'}</span>
+              <span style={{ textAlign: 'right' }}>
+                {l?.url
+                  ? <a href={l.url} target="_blank" rel="noopener noreferrer" style={{ color: ORANGE, fontSize: 11.5, fontWeight: 600, textDecoration: 'none' }}>Zoho ↗</a>
+                  : <span style={{ color: 'var(--text3)', fontSize: 11 }}>—</span>}
+              </span>
+            </div>
+          ))}
         </div>
       </div>
     </div>

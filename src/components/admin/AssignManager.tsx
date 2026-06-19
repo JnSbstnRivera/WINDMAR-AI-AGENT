@@ -21,10 +21,14 @@ interface Lead {
   email: string | null;
   owner: string | null;
   consultor: string | null;
+  telemercadeo: string | null; // Llamada de Telemercadeo: No llamar / Llamar / …
   createdAt: string | null;
   appointmentAt: string | null; // Cita Date/Time (Presenter_Appointment)
   zohoUrl: string;
 }
+
+/** true si el lead está marcado como "No llamar" en Telemercadeo. */
+const isNoLlamar = (t: string | null) => !!t && /no\s*llamar/i.test(t);
 
 const BUCKET_COLOR: Record<string, string> = {
   nuevo: '#38bdf8',
@@ -45,6 +49,8 @@ export function AssignManager({ users }: { users: AssignUser[] }) {
   const [zohoUsers, setZohoUsers] = useState<Array<{ name: string; email: string }>>([]);
   const [leads, setLeads] = useState<Lead[] | null>(null);
   const [statusFilter, setStatusFilter] = useState<string>('');
+  const [consultorFilter, setConsultorFilter] = useState<string>(''); // filtro por Sales Rep / consultor
+  const [telFilter, setTelFilter] = useState<'todos' | 'llamar' | 'noLlamar'>('todos'); // llamar / no llamar
   // Filtro por fecha de CITA (Presenter_Appointment) — caso de Jesús (TM):
   // ver citas de hoy / futuras / una fecha específica.
   const [citaFilter, setCitaFilter] = useState<'todas' | 'hoy' | 'futuras' | 'fecha'>('todas');
@@ -133,9 +139,11 @@ export function AssignManager({ users }: { users: AssignUser[] }) {
   const hoyPR = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Puerto_Rico', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
   const citaDay = (l: Lead) => (l.appointmentAt || '').slice(0, 10);
 
-  // Leads visibles según filtro de estado + filtro de fecha de cita.
+  // Leads visibles según filtro de estado + consultor + telemercadeo + fecha de cita.
   const visible = (leads ?? [])
     .filter((l) => (statusFilter ? (l.status || 'sin estado') === statusFilter : true))
+    .filter((l) => (consultorFilter ? (l.consultor || 'Sin consultor') === consultorFilter : true))
+    .filter((l) => telFilter === 'todos' ? true : telFilter === 'noLlamar' ? isNoLlamar(l.telemercadeo) : !isNoLlamar(l.telemercadeo))
     .filter((l) => {
       if (citaFilter === 'todas') return true;
       const d = citaDay(l);
@@ -145,6 +153,15 @@ export function AssignManager({ users }: { users: AssignUser[] }) {
       if (citaFilter === 'fecha') return citaFecha ? d === citaFecha : true;
       return true;
     });
+  const distinctConsultores = leads
+    ? Array.from(
+        leads.reduce((m, l) => {
+          const c = l.consultor || 'Sin consultor';
+          m.set(c, (m.get(c) || 0) + 1);
+          return m;
+        }, new Map<string, number>())
+      ).sort((a, b) => b[1] - a[1])
+    : [];
   const distinctStatuses = leads
     ? Array.from(
         leads.reduce((m, l) => {
@@ -168,9 +185,9 @@ export function AssignManager({ users }: { users: AssignUser[] }) {
     if (rows.length === 0) return;
     downloadCSV(
       `cartera-${effectiveSource || 'leads'}.csv`,
-      ['Lead#', 'Cliente', 'Telefono', 'Estado', 'Lead Owner', 'Consultor', 'Creado', 'Cita', 'Zoho URL'],
+      ['Lead#', 'Cliente', 'Telefono', 'Estado', 'Lead Owner', 'Consultor', 'Telemercadeo', 'Creado', 'Cita', 'Zoho URL'],
       rows.map((l) => [
-        l.leadNumber || '', l.fullName, l.phone || '', l.status || '', l.owner || '', l.consultor || '',
+        l.leadNumber || '', l.fullName, l.phone || '', l.status || '', l.owner || '', l.consultor || '', l.telemercadeo || '',
         l.createdAt ? l.createdAt.slice(0, 10) : '', l.appointmentAt ? l.appointmentAt.slice(0, 10) : '', l.zohoUrl,
       ])
     );
@@ -366,6 +383,31 @@ export function AssignManager({ users }: { users: AssignUser[] }) {
                 </select>
               </div>
 
+              {/* Filtro por Consultor (Sales Rep) + Telemercadeo (llamar / no llamar) */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10, flexWrap: 'wrap' }}>
+                <span style={{ color: 'var(--text2)', fontSize: 12 }}>Consultor:</span>
+                <select
+                  value={consultorFilter}
+                  onChange={(e) => { setConsultorFilter(e.target.value); setSelected(new Set()); }}
+                  style={{ ...selectStyle, minWidth: 220 }}
+                >
+                  <option value="">Todos los consultores ({leads.length})</option>
+                  {distinctConsultores.map(([c, n]) => (
+                    <option key={c} value={c} style={{ background: '#0f1525' }}>{c} ({n})</option>
+                  ))}
+                </select>
+                <span style={{ color: 'var(--text2)', fontSize: 12, marginLeft: 8 }}>📞 Telemercadeo:</span>
+                {([['todos', 'Todos'], ['llamar', 'Llamar'], ['noLlamar', 'No llamar']] as const).map(([k, lbl]) => (
+                  <button
+                    key={k}
+                    onClick={() => { setTelFilter(k); setSelected(new Set()); }}
+                    style={{ ...selectStyle, cursor: 'pointer', minWidth: 0, padding: '6px 12px', borderColor: telFilter === k ? '#F7941D' : 'var(--glass-border)', color: telFilter === k ? '#F7941D' : 'var(--text2)' }}
+                  >
+                    {lbl}
+                  </button>
+                ))}
+              </div>
+
               {/* Filtro por fecha de CITA (Presenter_Appointment) — caso TM (Jesús) */}
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
                 <span style={{ color: 'var(--text2)', fontSize: 12 }}>📅 Cita:</span>
@@ -423,17 +465,25 @@ export function AssignManager({ users }: { users: AssignUser[] }) {
                   >
                     <input type="checkbox" checked={selected.has(l.id)} onChange={() => toggle(l.id)} />
                     <div style={{ minWidth: 0 }}>
-                      <a
-                        href={l.zohoUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        style={{ color: 'var(--text1)', fontSize: 13, fontWeight: 600, textDecoration: 'none' }}
-                        title={`Abrir ${l.leadNumber || ''} en Zoho`}
-                      >
-                        {l.fullName}
-                      </a>
+                      <span className="inline-flex items-center gap-1.5" style={{ maxWidth: '100%' }}>
+                        <a
+                          href={l.zohoUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={{ color: 'var(--text1)', fontSize: 13, fontWeight: 600, textDecoration: 'none', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+                          title={`Abrir ${l.leadNumber || ''} en Zoho`}
+                        >
+                          {l.fullName}
+                        </a>
+                        {isNoLlamar(l.telemercadeo) && (
+                          <span style={{ flexShrink: 0, fontSize: 9, fontWeight: 700, padding: '1px 6px', borderRadius: 999, background: 'rgba(239,68,68,0.18)', color: '#fca5a5', border: '1px solid rgba(239,68,68,0.5)', textTransform: 'uppercase', letterSpacing: '0.04em' }} title="Telemercadeo: No llamar">
+                            No llamar
+                          </span>
+                        )}
+                      </span>
                       <div style={{ fontSize: 11, color: 'var(--text3)' }}>
                         {l.leadNumber || ''}{l.phone ? ` · ${l.phone}` : ''}
+                        {l.telemercadeo && !isNoLlamar(l.telemercadeo) ? ` · 📞 ${l.telemercadeo}` : ''}
                       </div>
                     </div>
                     <span style={{ fontSize: 12, color: BUCKET_COLOR[l.bucket] || '#94a3b8' }}>

@@ -207,7 +207,7 @@ export function detectQueryType(query: string): QueryType {
 // Campos que pedimos a Zoho — minimizar payload (Zoho devuelve TODO si no
 // especificas). Lista probada en NOTAS-VENTAS-VASS.
 const LEAD_FIELDS =
-  'Full_Name,First_Name,Last_Name,Phone,Mobile,Email,Lead_Status,Owner,Sales_Rep,Sales_Rep_Email,Sales_Rep_Phone,Street,City,State,Zip_Code,Created_Time,Lead_Number';
+  'Full_Name,First_Name,Last_Name,Phone,Mobile,Email,Lead_Status,Owner,Sales_Rep,Sales_Rep_Email,Sales_Rep_Phone,Llamada_de_Telemercadeo,Street,City,State,Zip_Code,Created_Time,Lead_Number';
 const DEAL_FIELDS =
   'Deal_Name,Amount,Stage,Closing_Date,Contact_Name,Owner,Created_Time';
 const CONTACT_FIELDS =
@@ -374,6 +374,7 @@ interface ZohoLeadRaw {
   Sales_Rep?: { id?: string; name?: string; email?: string };
   Sales_Rep_Email?: string;
   Sales_Rep_Phone?: string; // campo custom del lead — tel del consultor
+  Llamada_de_Telemercadeo?: string; // "No llamar" / "Llamar" etc.
   Created_Time?: string;
   // Campos custom posibles:
   Sistema_Comprado?: string;
@@ -607,6 +608,7 @@ export interface MyLead {
   consultor: string | null;   // Sales_Rep (consultor de ventas)
   consultorEmail: string | null;
   consultorPhone: string | null;
+  telemercadeo: string | null; // "Llamada de Telemercadeo": No llamar / Llamar / …
   modifiedAt: string | null;
   createdAt: string | null;
   appointmentAt: string | null; // Presenter_Appointment ("Cita Date/Time")
@@ -657,6 +659,7 @@ export async function getMyLeads(ownerId: string, limit = 1000): Promise<MyLead[
     consultor: r.Sales_Rep?.name || null,
     consultorEmail: r.Sales_Rep?.email || r.Sales_Rep_Email || getUserContactById(r.Sales_Rep?.id).email,
     consultorPhone: r.Sales_Rep_Phone || getUserContactById(r.Sales_Rep?.id).phone,
+    telemercadeo: r.Llamada_de_Telemercadeo || null,
     modifiedAt: r.Modified_Time || null,
     createdAt: r.Created_Time || null,
     appointmentAt: r.Presenter_Appointment || null,
