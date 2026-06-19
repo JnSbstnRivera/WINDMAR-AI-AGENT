@@ -142,7 +142,7 @@ export function AssignManager({ users }: { users: AssignUser[] }) {
   // Leads visibles según filtro de estado + consultor + telemercadeo + fecha de cita.
   const visible = (leads ?? [])
     .filter((l) => (statusFilter ? (l.status || 'sin estado') === statusFilter : true))
-    .filter((l) => (consultorFilter ? (l.consultor || 'Sin consultor') === consultorFilter : true))
+    .filter((l) => (consultorFilter.trim() ? (l.consultor || 'Sin consultor').toLowerCase().includes(consultorFilter.trim().toLowerCase()) : true))
     .filter((l) => telFilter === 'todos' ? true : telFilter === 'noLlamar' ? isNoLlamar(l.telemercadeo) : !isNoLlamar(l.telemercadeo))
     .filter((l) => {
       if (citaFilter === 'todas') return true;
@@ -386,16 +386,21 @@ export function AssignManager({ users }: { users: AssignUser[] }) {
               {/* Filtro por Consultor (Sales Rep) + Telemercadeo (llamar / no llamar) */}
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10, flexWrap: 'wrap' }}>
                 <span style={{ color: 'var(--text2)', fontSize: 12 }}>Consultor:</span>
-                <select
+                <input
                   value={consultorFilter}
                   onChange={(e) => { setConsultorFilter(e.target.value); setSelected(new Set()); }}
-                  style={{ ...selectStyle, minWidth: 220 }}
-                >
-                  <option value="">Todos los consultores ({leads.length})</option>
+                  list="consultores-list"
+                  placeholder={`Escribe o elige (${distinctConsultores.length})`}
+                  style={{ ...selectStyle, minWidth: 240 }}
+                />
+                <datalist id="consultores-list">
                   {distinctConsultores.map(([c, n]) => (
-                    <option key={c} value={c} style={{ background: '#0f1525' }}>{c} ({n})</option>
+                    <option key={c} value={c}>{c} ({n})</option>
                   ))}
-                </select>
+                </datalist>
+                {consultorFilter && (
+                  <button onClick={() => { setConsultorFilter(''); setSelected(new Set()); }} style={{ fontSize: 11, color: 'var(--text3)', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline' }}>limpiar</button>
+                )}
                 <span style={{ color: 'var(--text2)', fontSize: 12, marginLeft: 8 }}>📞 Telemercadeo:</span>
                 {([['todos', 'Todos'], ['llamar', 'Llamar'], ['noLlamar', 'No llamar']] as const).map(([k, lbl]) => (
                   <button
@@ -408,18 +413,9 @@ export function AssignManager({ users }: { users: AssignUser[] }) {
                 ))}
               </div>
 
-              {/* Filtro por fecha de CITA (Presenter_Appointment) — caso TM (Jesús) */}
+              {/* Filtro por fecha de CITA (Presenter_Appointment) */}
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
-                <span style={{ color: 'var(--text2)', fontSize: 12 }}>📅 Cita:</span>
-                {([['todas', 'Todas'], ['hoy', 'Hoy'], ['futuras', 'Futuras']] as const).map(([k, lbl]) => (
-                  <button
-                    key={k}
-                    onClick={() => { setCitaFilter(k); setSelected(new Set()); }}
-                    style={{ ...selectStyle, cursor: 'pointer', borderColor: citaFilter === k ? '#F7941D' : 'var(--glass-border)', color: citaFilter === k ? '#F7941D' : 'var(--text2)' }}
-                  >
-                    {lbl}
-                  </button>
-                ))}
+                <span style={{ color: 'var(--text2)', fontSize: 12 }}>📅 Fecha de cita:</span>
                 <input
                   type="date"
                   value={citaFecha}
@@ -427,8 +423,11 @@ export function AssignManager({ users }: { users: AssignUser[] }) {
                   style={{ ...selectStyle, borderColor: citaFilter === 'fecha' ? '#F7941D' : 'var(--glass-border)', colorScheme: 'dark' }}
                   title="Ver citas de una fecha específica"
                 />
-                {citaFilter !== 'todas' && (
-                  <span style={{ color: 'var(--text3)', fontSize: 12 }}>{visible.length} con cita</span>
+                {citaFilter === 'fecha' && (
+                  <>
+                    <span style={{ color: 'var(--text3)', fontSize: 12 }}>{visible.length} con cita ese día</span>
+                    <button onClick={() => { setCitaFecha(''); setCitaFilter('todas'); setSelected(new Set()); }} style={{ fontSize: 11, color: 'var(--text3)', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline' }}>limpiar</button>
+                  </>
                 )}
               </div>
 
