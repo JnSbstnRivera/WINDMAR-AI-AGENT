@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
 interface Props {
@@ -67,7 +68,7 @@ export function AdminSidebar({ pendingCount, signOutAction }: Props) {
           {LINKS.map((l) => {
             const active = isActive(l.href);
             return (
-              <a
+              <Link
                 key={l.href}
                 href={l.href}
                 onClick={() => setOpen(false)}
@@ -86,7 +87,7 @@ export function AdminSidebar({ pendingCount, signOutAction }: Props) {
                 {l.badge && pendingCount > 0 && (
                   <span style={{ minWidth: 18, height: 18, padding: '0 5px', fontSize: 10, fontWeight: 700, background: '#F7941D', color: '#1B3A5C', borderRadius: 999, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>{pendingCount}</span>
                 )}
-              </a>
+              </Link>
             );
           })}
         </nav>

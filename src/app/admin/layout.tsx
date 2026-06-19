@@ -2,7 +2,6 @@ import { redirect } from 'next/navigation';
 import { auth, signOut } from '@/auth';
 import { isAdmin } from '@/lib/admin-auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
-import { AdminThemeToggle } from '@/components/admin/AdminThemeToggle';
 import { AdminSidebar } from '@/components/admin/AdminSidebar';
 import { LiquidShaderBg } from '@/components/admin/LiquidShaderBg';
 import './admin-theme.css';
@@ -64,11 +63,6 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 
         {/* Navegación como panel izquierdo (transparente + neón) */}
         <AdminSidebar pendingCount={pendingCount} signOutAction={handleSignOut} />
-
-        {/* Sin header: solo el toggle de tema, flotante arriba a la derecha */}
-        <div className="fixed top-4 right-5 z-[40]">
-          <AdminThemeToggle />
-        </div>
 
         <div className="relative z-[1] md:pl-[232px]">
           <div className="max-w-[1280px] mx-auto px-5 pt-6 pb-8">
