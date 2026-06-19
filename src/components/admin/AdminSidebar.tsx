@@ -9,14 +9,14 @@ interface Props {
 }
 
 const LINKS = [
-  { href: '/admin', label: 'Dashboard', icon: '📊' },
-  { href: '/admin/gestion', label: 'Gestión (chat agente)', icon: '☀', accent: true },
-  { href: '/admin/usuarios', label: 'Usuarios y accesos', icon: '👥', badge: true },
-  { href: '/admin/asignar', label: 'Asignar leads', icon: '🎯' },
-  { href: '/admin/actividad', label: 'Actividad de admins', icon: '📈' },
-  { href: '/admin/zoho', label: 'Zoho — config y salud', icon: '⚙' },
-  { href: '/admin/auditoria', label: 'Auditoría', icon: '🛡' },
-  { href: '/', label: 'Volver al chat', icon: '←' },
+  { href: '/admin', label: 'Dashboard' },
+  { href: '/admin/gestion', label: 'Gestión (chat agente)', accent: true },
+  { href: '/admin/usuarios', label: 'Usuarios y accesos', badge: true },
+  { href: '/admin/asignar', label: 'Asignar leads' },
+  { href: '/admin/actividad', label: 'Actividad de admins' },
+  { href: '/admin/zoho', label: 'Zoho — config y salud' },
+  { href: '/admin/auditoria', label: 'Auditoría' },
+  { href: '/', label: 'Volver al chat' },
 ];
 
 /**
@@ -71,10 +71,10 @@ export function AdminSidebar({ pendingCount, signOutAction }: Props) {
                 key={l.href}
                 href={l.href}
                 onClick={() => setOpen(false)}
-                className="ad-side-link"
+                className="ad-side-link ad-mono"
                 style={{
-                  display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', borderRadius: 9,
-                  fontSize: 13, textDecoration: 'none',
+                  display: 'flex', alignItems: 'center', gap: 10, padding: '11px 12px', borderRadius: 9,
+                  fontSize: 11.5, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', textDecoration: 'none',
                   color: active ? '#F7941D' : l.accent ? '#F7941D' : 'var(--text1)',
                   background: active ? 'rgba(247,148,29,0.14)' : 'transparent',
                   border: `1px solid ${active ? 'rgba(247,148,29,0.45)' : 'transparent'}`,
@@ -82,7 +82,6 @@ export function AdminSidebar({ pendingCount, signOutAction }: Props) {
                   transition: 'all 0.15s',
                 }}
               >
-                <span style={{ width: 18, textAlign: 'center' }}>{l.icon}</span>
                 <span style={{ flex: 1 }}>{l.label}</span>
                 {l.badge && pendingCount > 0 && (
                   <span style={{ minWidth: 18, height: 18, padding: '0 5px', fontSize: 10, fontWeight: 700, background: '#F7941D', color: '#1B3A5C', borderRadius: 999, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>{pendingCount}</span>
@@ -95,10 +94,10 @@ export function AdminSidebar({ pendingCount, signOutAction }: Props) {
         <form action={signOutAction} style={{ marginTop: 8 }}>
           <button
             type="submit"
-            style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', borderRadius: 9, fontSize: 13, background: 'transparent', border: '1px solid rgba(239,68,68,0.3)', cursor: 'pointer', color: '#ef4444' }}
+            className="ad-mono"
+            style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'flex-start', padding: '11px 12px', borderRadius: 9, fontSize: 11.5, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', background: 'transparent', border: '1px solid rgba(239,68,68,0.3)', cursor: 'pointer', color: '#ef4444' }}
           >
-            <span style={{ width: 18, textAlign: 'center' }}>⎋</span>
-            <span>Cerrar sesión</span>
+            Cerrar sesión
           </button>
         </form>
       </aside>
