@@ -51,10 +51,9 @@ export function AssignManager({ users }: { users: AssignUser[] }) {
   const [statusFilter, setStatusFilter] = useState<string>('');
   const [consultorFilter, setConsultorFilter] = useState<string>(''); // filtro por Sales Rep / consultor
   const [telFilter, setTelFilter] = useState<'todos' | 'llamar' | 'noLlamar'>('todos'); // llamar / no llamar
-  // Filtro por fecha de CITA (Presenter_Appointment) — caso de Jesús (TM):
-  // ver citas de hoy / futuras / una fecha específica.
-  const [citaFilter, setCitaFilter] = useState<'todas' | 'hoy' | 'futuras' | 'fecha'>('todas');
-  const [citaFecha, setCitaFecha] = useState<string>(''); // YYYY-MM-DD
+  // Filtro por fecha de CITA (Presenter_Appointment): hoy o rango desde/hasta.
+  const [citaDesde, setCitaDesde] = useState<string>(''); // YYYY-MM-DD
+  const [citaHasta, setCitaHasta] = useState<string>('');
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -145,12 +144,11 @@ export function AssignManager({ users }: { users: AssignUser[] }) {
     .filter((l) => (consultorFilter.trim() ? (l.consultor || 'Sin consultor').toLowerCase().includes(consultorFilter.trim().toLowerCase()) : true))
     .filter((l) => telFilter === 'todos' ? true : telFilter === 'noLlamar' ? isNoLlamar(l.telemercadeo) : !isNoLlamar(l.telemercadeo))
     .filter((l) => {
-      if (citaFilter === 'todas') return true;
+      if (!citaDesde && !citaHasta) return true;
       const d = citaDay(l);
       if (!d) return false;
-      if (citaFilter === 'hoy') return d === hoyPR;
-      if (citaFilter === 'futuras') return d >= hoyPR;
-      if (citaFilter === 'fecha') return citaFecha ? d === citaFecha : true;
+      if (citaDesde && d < citaDesde) return false;
+      if (citaHasta && d > citaHasta) return false;
       return true;
     });
   const distinctConsultores = leads
@@ -413,20 +411,36 @@ export function AssignManager({ users }: { users: AssignUser[] }) {
                 ))}
               </div>
 
-              {/* Filtro por fecha de CITA (Presenter_Appointment) */}
+              {/* Filtro por fecha de CITA (Presenter_Appointment): Hoy + rango desde/hasta */}
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
-                <span style={{ color: 'var(--text2)', fontSize: 12 }}>📅 Fecha de cita:</span>
+                <span style={{ color: 'var(--text2)', fontSize: 12 }}>📅 Cita:</span>
+                <button
+                  onClick={() => { setCitaDesde(hoyPR); setCitaHasta(hoyPR); setSelected(new Set()); }}
+                  style={{ ...selectStyle, cursor: 'pointer', minWidth: 0, padding: '6px 14px', borderColor: (citaDesde === hoyPR && citaHasta === hoyPR) ? '#F7941D' : 'var(--glass-border)', color: (citaDesde === hoyPR && citaHasta === hoyPR) ? '#F7941D' : 'var(--text2)' }}
+                  title="Citas de hoy"
+                >
+                  Hoy
+                </button>
+                <span style={{ color: 'var(--text3)', fontSize: 12 }}>Desde</span>
                 <input
                   type="date"
-                  value={citaFecha}
-                  onChange={(e) => { setCitaFecha(e.target.value); setCitaFilter(e.target.value ? 'fecha' : 'todas'); setSelected(new Set()); }}
-                  style={{ ...selectStyle, borderColor: citaFilter === 'fecha' ? '#F7941D' : 'var(--glass-border)', colorScheme: 'dark' }}
-                  title="Ver citas de una fecha específica"
+                  value={citaDesde}
+                  onChange={(e) => { setCitaDesde(e.target.value); setSelected(new Set()); }}
+                  style={{ ...selectStyle, minWidth: 0, borderColor: citaDesde ? '#F7941D' : 'var(--glass-border)', colorScheme: 'dark' }}
+                  title="Citas desde esta fecha"
                 />
-                {citaFilter === 'fecha' && (
+                <span style={{ color: 'var(--text3)', fontSize: 12 }}>hasta</span>
+                <input
+                  type="date"
+                  value={citaHasta}
+                  onChange={(e) => { setCitaHasta(e.target.value); setSelected(new Set()); }}
+                  style={{ ...selectStyle, minWidth: 0, borderColor: citaHasta ? '#F7941D' : 'var(--glass-border)', colorScheme: 'dark' }}
+                  title="Citas hasta esta fecha"
+                />
+                {(citaDesde || citaHasta) && (
                   <>
-                    <span style={{ color: 'var(--text3)', fontSize: 12 }}>{visible.length} con cita ese día</span>
-                    <button onClick={() => { setCitaFecha(''); setCitaFilter('todas'); setSelected(new Set()); }} style={{ fontSize: 11, color: 'var(--text3)', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline' }}>limpiar</button>
+                    <span style={{ color: 'var(--text3)', fontSize: 12 }}>{visible.length} con cita</span>
+                    <button onClick={() => { setCitaDesde(''); setCitaHasta(''); setSelected(new Set()); }} style={{ fontSize: 11, color: 'var(--text3)', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline' }}>limpiar</button>
                   </>
                 )}
               </div>
