@@ -166,6 +166,7 @@ export function AssignManager({ users }: { users: AssignUser[] }) {
   async function distribute() {
     if (targets.length === 0 || selected.size === 0) return;
     const plan = splitEven(Array.from(selected), targets);
+    const byId = new Map<string, Lead>((leads ?? []).map((l) => [l.id, l] as [string, Lead]));
     setBusy(true);
     setMsg(null);
     let ok = 0, fail = 0;
@@ -178,7 +179,12 @@ export function AssignManager({ users }: { users: AssignUser[] }) {
           const res = await fetch('/api/zoho/assign', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ leadIds: slice, ownerEmail: email }),
+            body: JSON.stringify({
+              leadIds: slice,
+              ownerEmail: email,
+              fromOwner: effectiveSource,
+              leads: slice.map((id) => { const l = byId.get(id); return { num: l?.leadNumber ?? null, name: l?.fullName ?? null }; }),
+            }),
           });
           const data = await res.json();
           if (res.ok) { ok += data.success ?? slice.length; slice.forEach((id) => done.add(id)); }

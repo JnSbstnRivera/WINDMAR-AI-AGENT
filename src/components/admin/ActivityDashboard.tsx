@@ -6,10 +6,12 @@ import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGri
 export interface AssignEvent {
   createdAt: string;
   admin: string;          // actor_email (quién asignó)
-  target: string | null;  // a quién (asesor destino)
+  target: string | null;  // a quién (asesor destino, owner nuevo)
   count: number;          // cuántos leads
   success: number | null;
   failed: number | null;
+  fromOwner: string | null;                                       // de quién era (owner anterior)
+  leads: Array<{ num: string | null; name: string | null }> | null; // qué leads
 }
 
 const PR = 'America/Puerto_Rico';
@@ -24,6 +26,7 @@ type Range = '7d' | '30d' | 'all';
 export function ActivityDashboard({ events }: { events: AssignEvent[] }) {
   const [admin, setAdmin] = useState<'all' | string>('all');
   const [range, setRange] = useState<Range>('30d');
+  const [expanded, setExpanded] = useState<number | null>(null); // fila expandida (lista de leads)
 
   const admins = useMemo(() => Array.from(new Set(events.map((e) => e.admin))).sort(), [events]);
 
@@ -159,23 +162,49 @@ export function ActivityDashboard({ events }: { events: AssignEvent[] }) {
       {/* Tabla plana */}
       <div style={card}>
         <div style={{ color: 'var(--text1)', fontSize: 14, fontWeight: 600, marginBottom: 10 }}>
-          Detalle ({flat.length}) — fecha · admin · a quién · cuántos
+          Detalle ({flat.length}) — fecha · admin · de quién → a quién · leads (clic para ver cuáles)
         </div>
-        <div style={{ maxHeight: 420, overflowY: 'auto' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '150px 1.2fr 1.2fr 80px 90px', gap: 8, padding: '6px 8px', position: 'sticky', top: 0, background: '#0f1525', fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.05em', color: ORANGE, fontWeight: 700, borderBottom: '1px solid var(--glass-border)' }}>
-            <span>Fecha</span><span>Admin</span><span>A quién</span><span style={{ textAlign: 'right' }}>Leads</span><span style={{ textAlign: 'right' }}>Fallos</span>
+        <div style={{ maxHeight: 460, overflowY: 'auto' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '18px 140px 1fr 1.4fr 64px 64px', gap: 8, padding: '6px 8px', position: 'sticky', top: 0, background: '#0f1525', fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.05em', color: ORANGE, fontWeight: 700, borderBottom: '1px solid var(--glass-border)' }}>
+            <span /><span>Fecha</span><span>Admin</span><span>De quién → A quién</span><span style={{ textAlign: 'right' }}>Leads</span><span style={{ textAlign: 'right' }}>Fallos</span>
           </div>
           {flat.length === 0 ? (
             <div style={{ color: 'var(--text2)', fontSize: 13, padding: 14 }}>Sin asignaciones en este periodo.</div>
-          ) : flat.map((e, i) => (
-            <div key={i} style={{ display: 'grid', gridTemplateColumns: '150px 1.2fr 1.2fr 80px 90px', gap: 8, padding: '7px 8px', alignItems: 'center', borderBottom: '1px solid rgba(255,255,255,0.05)', fontSize: 12.5 }}>
-              <span style={{ color: 'var(--text3)', fontSize: 11 }}>{fmtDateTime(e.createdAt)}</span>
-              <span style={{ color: '#F7941D', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={e.admin}>{shortName(e.admin)}</span>
-              <span style={{ color: 'var(--text1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={e.target || ''}>{shortName(e.target)}</span>
-              <span style={{ color: BLUE, fontWeight: 700, textAlign: 'right' }}>{e.count}</span>
-              <span style={{ color: e.failed ? '#fca5a5' : 'var(--text3)', textAlign: 'right' }}>{e.failed || 0}</span>
-            </div>
-          ))}
+          ) : flat.map((e, i) => {
+            const hasLeads = !!(e.leads && e.leads.length);
+            const open = expanded === i;
+            return (
+              <div key={i}>
+                <div
+                  onClick={() => hasLeads && setExpanded(open ? null : i)}
+                  style={{ display: 'grid', gridTemplateColumns: '18px 140px 1fr 1.4fr 64px 64px', gap: 8, padding: '7px 8px', alignItems: 'center', borderBottom: '1px solid rgba(255,255,255,0.05)', fontSize: 12.5, cursor: hasLeads ? 'pointer' : 'default', background: open ? 'rgba(247,148,29,0.06)' : 'transparent' }}
+                >
+                  <span style={{ color: 'var(--text3)', transform: open ? 'rotate(90deg)' : 'none', transition: 'transform 0.15s' }}>{hasLeads ? '▸' : ''}</span>
+                  <span style={{ color: 'var(--text3)', fontSize: 11 }}>{fmtDateTime(e.createdAt)}</span>
+                  <span style={{ color: '#F7941D', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={e.admin}>{shortName(e.admin)}</span>
+                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={`${e.fromOwner || '—'} → ${e.target || '—'}`}>
+                    <span style={{ color: 'var(--text3)' }}>{shortName(e.fromOwner)}</span>
+                    <span style={{ color: 'var(--text3)' }}> → </span>
+                    <span style={{ color: 'var(--text1)', fontWeight: 600 }}>{shortName(e.target)}</span>
+                  </span>
+                  <span style={{ color: BLUE, fontWeight: 700, textAlign: 'right' }}>{e.count}</span>
+                  <span style={{ color: e.failed ? '#fca5a5' : 'var(--text3)', textAlign: 'right' }}>{e.failed || 0}</span>
+                </div>
+                {open && hasLeads && (
+                  <div style={{ padding: '8px 12px 12px 44px', background: 'rgba(255,255,255,0.02)', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                    <div style={{ color: 'var(--text3)', fontSize: 11, marginBottom: 6 }}>Leads movidos ({e.leads!.length}):</div>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                      {e.leads!.map((l, j) => (
+                        <span key={j} style={{ fontSize: 11.5, padding: '3px 9px', borderRadius: 7, background: 'rgba(56,189,248,0.1)', border: '1px solid rgba(56,189,248,0.25)', color: 'var(--text1)' }}>
+                          {l.num ? <b style={{ color: BLUE }}>{l.num}</b> : null}{l.num && l.name ? ' · ' : ''}{l.name || (l.num ? '' : '—')}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
       </div>
     </div>

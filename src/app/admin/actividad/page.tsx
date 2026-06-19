@@ -18,7 +18,10 @@ export default async function AdminActivityPage() {
     .limit(2000);
 
   const events: AssignEvent[] = (data || []).map((r) => {
-    const d = (r.detail || {}) as { count?: number; success?: number; failed?: number };
+    const d = (r.detail || {}) as {
+      count?: number; success?: number; failed?: number;
+      fromOwner?: string | null; leads?: Array<{ num?: string | null; name?: string | null }>;
+    };
     return {
       createdAt: r.created_at,
       admin: r.actor_email,
@@ -26,6 +29,8 @@ export default async function AdminActivityPage() {
       count: typeof d.count === 'number' ? d.count : typeof d.success === 'number' ? d.success : 0,
       success: typeof d.success === 'number' ? d.success : null,
       failed: typeof d.failed === 'number' ? d.failed : null,
+      fromOwner: d.fromOwner ?? null,
+      leads: Array.isArray(d.leads) ? d.leads.map((l) => ({ num: l.num ?? null, name: l.name ?? null })) : null,
     };
   });
 
