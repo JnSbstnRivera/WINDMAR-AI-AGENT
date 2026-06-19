@@ -4,7 +4,8 @@ import { isAdmin } from '@/lib/admin-auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { AdminClock } from '@/components/admin/AdminClock';
 import { AdminThemeToggle } from '@/components/admin/AdminThemeToggle';
-import { AdminNav } from '@/components/admin/AdminNav';
+import { AdminSidebar } from '@/components/admin/AdminSidebar';
+import { AtcShaderBg } from '@/components/admin/AtcShaderBg';
 import './admin-theme.css';
 
 /**
@@ -57,50 +58,48 @@ export default async function AdminLayout({ children }: { children: React.ReactN
       />
 
       <div className="admin-root">
-        {/* Ambient: orbs flotantes + grid de fondo */}
-        <div className="ad-bg-fx">
-          <div className="ad-orb ad-o1" />
-          <div className="ad-orb ad-o2" />
-          <div className="ad-orb ad-o3" />
-          <div className="ad-orb ad-o4" />
-        </div>
+        {/* Fondo animado tipo warp (shader Windmar) + grid neón encima */}
+        <AtcShaderBg />
         <div className="ad-bg-grid" />
 
-        <div className="relative z-[1] max-w-[1280px] mx-auto px-5 pb-8">
-          {/* Topbar */}
-          <nav className="ad-topbar">
-            <div className="flex items-center gap-4">
-              {/* SUN BOT grande sin fondo — solo PNG con drop-shadow naranja */}
-              <img
-                src="/sunbot-feliz.png"
-                alt="SUN BOT — Windmar AI"
-                className="ad-brand-mascot"
-              />
-              <div>
-                <div className="ad-brand-title">WINDMAR HOME</div>
-                <div className="ad-brand-sub">
-                  Resumen Ejecutivo · Admin {capName}
+        {/* Navegación como panel izquierdo (transparente + neón) */}
+        <AdminSidebar pendingCount={pendingCount} signOutAction={handleSignOut} />
+
+        <div className="relative z-[1] md:pl-[232px]">
+          <div className="max-w-[1280px] mx-auto px-5 pb-8">
+            {/* Topbar */}
+            <nav className="ad-topbar">
+              <div className="flex items-center gap-4">
+                <img
+                  src="/sunbot-feliz.png"
+                  alt="SUN BOT — Windmar AI"
+                  className="ad-brand-mascot"
+                />
+                <div>
+                  <div className="ad-brand-title">WINDMAR HOME</div>
+                  <div className="ad-brand-sub">
+                    Resumen Ejecutivo · Admin {capName}
+                  </div>
                 </div>
               </div>
-            </div>
 
-            <div className="flex items-center gap-3">
-              <div className="ad-live">
-                <span className="ad-live-dot" />EN VIVO
+              <div className="flex items-center gap-3">
+                <div className="ad-live">
+                  <span className="ad-live-dot" />EN VIVO
+                </div>
+                <AdminClock />
+                <AdminThemeToggle />
               </div>
-              <AdminClock />
-              <AdminThemeToggle />
-              <AdminNav pendingCount={pendingCount} signOutAction={handleSignOut} />
-            </div>
-          </nav>
+            </nav>
 
-          {children}
+            {children}
 
-          <footer className="mt-8 text-center">
-            <p className="ad-mono text-[10px] tracking-[0.18em]" style={{ color: 'var(--text3)' }}>
-              WINDMAR HOME PUERTO RICO · DATOS EN VIVO · SUPABASE
-            </p>
-          </footer>
+            <footer className="mt-8 text-center">
+              <p className="ad-mono text-[10px] tracking-[0.18em]" style={{ color: 'var(--text3)' }}>
+                WINDMAR HOME PUERTO RICO · DATOS EN VIVO · SUPABASE
+              </p>
+            </footer>
+          </div>
         </div>
       </div>
     </>
