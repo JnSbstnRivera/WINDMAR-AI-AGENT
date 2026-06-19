@@ -1,14 +1,13 @@
 import { signIn } from '@/auth';
+import { CyberGridBg } from '@/components/CyberGridBg';
 
 export default function LoginPage() {
   return (
-    <main className="min-h-screen flex flex-col items-center justify-center px-6 bg-gray-50 dark:bg-[#0a1628] relative overflow-hidden">
-      {/* ──────────────────────────────────────────────────────────────
-          TRAMA DE FONDO: glow naranja pulsante (estilo WINDMAR-QA-CALLS).
-          Circular 700×700, blur 60px, escala 1 ↔ 1.15 cada 3s.
-          Pointer-events-none para que NO interfiera con clicks del form.
-          ────────────────────────────────────────────────────────────── */}
-      <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+    <main className="min-h-screen flex flex-col items-center justify-center px-6 bg-[#05070d] relative overflow-hidden">
+      {/* Fondo: shader Cybernetic Grid (rejilla azul + pulsos naranja, reacciona al cursor) */}
+      <CyberGridBg />
+      {/* Glow naranja ambiental encima del grid */}
+      <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-[1]">
         <div className="login-bg-glow" />
       </div>
 
@@ -42,10 +41,10 @@ export default function LoginPage() {
             />
           </div>
 
-          <h1 className="text-2xl font-bold text-[#1B3A5C] dark:text-white mt-2 tracking-tight">
+          <h1 className="text-2xl font-bold text-white mt-2 tracking-tight" style={{ textShadow: '0 1px 16px rgba(43,92,190,0.5)' }}>
             Agente Windmar Home
           </h1>
-          <p className="text-sm text-gray-600 dark:text-gray-400 text-center max-w-sm">
+          <p className="text-sm text-gray-300 text-center max-w-sm">
             Inicia sesión con tu correo corporativo Windmar
           </p>
         </div>
@@ -162,14 +161,14 @@ export default function LoginPage() {
           </form>
 
           {/* Footer 1 — solo cuentas autorizadas (acento naranja) */}
-          <p className="text-[12px] text-gray-500 dark:text-gray-400 text-center mt-6">
+          <p className="text-[12px] text-gray-400 text-center mt-6">
             Solo cuentas <strong className="text-[#F7941D]">@windmarhome.com</strong> y{' '}
             <strong className="text-[#F7941D]">@windmarenergy.com</strong>
           </p>
         </div>
 
         {/* Footer 2 — ayuda, con fade-in más tardío */}
-        <p className="text-[11px] text-gray-500 dark:text-gray-500 text-center leading-relaxed mt-4 login-fade-in-delayed-2">
+        <p className="text-[11px] text-gray-400 text-center leading-relaxed mt-4 login-fade-in-delayed-2">
           Si tienes problemas para iniciar sesión, contacta a IT.
         </p>
       </div>
