@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, Cell } from 'recharts';
+import { downloadCSV } from '@/lib/csv';
 
 export interface AssignEvent {
   createdAt: string;
@@ -64,6 +65,35 @@ export function ActivityDashboard({ events }: { events: AssignEvent[] }) {
     () => [...filtered].sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(0, 300),
     [filtered]
   );
+
+  const stamp = () => fmtDateTime(new Date().toISOString()).replace(/[/:, ]/g, '-');
+  const sufijo = `${admin === 'all' ? 'todos' : shortName(admin)}-${range}`;
+
+  // Export 1: una fila por asignación.
+  function exportResumen() {
+    downloadCSV(
+      `actividad-resumen-${sufijo}.csv`,
+      ['Fecha', 'Admin', 'De quién', 'A quién', 'Leads', 'Fallos'],
+      flat.map((e) => [fmtDateTime(e.createdAt), e.admin, e.fromOwner || '', e.target || '', e.count, e.failed || 0])
+    );
+  }
+  // Export 2: una fila por LEAD movido (para control de líderes).
+  function exportPorLead() {
+    const rows: Array<Array<string | number | null>> = [];
+    flat.forEach((e) => {
+      if (e.leads && e.leads.length) {
+        e.leads.forEach((l) => rows.push([fmtDateTime(e.createdAt), e.admin, e.fromOwner || '', e.target || '', l.num || '', l.name || '', l.url || '']));
+      } else {
+        rows.push([fmtDateTime(e.createdAt), e.admin, e.fromOwner || '', e.target || '', '', '(sin detalle de leads)', '']);
+      }
+    });
+    downloadCSV(`actividad-por-lead-${sufijo}.csv`, ['Fecha', 'Admin', 'De quién', 'A quién', 'Lead#', 'Cliente', 'Zoho URL'], rows);
+  }
+
+  const xlsBtn: React.CSSProperties = {
+    fontSize: 12, fontWeight: 600, padding: '6px 12px', borderRadius: 8, cursor: 'pointer',
+    border: '1px solid rgba(34,197,94,0.5)', background: 'rgba(34,197,94,0.12)', color: '#22c55e', whiteSpace: 'nowrap',
+  };
 
   const card: React.CSSProperties = { background: 'var(--glass-bg)', border: '1px solid var(--glass-border)', borderRadius: 12, padding: 14 };
   const kpi: React.CSSProperties = { ...card, display: 'flex', flexDirection: 'column', gap: 2 };
@@ -161,8 +191,18 @@ export function ActivityDashboard({ events }: { events: AssignEvent[] }) {
 
       {/* Tabla plana */}
       <div style={card}>
-        <div style={{ color: 'var(--text1)', fontSize: 14, fontWeight: 600, marginBottom: 10 }}>
-          Detalle ({flat.length}) — fecha · admin · de quién → a quién · leads (clic para ver cuáles)
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 10 }}>
+          <div style={{ color: 'var(--text1)', fontSize: 14, fontWeight: 600 }}>
+            Detalle ({flat.length}) — fecha · admin · de quién → a quién · leads (clic para ver cuáles)
+          </div>
+          <div style={{ display: 'flex', gap: 8, marginLeft: 'auto' }}>
+            <button onClick={exportResumen} disabled={flat.length === 0} style={{ ...xlsBtn, opacity: flat.length === 0 ? 0.5 : 1 }} title="Descargar resumen (una fila por asignación)">
+              ⬇ Excel resumen
+            </button>
+            <button onClick={exportPorLead} disabled={flat.length === 0} style={{ ...xlsBtn, opacity: flat.length === 0 ? 0.5 : 1 }} title="Descargar detalle (una fila por lead movido)">
+              ⬇ Excel por lead
+            </button>
+          </div>
         </div>
         <div style={{ maxHeight: 460, overflowY: 'auto' }}>
           <div style={{ display: 'grid', gridTemplateColumns: '18px 140px 1fr 1.4fr 64px 64px', gap: 8, padding: '6px 8px', position: 'sticky', top: 0, background: '#0f1525', fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.05em', color: ORANGE, fontWeight: 600, borderBottom: '1px solid var(--glass-border)' }}>

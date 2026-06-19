@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { BUCKET_LABEL, type Bucket } from '@/lib/zoho-status';
 import { OwnerSelect } from './OwnerSelect';
+import { downloadCSV } from '@/lib/csv';
 
 export interface AssignUser {
   email: string;
@@ -158,6 +159,20 @@ export function AssignManager({ users }: { users: AssignUser[] }) {
     if (visible.length === 0) return;
     setSelected((prev) =>
       prev.size === visible.length ? new Set() : new Set(visible.map((l) => l.id))
+    );
+  }
+
+  // Descarga la cartera visible a Excel (CSV). Si hay seleccionados, exporta solo esos.
+  function exportCartera() {
+    const rows = visible.filter((l) => selected.size === 0 || selected.has(l.id));
+    if (rows.length === 0) return;
+    downloadCSV(
+      `cartera-${effectiveSource || 'leads'}.csv`,
+      ['Lead#', 'Cliente', 'Telefono', 'Estado', 'Lead Owner', 'Consultor', 'Creado', 'Cita', 'Zoho URL'],
+      rows.map((l) => [
+        l.leadNumber || '', l.fullName, l.phone || '', l.status || '', l.owner || '', l.consultor || '',
+        l.createdAt ? l.createdAt.slice(0, 10) : '', l.appointmentAt ? l.appointmentAt.slice(0, 10) : '', l.zohoUrl,
+      ])
     );
   }
 
@@ -328,7 +343,15 @@ export function AssignManager({ users }: { users: AssignUser[] }) {
                   Seleccionar todos ({visible.length})
                 </label>
                 <span style={{ color: 'var(--text3)', fontSize: 12 }}>· {selected.size} seleccionados</span>
-                <span style={{ color: 'var(--text2)', fontSize: 12, marginLeft: 'auto' }}>Filtrar estado:</span>
+                <button
+                  onClick={exportCartera}
+                  disabled={visible.length === 0}
+                  style={{ fontSize: 12, fontWeight: 600, padding: '5px 11px', borderRadius: 8, cursor: 'pointer', border: '1px solid rgba(34,197,94,0.5)', background: 'rgba(34,197,94,0.12)', color: '#22c55e', marginLeft: 'auto' }}
+                  title={selected.size > 0 ? `Descargar ${selected.size} seleccionados a Excel` : 'Descargar la cartera visible a Excel'}
+                >
+                  ⬇ Excel {selected.size > 0 ? `(${selected.size})` : ''}
+                </button>
+                <span style={{ color: 'var(--text2)', fontSize: 12 }}>Filtrar estado:</span>
                 <select
                   value={statusFilter}
                   onChange={(e) => { setStatusFilter(e.target.value); setSelected(new Set()); }}
